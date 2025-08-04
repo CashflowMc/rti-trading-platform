@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTi Cashflowops - Professional Trading Platform</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Rocket Launch Animation */
+        @keyframes rocketLaunch {
+            0% { transform: translateX(-50%) translateY(20px) scale(1) rotate(0deg); opacity: 1; }
+            7% { transform: translateX(-50%) translateY(-80px) scale(1.05) rotate(-2deg); opacity: 1; }
+            14% { transform: translateX(-45%) translateY(-150px) scale(1.1) rotate(-5deg); opacity: 1; }
+            21% { transform: translateX(-15%) translateY(-420px) scale(1.1) rotate(45deg); opacity: 1; }
+            29% { transform: translateX(50px) translateY(-520px) scale(1.05) rotate(45deg); opacity: 1; }
+            36% { transform: translateX(150px) translateY(-650px) scale(1.0) rotate(45deg); opacity: 1; }
+            43% { transform: translateX(300px) translateY(-800px) scale(0.95) rotate(45deg); opacity: 1; }
+            50% { transform: translateX(500px) translateY(-980px) scale(0.9) rotate(45deg); opacity: 1; }
+            57% { transform: translateX(750px) translateY(-1200px) scale(0.8) rotate(0deg); opacity: 1; }
+            64% { transform: translateX(800px) translateY(-1000px) scale(0.75) rotate(0deg); opacity: 1; }
+            71% { transform: translateX(800px) translateY(-900px) scale(0.65) rotate(0deg); opacity: 1; }
+            79% { transform: translateX(800px) translateY(-950px) scale(0.6) rotate(0deg); opacity: 1; }
+            86% { transform: translateX(800px) translateY(-900px) scale(0.55) rotate(0deg); opacity: 1; }
+            93% { transform: translateX(800px) translateY(-912px) scale(0.53) rotate(0deg); opacity: 1; }
+            100% { transform: translateX(800px) translateY(-925px) scale(0.52) rotate(0deg); opacity: 1; }
+        }
+        
+        /* Money Rain Animations */
+        @keyframes dollarFall1 {
+            0% { opacity: 1; transform: translateY(-50px) rotate(0deg) scale(1); }
+            100% { opacity: 0.3; transform: translateY(calc(100vh + 50px)) rotate(360deg) scale(0.5); }
+        }
+        
+        @keyframes dollarFall2 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(-30px) rotate(180deg) scale(0.8); }
+            100% { opacity: 0.2; transform: translateY(calc(100vh + 50px)) translateX(-60px) rotate(360deg) scale(0.4); }
+        }
+        
+        @keyframes dollarFall3 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(40px) rotate(-180deg) scale(0.9); }
+            100% { opacity: 0.3; transform: translateY(calc(100vh + 50px)) translateX(80px) rotate(-360deg) scale(0.5); }
+        }
+        
+        @keyframes dollarFall4 {
+            0% { opacity: 1; transform: translateY(-50px) rotate(0deg) scale(1); }
+            100% { opacity: 0.2; transform: translateY(calc(100vh + 50px)) rotate(-270deg) scale(0.6); }
+        }
+        
+        @keyframes dollarFall5 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(-50px) rotate(270deg) scale(0.7); }
+            100% { opacity: 0.3; transform: translateY(calc(100vh + 50px)) translateX(-100px) rotate(540deg) scale(0.4); }
+        }
+        
+        @keyframes dollarFall6 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(25px) rotate(-90deg) scale(0.8); }
+            100% { opacity: 0.2; transform: translateY(calc(100vh + 50px)) translateX(50px) rotate(-180deg) scale(0.5); }
+        }
+        
+        @keyframes dollarFall7 {
+            0% { opacity: 1; transform: translateY(-50px) rotate(0deg) scale(1); }
+            100% { opacity: 0.3; transform: translateY(calc(100vh + 50px)) rotate(450deg) scale(0.6); }
+        }
+        
+        @keyframes dollarFall8 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(-20px) rotate(-45deg) scale(0.9); }
+            100% { opacity: 0.2; transform: translateY(calc(100vh + 50px)) translateX(-40px) rotate(-90deg) scale(0.4); }
+        }
+        
+        @keyframes dollarFall9 {
+            0% { opacity: 1; transform: translateY(-50px) rotate(0deg) scale(1); }
+            100% { opacity: 0.3; transform: translateY(calc(100vh + 50px)) rotate(315deg) scale(0.7); }
+        }
+        
+        @keyframes dollarFall10 {
+            0% { opacity: 1; transform: translateY(-50px) translateX(0px) rotate(0deg) scale(1); }
+            50% { transform: translateY(50vh) translateX(60px) rotate(135deg) scale(0.8); }
+            100% { opacity: 0.2; transform: translateY(calc(100vh + 50px)) translateX(120px) rotate(270deg) scale(0.5); }
+        }
+        
+        /* Engine Flame Animations */
+        @keyframes engineFlame {
+            0% { transform: scaleY(1) scaleX(1); opacity: 0.8; }
+            100% { transform: scaleY(1.4) scaleX(0.8); opacity: 0.95; }
+        }
+        
+        @keyframes mainEngineFlame {
+            0% { transform: scaleY(1) scaleX(1); opacity: 0.9; }
+            100% { transform: scaleY(1.6) scaleX(0.7); opacity: 1; }
+        }
+        
+        @keyframes exhaustTrail {
+            0% { transform: translateX(-50%) scaleY(1) scaleX(1); opacity: 0.5; }
+            100% { transform: translateX(-50%) scaleY(1.8) scaleX(0.8); opacity: 0.3; }
+        }
+        
+        @keyframes messageAppear {
+            0%, 80% { opacity: 0; transform: translateY(20px); }
+            90% { opacity: 1; transform: translateY(0px); }
+            100% { opacity: 1; transform: translateY(0px); }
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+        const { Bell, Bot, TrendingUp, TrendingDown, Users, Clock, Edit3, Trash2, Plus, LogOut, MessageCircle, BarChart3, Send } = LucideReact;
+        
+        // Sample trading data
+        const mockChartData = [
+            { time: '9:30', SPY: 451.20, QQQ: 378.45, BTC: 44800, SPY_RSI: 65, QQQ_RSI: 58, BTC_RSI: 72, SPY_MA: 450.80, QQQ_MA: 377.90, BTC_MA: 44200 },
+            { time: '10:00', SPY: 452.10, QQQ: 379.20, BTC: 45200, SPY_RSI: 68, QQQ_RSI: 62, BTC_RSI: 75, SPY_MA: 451.15, QQQ_MA: 378.25, BTC_MA: 44400 },
+            { time: '10:30', SPY: 451.85, QQQ: 378.90, BTC: 45100, SPY_RSI: 66, QQQ_RSI: 60, BTC_RSI: 73, SPY_MA: 451.38, QQQ_MA: 378.52, BTC_MA: 44600 },
+            { time: '11:00', SPY: 453.50, QQQ: 380.15, BTC: 45800, SPY_RSI: 72, QQQ_RSI: 65, BTC_RSI: 78, SPY_MA: 451.91, QQQ_MA: 378.93, BTC_MA: 44900, signal: 'BUY' },
+            { time: '11:30', SPY: 454.20, QQQ: 381.30, BTC: 46200, SPY_RSI: 75, QQQ_RSI: 68, BTC_RSI: 80, SPY_MA: 452.57, QQQ_MA: 379.60, BTC_MA: 45220 },
+            { time: '12:00', SPY: 453.90, QQQ: 380.85, BTC: 46000, SPY_RSI: 73, QQQ_RSI: 66, BTC_RSI: 78, SPY_MA: 452.96, QQQ_MA: 379.81, BTC_MA: 45380, signal: 'SELL' },
+            { time: '12:30', SPY: 455.10, QQQ: 382.20, BTC: 46500, SPY_RSI: 78, QQQ_RSI: 71, BTC_RSI: 82, SPY_MA: 453.55, QQQ_MA: 380.36, BTC_MA: 45617 }
+        ];
+
+        const supportResistanceLevels = {
+            SPY: { resistance: 456.00, support: 449.50, expectedHigh: 458.25, expectedLow: 447.80 },
+            QQQ: { resistance: 385.00, support: 375.00, expectedHigh: 388.50, expectedLow: 372.20 },
+            BTC: { resistance: 48000, support: 43500, expectedHigh: 49500, expectedLow: 42000 }
+        };
+
+        const initialAlerts = [
+            {
+                id: 'alert0',
+                type: 'BOT_SIGNAL',
+                botName: 'Technical Analysis Pro',
+                title: 'CRITICAL SUPPORT BREAK - DE',
+                message: '🚨 Deere & Company broke below key support at $515.00. Currently trading at $503.26 (-4.03%). Expected low target: $492.00. Watch for bounce at critical level $500.00 or further decline to $480 zone.',
+                timestamp: new Date(Date.now() - 45000),
+                priority: 'HIGH',
+                status: 'ACTIVE',
+                pnl: null,
+                symbol: 'DE'
+            },
+            {
+                id: 'alert1',
+                type: 'BOT_SIGNAL',
+                botName: 'Scalp Master Pro',
+                title: 'BUY SIGNAL - SPY',
+                message: 'Strong bullish momentum detected. Entry: $451.20, Target: $453.50, Stop: $449.80',
+                timestamp: new Date(Date.now() - 120000),
+                priority: 'HIGH',
+                status: 'ACTIVE',
+                pnl: null,
+                symbol: 'SPY'
+            }
+        ];
+
+        const TradingPlatform = () => {
+            const [user, setUser] = useState(null);
+            const [showLanding, setShowLanding] = useState(true);
+            const [alerts, setAlerts] = useState(initialAlerts);
+            const [activeTab, setActiveTab] = useState('charts');
+            const [customCharts, setCustomCharts] = useState([
+                {
+                    id: 'demo_chart_1',
+                    name: 'DE Support Break Analysis',
+                    symbol: 'DE',
+                    timeframe: '1h',
+                    levels: { resistance: '526.73', support: '515.00' },
+                    script: `// Deere & Company Technical Analysis
+indicator("DE Support Break Alert", overlay=true)
+
+// Key levels from technical analysis
+resistance_level = 526.73
+support_level = 515.00
+expected_low = 492.00
+
+// Plot support/resistance
+plot(resistance_level, color=color.red, linewidth=2, title="Resistance")
+plot(support_level, color=color.green, linewidth=2, title="Support") 
+plot(expected_low, color=color.orange, linewidth=1, style=plot.style_dashed, title="Target Low")
+
+// Moving Average for trend confirmation
+ma_20 = ta.sma(close, 20)
+plot(ma_20, color=color.yellow, linewidth=1, title="MA(20)")
+
+// Alert when price breaks below support
+alertcondition(ta.crossunder(close, support_level), title="Support Break", message="DE broke below key support at $515!")`,
+                    createdAt: new Date(Date.now() - 86400000)
+                }
+            ]);
+
+            const formatTimeAgo = (timestamp) => {
+                const diff = Date.now() - timestamp.getTime();
+                const minutes = Math.floor(diff / 60000);
+                if (minutes < 1) return 'Just now';
+                if (minutes < 60) return `${minutes}m ago`;
+                return `${Math.floor(minutes / 60)}h ago`;
+            };
+
+            // Landing Page Component
+            const LandingPage = () => {
+                const [loginData, setLoginData] = useState({ username: '', password: '' });
+
+                const handleLogin = () => {
+                    if (loginData.username === 'admin' && loginData.password === 'admin123') {
+                        setUser({
+                            id: 'admin1',
+                            username: 'EliteTrader_Admin',
+                            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face&facepad=2&bg=gray',
+                            tier: 'ADMIN',
+                            isAdmin: true
+                        });
+                    } else {
+                        setUser({
+                            id: 'user123',
+                            username: 'TradeMaster47',
+                            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face&facepad=2&bg=gray',
+                            tier: 'GOLD',
+                            isAdmin: false
+                        });
+                    }
+                    setShowLanding(false);
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden relative">
+                        {/* Animated Background Elements */}
+                        <div className="absolute inset-0">
+                            <div className="absolute top-20 left-10 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                            <div className="absolute top-40 right-20 w-1 h-1 bg-white rounded-full animate-ping"></div>
+                            <div className="absolute bottom-32 left-1/4 w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce"></div>
+                        </div>
+
+                        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 pt-32">
+                            {/* Moon Target */}
+                            <div className="relative mb-6">
+                                <div className="flex justify-center">
+                                    <div className="text-8xl" style={{ position: 'relative', zIndex: 10 }}>🌕</div>
+                                </div>
+                            </div>
+
+                            {/* Platform Branding */}
+                            <div className="text-center mb-8">
+                                <h1 className="text-6xl md:text-8xl font-black text-white mb-4 tracking-wider"
+                                    style={{
+                                        fontFamily: 'Impact, Arial Black, sans-serif',
+                                        textShadow: '0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(34, 197, 94, 0.2)'
+                                    }}>
+                                    RTi
+                                </h1>
+                                <h2 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 tracking-wide"
+                                    style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
+                                    CASHFLOWOPS
+                                </h2>
+                                <p className="text-xl md:text-2xl text-gray-300 mt-4 font-bold tracking-widest">
+                                    TO THE MOON 🚀
+                                </p>
+                            </div>
+
+                            {/* Money Rain Animation */}
+                            <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 15 }}>
+                                {[...Array(10)].map((_, i) => (
+                                    <div key={i} className={`absolute text-${i % 2 === 0 ? '4xl' : '3xl'} opacity-0`}
+                                         style={{
+                                             left: `${10 + i * 8}%`,
+                                             top: '-50px',
+                                             animation: `dollarFall${(i % 10) + 1} 7s ease-out forwards`,
+                                             animationDelay: `${0.5 + i * 0.5}s`
+                                         }}>
+                                        {['💵', '💰', '💸'][i % 3]}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Rocket Animation */}
+                            <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full" style={{ zIndex: 20 }}>
+                                <div className="relative inline-block" style={{ animation: 'rocketLaunch 7s ease-out forwards' }}>
+                                    <div className="relative" style={{ width: '80px', height: '120px' }}>
+                                        <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 relative z-20"
+                                             style={{
+                                                 fontFamily: 'Impact, Arial Black, sans-serif',
+                                                 textShadow: '0 0 20px rgba(34, 197, 94, 0.8), 0 0 40px rgba(234, 179, 8, 0.6)',
+                                                 filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.4))',
+                                                 lineHeight: '1',
+                                                 transform: 'translateX(8px)'
+                                             }}>
+                                            $
+                                        </div>
+                                        {/* Engine Effects */}
+                                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 -translate-x-1 flex gap-1">
+                                            <div className="w-3 h-12 bg-gradient-to-b from-blue-400 via-yellow-400 to-orange-500 rounded-b-full opacity-90"
+                                                 style={{ animation: 'engineFlame 0.1s ease-in-out infinite alternate' }}></div>
+                                            <div className="w-5 h-16 bg-gradient-to-b from-blue-300 via-yellow-300 to-red-500 rounded-b-full opacity-95"
+                                                 style={{ animation: 'mainEngineFlame 0.15s ease-in-out infinite alternate' }}></div>
+                                            <div className="w-3 h-12 bg-gradient-to-b from-blue-400 via-yellow-400 to-orange-500 rounded-b-full opacity-90"
+                                                 style={{ animation: 'engineFlame 0.1s ease-in-out infinite alternate-reverse' }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Success Message */}
+                            <div className="text-center mb-6 mt-8">
+                                <p className="text-2xl font-black text-yellow-400 opacity-0"
+                                   style={{
+                                       fontFamily: 'Impact, Arial Black, sans-serif',
+                                       animation: 'messageAppear 7s ease-out forwards'
+                                   }}>
+                                    🚀 MONEY ROCKET LIGHTNING FAST PRECISION FLIGHT! ⚡
+                                </p>
+                            </div>
+
+                            {/* Login Form */}
+                            <div className="bg-black/80 backdrop-blur-lg border border-green-500/30 rounded-2xl shadow-2xl p-8 w-full max-w-md">
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Username</label>
+                                        <input
+                                            type="text"
+                                            value={loginData.username}
+                                            onChange={(e) => setLoginData({...loginData, username: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-900 border border-green-500/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-400"
+                                            placeholder="Enter your username"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Password</label>
+                                        <input
+                                            type="password"
+                                            value={loginData.password}
+                                            onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                                            className="w-full px-4 py-3 bg-gray-900 border border-green-500/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent text-white placeholder-gray-400"
+                                            placeholder="Enter your password"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleLogin}
+                                        className="w-full bg-gradient-to-r from-green-500 via-yellow-500 to-orange-500 text-black py-4 rounded-lg font-black text-lg hover:from-green-600 hover:via-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg uppercase tracking-wide">
+                                        Launch to Dashboard 🚀
+                                    </button>
+                                    <div className="text-center text-sm text-gray-400 space-y-1">
+                                        <p className="font-bold text-green-400">Demo Credentials:</p>
+                                        <p>Admin: <span className="text-white">admin</span> / <span className="text-white">admin123</span></p>
+                                        <p>Member: <span className="text-white">any username</span> / <span className="text-white">any password</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Main Dashboard Component
+            const Dashboard = () => (
+                <div className="min-h-screen bg-gray-900">
+                    <header className="bg-gray-800 shadow-2xl border-b border-gray-700">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between items-center h-16">
+                                <div className="flex items-center gap-3">
+                                    <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
+                                        RTi Cashflowops
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-green-400">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        <span className="text-sm font-medium">Live Markets</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <img src={user.avatar} alt="" className="w-8 h-8 rounded-full border-2 border-gray-600" />
+                                        <div className="text-right">
+                                            <p className="text-sm font-medium text-white">{user.username}</p>
+                                            <p className={`text-xs font-bold ${
+                                                user.tier === 'ADMIN' ? 'text-red-400' :
+                                                user.tier === 'PLATINUM' ? 'text-purple-400' :
+                                                user.tier === 'GOLD' ? 'text-yellow-400' : 'text-gray-400'
+                                            }`}>
+                                                {user.tier}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setUser(null);
+                                                setShowLanding(true);
+                                            }}
+                                            className="p-1 text-gray-400 hover:text-white transition-colors">
+                                            <LogOut className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        {/* Tab Navigation */}
+                        <div className="flex space-x-4 mb-6">
+                            <button
+                                onClick={() => setActiveTab('charts')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                    activeTab === 'charts' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}>
+                                <BarChart3 className="w-5 h-5" />
+                                Trading Charts
+                            </button>
+                            {customCharts.length > 0 && (
+                                <button
+                                    onClick={() => setActiveTab('custom')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                        activeTab === 'custom' 
+                                            ? 'bg-green-600 text-white shadow-lg' 
+                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                    }`}>
+                                    <Edit3 className="w-5 h-5" />
+                                    Custom Charts ({customCharts.length})
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setActiveTab('alerts')}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                                    activeTab === 'alerts' 
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}>
+                                <Bell className="w-5 h-5" />
+                                Live Alerts
+                            </button>
+                        </div>
+
+                        {/* Tab Content */}
+                        {activeTab === 'charts' && (
+                            <div className="text-center py-12">
+                                <h2 className="text-2xl font-bold text-white mb-4">Professional Trading Charts</h2>
+                                <p className="text-gray-400 mb-8">Advanced charting with Pine Script integration</p>
+                                <div className="bg-gray-800 rounded-lg p-8">
+                                    <BarChart3 className="w-16 h-16 mx-auto text-blue-500 mb-4" />
+                                    <p className="text-white">Chart components ready for your customization</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'custom' && (
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-white">Custom Trading Charts</h2>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    {customCharts.map(chart => (
+                                        <div key={chart.id} className="bg-gray-800 rounded-lg shadow-2xl border border-green-500/30 p-4">
+                                            <h3 className="text-lg font-bold text-white mb-2">{chart.name}</h3>
+                                            <div className="text-sm text-gray-400 mb-4">
+                                                {chart.symbol} • {chart.timeframe} • Pine Script Active
+                                            </div>
+                                            <div className="bg-gray-900 rounded-lg p-3 mb-4">
+                                                <pre className="text-xs text-green-400 font-mono overflow-hidden">
+                                                    {chart.script.split('\n').slice(0, 3).join('\n')}...
+                                                </pre>
+                                            </div>
+                                            <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm transition-colors">
+                                                View Interactive Chart
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'alerts' && (
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-white">Live Trading Alerts</h2>
+                                <div className="space-y-4">
+                                    {alerts.map(alert => (
+                                        <div key={alert.id} className={`bg-gray-800 rounded-lg shadow-xl border-l-4 p-6 ${
+                                            alert.priority === 'HIGH' ? 'border-red-500' :
+                                            alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-500'
+                                        }`}>
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-white">{alert.title}</h3>
+                                                    <p className="text-sm text-blue-400 font-medium mb-2">🤖 {alert.botName}</p>
+                                                    <p className="text-gray-300 mb-3">{alert.message}</p>
+                                                </div>
+                                                <div className="text-right ml-4">
+                                                    <span className="text-sm text-gray-400">{formatTimeAgo(alert.timestamp)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+
+            return showLanding ? <LandingPage /> : <Dashboard />;
+        };
+
+        // Render the application
+        ReactDOM.render(<TradingPlatform />, document.getElementById('root'));
+    </script>
+</body>
+</html>
