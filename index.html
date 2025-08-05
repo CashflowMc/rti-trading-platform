@@ -34,6 +34,15 @@
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
+
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .chat-message-enter {
+            animation: slideIn 0.3s ease-out;
+        }
         
         .money-rain {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden;
@@ -61,13 +70,36 @@
             animation: pulse 2s infinite;
             box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
         }
+
+        .chat-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 #f7fafc;
+        }
+
+        .chat-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-scrollbar::-webkit-scrollbar-track {
+            background: #f7fafc;
+            border-radius: 3px;
+        }
+
+        .chat-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 3px;
+        }
+
+        .chat-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
@@ -93,6 +125,13 @@
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
 
+            // Chat state
+            const [chatMessages, setChatMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const [chatExpanded, setChatExpanded] = useState(false);
+            const [unreadMessages, setUnreadMessages] = useState(0);
+            const chatMessagesRef = useRef(null);
+
             // Initialize socket connection
             useEffect(() => {
                 if (user && !socket && !showSubscriptionPicker) {
@@ -117,6 +156,41 @@
                             [data.symbol]: data
                         }));
                     });
+
+                    // Chat events
+                    socket.on('chatMessage', (message) => {
+                        debugLog('New chat message received:', message);
+                        setChatMessages(prev => [...prev, {
+                            ...message,
+                            id: Date.now() + Math.random(),
+                            timestamp: new Date()
+                        }]);
+                        
+                        // Increment unread if chat is collapsed
+                        if (!chatExpanded) {
+                            setUnreadMessages(prev => prev + 1);
+                        }
+                    });
+
+                    socket.on('userJoined', (userData) => {
+                        debugLog('User joined:', userData);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now() + Math.random(),
+                            type: 'system',
+                            message: `${userData.username} joined the trading room`,
+                            timestamp: new Date()
+                        }]);
+                    });
+
+                    socket.on('userLeft', (userData) => {
+                        debugLog('User left:', userData);
+                        setChatMessages(prev => [...prev, {
+                            id: Date.now() + Math.random(),
+                            type: 'system',
+                            message: `${userData.username} left the trading room`,
+                            timestamp: new Date()
+                        }]);
+                    });
                 }
 
                 return () => {
@@ -126,6 +200,20 @@
                     }
                 };
             }, [user, showSubscriptionPicker]);
+
+            // Auto-scroll chat to bottom
+            useEffect(() => {
+                if (chatMessagesRef.current) {
+                    chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+                }
+            }, [chatMessages]);
+
+            // Clear unread messages when chat is expanded
+            useEffect(() => {
+                if (chatExpanded) {
+                    setUnreadMessages(0);
+                }
+            }, [chatExpanded]);
 
             // Enhanced API Functions
             const apiCall = async (endpoint, options = {}) => {
@@ -165,7 +253,6 @@
                 if (!user) return false;
                 if (user.isAdmin) return false;
                 
-                // Check if user is on FREE tier and has never had a subscription
                 const hasNeverSubscribed = !user.subscriptionId && 
                                           !user.subscriptionStatus && 
                                           user.tier === 'FREE';
@@ -178,6 +265,50 @@
                 });
                 
                 return hasNeverSubscribed;
+            };
+
+            // Chat functions
+            const sendChatMessage = () => {
+                if (!newMessage.trim() || !socket) return;
+
+                const messageData = {
+                    message: newMessage.trim(),
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        avatar: user.avatar,
+                        tier: user.tier,
+                        isAdmin: user.isAdmin
+                    },
+                    timestamp: new Date()
+                };
+
+                debugLog('Sending chat message:', messageData);
+                socket.emit('chatMessage', messageData);
+                setNewMessage('');
+            };
+
+            const handleChatKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            };
+
+            const formatChatTime = (timestamp) => {
+                return new Date(timestamp).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            };
+
+            const getTierColor = (tier) => {
+                switch (tier) {
+                    case 'ADMIN': return 'text-red-600 bg-red-100';
+                    case 'MONTHLY': return 'text-green-600 bg-green-100';
+                    case 'WEEKLY': return 'text-blue-600 bg-blue-100';
+                    default: return 'text-gray-600 bg-gray-100';
+                }
             };
 
             const fetchAlerts = async () => {
@@ -299,7 +430,6 @@
                         localStorage.setItem('token', response.token);
                         setUser(response.user);
 
-                        // Check if user needs subscription selection
                         if (requiresSubscriptionSelection(response.user)) {
                             debugLog('🔒 User requires subscription selection');
                             setShowSubscriptionPicker(true);
@@ -343,7 +473,6 @@
                         localStorage.setItem('token', response.token);
                         setUser(response.user);
                         
-                        // New registrations always need subscription selection
                         setShowSubscriptionPicker(true);
                         setShowLanding(false);
                     } catch (err) {
@@ -582,7 +711,7 @@
                 );
             };
 
-            // NEW: Subscription Selection Page
+            // Subscription Selection Page (keeping existing implementation)
             const SubscriptionPicker = () => {
                 const [selectedPlan, setSelectedPlan] = useState('');
                 const [isProcessing, setIsProcessing] = useState(false);
@@ -626,18 +755,14 @@
                     debugLog('Plan selected:', planId);
                     
                     try {
-                        // Here you would integrate with Stripe
-                        // For now, we'll simulate the selection
                         debugLog('Processing payment for plan:', planId);
                         
-                        // Redirect to your Stripe payment link or create checkout session
                         if (planId === 'weekly') {
                             window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
                         } else {
                             window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
                         }
                         
-                        // Show message
                         setError('🚀 Redirecting to secure payment... Complete payment to access dashboard!');
                         
                     } catch (error) {
@@ -651,12 +776,10 @@
                 const handleSkipForNow = () => {
                     debugLog('User chose to skip subscription selection');
                     setShowSubscriptionPicker(false);
-                    // Let them into dashboard with limited access
                 };
 
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden relative">
-                        {/* Money Rain Effect */}
                         <div className="money-rain">
                             {[...Array(15)].map((_, i) => {
                                 const randomLeft = ((i * 23) % 100);
@@ -678,7 +801,6 @@
 
                         <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
                             <div className="w-full max-w-6xl">
-                                {/* Header */}
                                 <div className="text-center mb-12">
                                     <div className="text-6xl mb-6">🚀🌕</div>
                                     <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-wider"
@@ -699,7 +821,6 @@
                                     </div>
                                 )}
 
-                                {/* Plans */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
                                     {plans.map((plan) => (
                                         <div key={plan.id} className={`relative bg-black/80 backdrop-blur-lg border rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${
@@ -750,7 +871,6 @@
                                     ))}
                                 </div>
 
-                                {/* Skip Option */}
                                 <div className="text-center">
                                     <button
                                         onClick={handleSkipForNow}
@@ -768,6 +888,141 @@
                 );
             };
 
+            // Chat Panel Component
+            const ChatPanel = () => {
+                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
+                const maxMessages = isPaidUser ? 100 : 10; // Free users see fewer messages
+
+                return (
+                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
+                        chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
+                    }`}>
+                        {/* Chat Header */}
+                        <div 
+                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
+                            onClick={() => setChatExpanded(!chatExpanded)}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">💬</span>
+                                <span className="font-bold">Trading Chat</span>
+                                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {unreadMessages > 0 && (
+                                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                        {unreadMessages}
+                                    </span>
+                                )}
+                                <span className="text-sm">
+                                    {chatExpanded ? '▼' : '▲'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Chat Content */}
+                        {chatExpanded && (
+                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
+                                {/* Messages Area */}
+                                <div 
+                                    ref={chatMessagesRef}
+                                    className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
+                                >
+                                    {chatMessages.length === 0 ? (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <span className="text-4xl mb-2 block">🚀</span>
+                                            <p className="text-sm">Welcome to RTi Trading Chat!</p>
+                                            <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
+                                        </div>
+                                    ) : (
+                                        chatMessages.slice(-maxMessages).map((message) => (
+                                            <div key={message.id} className="chat-message-enter">
+                                                {message.type === 'system' ? (
+                                                    <div className="text-center">
+                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                            {message.message}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-start gap-2">
+                                                        <img 
+                                                            src={message.user.avatar} 
+                                                            alt="" 
+                                                            className="w-8 h-8 rounded-full flex-shrink-0"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="font-medium text-sm text-gray-900 truncate">
+                                                                    {message.user.username}
+                                                                </span>
+                                                                <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
+                                                                    {message.user.tier}
+                                                                </span>
+                                                                <span className="text-xs text-gray-400">
+                                                                    {formatChatTime(message.timestamp)}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-700 break-words">
+                                                                {message.message}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                    
+                                    {!isPaidUser && chatMessages.length > maxMessages && (
+                                        <div className="text-center py-2 border-t">
+                                            <p className="text-xs text-gray-500">
+                                                Showing last {maxMessages} messages
+                                            </p>
+                                            <button 
+                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                Upgrade to see full chat history
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Chat Input */}
+                                <div className="border-t p-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            onKeyPress={handleChatKeyPress}
+                                            placeholder={isPaidUser ? "Type your message..." : "Upgrade for unlimited messages..."}
+                                            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            disabled={!isPaidUser}
+                                        />
+                                        <button
+                                            onClick={sendChatMessage}
+                                            disabled={!newMessage.trim() || !isPaidUser}
+                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            🚀
+                                        </button>
+                                    </div>
+                                    {!isPaidUser && (
+                                        <p className="text-xs text-gray-500 mt-1 text-center">
+                                            <button 
+                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                className="text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                Upgrade to participate in chat
+                                            </button>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
             const Dashboard = () => {
                 const filteredAlerts = alerts.filter(alert => 
                     filterType === 'ALL' || alert.type === filterType
@@ -777,7 +1032,7 @@
                 const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
 
                 return (
-                    <div className="min-h-screen bg-gray-50">
+                    <div className="min-h-screen bg-gray-50 relative">
                         <header className="bg-white shadow-sm border-b">
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
@@ -862,7 +1117,7 @@
                                                 <ul className="text-sm text-yellow-100 mt-2 space-y-1">
                                                     <li>• Unlimited live alerts & bot signals</li>
                                                     <li>• Real-time market data & PnL tracking</li>
-                                                    <li>• Premium trading strategies</li>
+                                                    <li>• Full chat participation & history</li>
                                                     <li>• Priority customer support</li>
                                                 </ul>
                                             </div>
@@ -1141,6 +1396,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        {/* Chat Panel */}
+                        <ChatPanel />
                     </div>
                 );
             };
@@ -1155,7 +1413,6 @@
                             debugLog('✅ Token valid, user loaded:', userData.username);
                             setUser(userData);
                             
-                            // Check if user needs subscription selection
                             if (requiresSubscriptionSelection(userData)) {
                                 debugLog('🔒 Existing user requires subscription selection');
                                 setShowSubscriptionPicker(true);
