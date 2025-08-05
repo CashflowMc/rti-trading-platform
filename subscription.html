@@ -1,0 +1,247 @@
+<!-- 📁 FILE: rti-trading-platform/subscription.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTi Cashflowops - Subscription Plans</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="css/subscription.css">
+</head>
+<body class="bg-gray-50">
+    
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3">
+                    <div class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
+                        RTi Cashflowops
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="index.html" class="text-gray-600 hover:text-gray-900">← Back to Dashboard</a>
+                    <div id="userProfile" class="hidden">
+                        <span id="username" class="text-sm font-medium"></span>
+                        <span id="userTier" class="text-xs px-2 py-1 rounded bg-gray-100"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Success Message -->
+    <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mx-4 mt-4">
+        <span class="block sm:inline">🎉 Subscription activated! Welcome to full access!</span>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mx-4 mt-4">
+        <span id="errorText"></span>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg">
+            <div class="text-center">
+                <div class="text-4xl mb-4">🚀</div>
+                <p class="text-lg font-medium">Processing your subscription...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-12">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 mb-4">
+                🚀 GET FULL GROUP ACCESS
+            </h1>
+            <p class="text-xl text-gray-600">Join our premium trading group with custom charts, alerts & live news!</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- FREE Plan -->
+            <div class="relative bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">FREE</h3>
+                    <div class="text-4xl font-black text-gray-600 mb-2">$0</div>
+                    <p class="text-gray-500">Forever</p>
+                </div>
+                
+                <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        3 live alerts per day
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        Basic market overview
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        Community access (limited)
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-red-500">✗</span>
+                        No full group access
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-red-500">✗</span>
+                        No custom charts
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-red-500">✗</span>
+                        No live news feed
+                    </li>
+                </ul>
+                
+                <div class="bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-center font-medium">
+                    Current Plan
+                </div>
+            </div>
+
+            <!-- WEEKLY Plan -->
+            <div class="relative bg-white rounded-2xl shadow-lg border-2 border-blue-400 p-8">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span class="bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+                        POPULAR CHOICE 🔥
+                    </span>
+                </div>
+                
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-blue-600 mb-2">WEEKLY</h3>
+                    <div class="text-4xl font-black text-blue-600 mb-2">$6</div>
+                    <p class="text-gray-500">Per week</p>
+                </div>
+                
+                <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        🔥 Full group access
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        📊 Custom charts & analysis
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        🚨 Unlimited live alerts
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        📰 Live news feed
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        💰 Real-time market data
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        👥 Direct trader access
+                    </li>
+                </ul>
+                
+                <button 
+                    onclick="upgradeSubscription('price_1234567890_weekly')" 
+                    class="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-purple-600 transition-all"
+                >
+                    🚀 Get Weekly Access
+                </button>
+            </div>
+
+            <!-- MONTHLY Plan -->
+            <div class="relative bg-white rounded-2xl shadow-lg border-2 border-green-400 p-8">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-green-600 mb-2">MONTHLY</h3>
+                    <div class="text-4xl font-black text-green-600 mb-2">$20</div>
+                    <p class="text-gray-500">Per month</p>
+                    <p class="text-xs text-green-600 font-medium mt-1">Save $4/month!</p>
+                </div>
+                
+                <ul class="space-y-3 mb-8 text-sm text-gray-600">
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        🔥 Full group access
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        📊 Custom charts & analysis
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        🚨 Unlimited live alerts
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        📰 Live news feed
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        💰 Real-time market data
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        👥 Direct trader access
+                    </li>
+                </ul>
+                
+                <button 
+                    onclick="upgradeSubscription('price_1234567890_monthly')" 
+                    class="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-3 rounded-lg font-bold hover:from-green-600 hover:to-emerald-600 transition-all"
+                >
+                    🚀 Get Monthly Access
+                </button>
+            </div>
+        </div>
+        
+        <div class="text-center mt-12">
+            <div class="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 mb-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-3">🚀 Full Group Access Includes:</h3>
+                <div class="grid md:grid-cols-2 gap-4 text-left">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">📊</span>
+                            <div>
+                                <p class="font-semibold text-gray-900">Custom Charts</p>
+                                <p class="text-sm text-gray-600">Professional trading charts & analysis</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">🚨</span>
+                            <div>
+                                <p class="font-semibold text-gray-900">Live Alerts</p>
+                                <p class="text-sm text-gray-600">Real-time buy/sell signals</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">📰</span>
+                            <div>
+                                <p class="font-semibold text-gray-900">Live News</p>
+                                <p class="text-sm text-gray-600">Breaking market news & updates</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">👥</span>
+                            <div>
+                                <p class="font-semibold text-gray-900">Trader Community</p>
+                                <p class="text-sm text-gray-600">Direct access to professional traders</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p class="text-gray-500 text-sm">
+                7-day money-back guarantee • Cancel anytime • Same features on both plans
+            </p>
+            <p class="text-gray-600 font-medium mt-2">
+                🔒 Secure payments powered by Stripe
+            </p>
+        </div>
+    </main>
+
+    <script src="js/subscription.js"></script>
+</body>
+</html>
