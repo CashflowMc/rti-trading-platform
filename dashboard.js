@@ -1,8 +1,8 @@
 // 📁 FILE: rti-trading-platform/js/dashboard.js
-// Trading Dashboard JavaScript
+// Trading Dashboard JavaScript - PRODUCTION READY
 
-// Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+// Configuration - UPDATED FOR PRODUCTION
+const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
 
 // Global variables
 let currentUser = null;
