@@ -74,11 +74,21 @@
         
         .falling-money {
             position: absolute;
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: 900;
-            color: #22c55e;
-            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+            color: #16a34a;
+            background: linear-gradient(135deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
             animation: moneyFall 3s ease-in infinite;
+            font-family: 'Courier New', monospace;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+            background-color: rgba(22, 163, 74, 0.1);
+            backdrop-filter: blur(1px);
         }
         
         .falling-money:nth-child(1) { left: 10%; animation-delay: 0.5s; animation-duration: 2.5s; }
@@ -304,7 +314,7 @@
                         {/* Money Rain Effect */}
                         <div className="money-rain">
                             {[...Array(15)].map((_, i) => (
-                                <div key={i} className="falling-money">💵</div>
+                                <div key={i} className="falling-money">$</div>
                             ))}
                         </div>
 
