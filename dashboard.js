@@ -1,5 +1,5 @@
 // 📁 FILE: rti-trading-platform/js/dashboard.js
-// Trading Dashboard JavaScript - PRODUCTION READY
+// Trading Dashboard JavaScript - PRODUCTION READY WITH SUBSCRIPTION CHECK
 
 // Configuration - UPDATED FOR PRODUCTION
 const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
@@ -51,6 +51,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
+    // Check subscription status - redirect if no subscription on file
+    if (requiresSubscriptionSelection()) {
+        console.log('🔒 User needs to select subscription plan');
+        showSubscriptionRequiredMessage();
+        setTimeout(() => {
+            window.location.href = 'subscription.html';
+        }, 3000);
+        return;
+    }
+    
     // Update UI based on user tier
     updateUIForUserTier();
     
@@ -67,6 +77,92 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Set up real-time market updates
     setInterval(fetchMarketData, 30000);
 });
+
+// Check if user requires subscription selection
+function requiresSubscriptionSelection() {
+    if (!currentUser) return false;
+    
+    // Admins can always access
+    if (currentUser.isAdmin) return false;
+    
+    // Check if user is on FREE tier and has never had a subscription
+    const hasNeverSubscribed = !currentUser.subscriptionId && 
+                              !currentUser.subscriptionStatus && 
+                              currentUser.tier === 'FREE';
+    
+    return hasNeverSubscribed;
+}
+
+// Show subscription required message
+function showSubscriptionRequiredMessage() {
+    // Hide all dashboard content
+    document.getElementById('alertsContainer').innerHTML = '';
+    document.getElementById('activeUsers').innerHTML = '';
+    document.getElementById('marketData').innerHTML = '';
+    
+    // Show subscription required overlay
+    const subscriptionOverlay = createSubscriptionOverlay();
+    document.body.appendChild(subscriptionOverlay);
+}
+
+// Create subscription required overlay
+function createSubscriptionOverlay() {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    overlay.id = 'subscriptionOverlay';
+    
+    overlay.innerHTML = `
+        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center shadow-2xl">
+            <div class="text-6xl mb-4">🔒</div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">
+                Subscription Required
+            </h2>
+            <p class="text-gray-600 mb-6">
+                To access the trading dashboard and all its features, please select a subscription plan.
+            </p>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-blue-800">
+                    <strong>What you'll get:</strong><br>
+                    • Full group access<br>
+                    • Unlimited live alerts<br>
+                    • Real-time market data<br>
+                    • Direct trader access
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="redirectToSubscription()" class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                    Choose Plan
+                </button>
+                <button onclick="logout()" class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
+                    Logout
+                </button>
+            </div>
+            <p class="text-xs text-gray-500 mt-4">
+                Redirecting to subscription page in <span id="countdown">3</span> seconds...
+            </p>
+        </div>
+    `;
+    
+    // Start countdown
+    let countdown = 3;
+    const countdownElement = overlay.querySelector('#countdown');
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdownElement) {
+            countdownElement.textContent = countdown;
+        }
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
+    
+    return overlay;
+}
+
+// Redirect to subscription page
+function redirectToSubscription() {
+    window.location.href = 'subscription.html';
+}
 
 // Check for payment success
 function checkPaymentSuccess() {
@@ -93,10 +189,12 @@ async function loadUserProfile() {
         currentUser = response;
         
         // Update UI
-        userAvatar.src = currentUser.avatar;
-        username.textContent = currentUser.username;
-        userTier.textContent = currentUser.tier === 'FREE' ? 'FREE TIER' : currentUser.tier;
-        userTier.className = `text-xs ${getTierStyles(currentUser.tier)}`;
+        if (userAvatar) userAvatar.src = currentUser.avatar;
+        if (username) username.textContent = currentUser.username;
+        if (userTier) {
+            userTier.textContent = currentUser.tier === 'FREE' ? 'FREE TIER' : currentUser.tier;
+            userTier.className = `text-xs ${getTierStyles(currentUser.tier)}`;
+        }
         
         console.log('👤 User loaded:', currentUser);
         
@@ -128,17 +226,17 @@ function updateUIForUserTier() {
     
     // Show/hide upgrade banner
     if (currentUser.tier === 'FREE') {
-        upgradeBanner.classList.remove('hidden');
+        if (upgradeBanner) upgradeBanner.classList.remove('hidden');
     }
     
     // Show admin panel for admins
     if (currentUser.isAdmin) {
-        adminPanel.classList.remove('hidden');
+        if (adminPanel) adminPanel.classList.remove('hidden');
     }
     
     // Show limited badge for free users
     if (!isPaidUser && !currentUser.isAdmin) {
-        marketLimitedBadge.classList.remove('hidden');
+        if (marketLimitedBadge) marketLimitedBadge.classList.remove('hidden');
     }
 }
 
@@ -178,7 +276,7 @@ function initializeSocket() {
 // Fetch alerts
 async function fetchAlerts() {
     try {
-        loadingAlerts.style.display = 'block';
+        if (loadingAlerts) loadingAlerts.style.display = 'block';
         const alerts = await apiCall(`/alerts?type=${currentFilter}`);
         allAlerts = alerts;
         displayAlerts();
@@ -186,12 +284,14 @@ async function fetchAlerts() {
         console.error('Error fetching alerts:', error);
         showError('Failed to fetch alerts');
     } finally {
-        loadingAlerts.style.display = 'none';
+        if (loadingAlerts) loadingAlerts.style.display = 'none';
     }
 }
 
 // Display alerts
 function displayAlerts() {
+    if (!alertsContainer) return;
+    
     const isPaidUser = currentUser.tier === 'WEEKLY' || currentUser.tier === 'MONTHLY' || currentUser.isAdmin;
     
     if (allAlerts.length === 0) {
@@ -244,7 +344,7 @@ function displayAlerts() {
     `).join('');
     
     // Show paywall for free users if there are more alerts
-    if (!isPaidUser && allAlerts.length > 3) {
+    if (!isPaidUser && allAlerts.length > 3 && blurredAlerts && alertsPaywall) {
         // Create blurred preview
         const previewAlerts = allAlerts.slice(3, 6);
         blurredAlerts.innerHTML = previewAlerts.map(alert => `
@@ -262,7 +362,7 @@ function displayAlerts() {
         `).join('');
         
         alertsPaywall.classList.remove('hidden');
-    } else {
+    } else if (alertsPaywall) {
         alertsPaywall.classList.add('hidden');
     }
 }
@@ -330,6 +430,8 @@ async function fetchActiveUsers() {
 
 // Display active users
 function displayActiveUsers() {
+    if (!activeUsers || !userCount) return;
+    
     const isPaidUser = currentUser.tier === 'WEEKLY' || currentUser.tier === 'MONTHLY' || currentUser.isAdmin;
     const displayUsers = isPaidUser ? allUsers : allUsers.slice(0, 3);
     
@@ -356,10 +458,10 @@ function displayActiveUsers() {
     `).join('');
     
     // Show hidden user count for free users
-    if (!isPaidUser && allUsers.length > 3) {
+    if (!isPaidUser && allUsers.length > 3 && hiddenUserCount && usersPaywall) {
         hiddenUserCount.textContent = allUsers.length - 3;
         usersPaywall.classList.remove('hidden');
-    } else {
+    } else if (usersPaywall) {
         usersPaywall.classList.add('hidden');
     }
 }
@@ -379,61 +481,65 @@ async function fetchMarketData() {
     const isPaidUser = currentUser.tier === 'WEEKLY' || currentUser.tier === 'MONTHLY' || currentUser.isAdmin;
     
     if (!isPaidUser) {
-        marketData.classList.add('hidden');
-        marketPaywall.classList.remove('hidden');
+        if (marketData) marketData.classList.add('hidden');
+        if (marketPaywall) marketPaywall.classList.remove('hidden');
         return;
     }
     
     try {
         const data = await apiCall('/market/data');
         
-        marketData.innerHTML = Object.entries(data).map(([symbol, info]) => `
-            <div class="flex justify-between items-center">
-                <span class="font-medium text-gray-900">${symbol}</span>
-                <div class="text-right">
-                    <div class="font-bold text-gray-900">
-                        $${info.price.toFixed(2)}
-                    </div>
-                    <div class="text-xs ${info.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}">
-                        ${info.changePercent >= 0 ? '+' : ''}${info.changePercent.toFixed(2)}%
+        if (marketData) {
+            marketData.innerHTML = Object.entries(data).map(([symbol, info]) => `
+                <div class="flex justify-between items-center">
+                    <span class="font-medium text-gray-900">${symbol}</span>
+                    <div class="text-right">
+                        <div class="font-bold text-gray-900">
+                            $${info.price.toFixed(2)}
+                        </div>
+                        <div class="text-xs ${info.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}">
+                            ${info.changePercent >= 0 ? '+' : ''}${info.changePercent.toFixed(2)}%
+                        </div>
                     </div>
                 </div>
-            </div>
-        `).join('');
-        
-        marketData.classList.remove('hidden');
-        marketPaywall.classList.add('hidden');
+            `).join('');
+            
+            marketData.classList.remove('hidden');
+        }
+        if (marketPaywall) marketPaywall.classList.add('hidden');
         
     } catch (error) {
         console.error('Error fetching market data:', error);
         if (error.message.includes('Subscription required')) {
-            marketData.classList.add('hidden');
-            marketPaywall.classList.remove('hidden');
+            if (marketData) marketData.classList.add('hidden');
+            if (marketPaywall) marketPaywall.classList.remove('hidden');
         }
     }
 }
 
 // Admin functions
 function toggleAdminPanel() {
-    adminPanelSection.classList.toggle('hidden');
+    if (adminPanelSection) {
+        adminPanelSection.classList.toggle('hidden');
+    }
 }
 
 async function createAlert() {
     if (!currentUser.isAdmin) return;
     
     const createBtn = document.getElementById('createAlertText');
-    const originalText = createBtn.textContent;
+    const originalText = createBtn ? createBtn.textContent : '';
     
     try {
-        createBtn.textContent = 'Creating...';
+        if (createBtn) createBtn.textContent = 'Creating...';
         
         const alertData = {
-            title: document.getElementById('alertTitle').value,
-            message: document.getElementById('alertMessage').value,
-            type: document.getElementById('alertType').value,
-            priority: document.getElementById('alertPriority').value,
-            botName: document.getElementById('alertBotName').value || null,
-            pnl: document.getElementById('alertPnl').value || null
+            title: document.getElementById('alertTitle')?.value || '',
+            message: document.getElementById('alertMessage')?.value || '',
+            type: document.getElementById('alertType')?.value || 'NEWS',
+            priority: document.getElementById('alertPriority')?.value || 'MEDIUM',
+            botName: document.getElementById('alertBotName')?.value || null,
+            pnl: document.getElementById('alertPnl')?.value || null
         };
         
         if (!alertData.title || !alertData.message) {
@@ -447,10 +553,11 @@ async function createAlert() {
         });
         
         // Clear form
-        document.getElementById('alertTitle').value = '';
-        document.getElementById('alertMessage').value = '';
-        document.getElementById('alertBotName').value = '';
-        document.getElementById('alertPnl').value = '';
+        const fields = ['alertTitle', 'alertMessage', 'alertBotName', 'alertPnl'];
+        fields.forEach(field => {
+            const element = document.getElementById(field);
+            if (element) element.value = '';
+        });
         
         showSuccess('Alert created successfully!');
         
@@ -458,7 +565,7 @@ async function createAlert() {
         console.error('Error creating alert:', error);
         showError('Failed to create alert');
     } finally {
-        createBtn.textContent = originalText;
+        if (createBtn) createBtn.textContent = originalText;
     }
 }
 
@@ -496,23 +603,29 @@ async function apiCall(endpoint, options = {}) {
 }
 
 function showSuccess(message) {
-    successText.textContent = message;
-    successMessage.classList.remove('hidden');
-    setTimeout(() => {
-        successMessage.classList.add('hidden');
-    }, 5000);
+    if (successText && successMessage) {
+        successText.textContent = message;
+        successMessage.classList.remove('hidden');
+        setTimeout(() => {
+            successMessage.classList.add('hidden');
+        }, 5000);
+    }
 }
 
 function showError(message) {
-    errorText.textContent = message;
-    errorMessage.classList.remove('hidden');
-    setTimeout(() => {
-        errorMessage.classList.add('hidden');
-    }, 5000);
+    if (errorText && errorMessage) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+        setTimeout(() => {
+            errorMessage.classList.add('hidden');
+        }, 5000);
+    }
 }
 
 function hideError() {
-    errorMessage.classList.add('hidden');
+    if (errorMessage) {
+        errorMessage.classList.add('hidden');
+    }
 }
 
 function logout() {
@@ -530,5 +643,6 @@ window.createAlert = createAlert;
 window.deleteAlert = deleteAlert;
 window.hideError = hideError;
 window.logout = logout;
+window.redirectToSubscription = redirectToSubscription;
 
 console.log('📦 Dashboard.js loaded successfully');
