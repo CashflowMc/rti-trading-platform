@@ -11,100 +11,55 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes dollarAcrossToMoon {
-            0% {
-                transform: translateX(0px) translateY(0px) scale(1) rotate(0deg);
-                opacity: 1;
-            }
-            25% {
-                transform: translateX(25vw) translateY(-30px) scale(1.1) rotate(15deg);
-                opacity: 1;
-            }
-            50% {
-                transform: translateX(50vw) translateY(-80px) scale(1.2) rotate(30deg);
-                opacity: 1;
-            }
-            75% {
-                transform: translateX(75vw) translateY(-140px) scale(1.1) rotate(45deg);
-                opacity: 1;
-            }
-            100% {
-                transform: translateX(calc(50vw - 50px)) translateY(-200px) scale(0.8) rotate(60deg);
-                opacity: 0.9;
-            }
+            0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 1; }
+            25% { transform: translateX(25vw) translateY(-30px) scale(1.1) rotate(15deg); opacity: 1; }
+            50% { transform: translateX(50vw) translateY(-80px) scale(1.2) rotate(30deg); opacity: 1; }
+            75% { transform: translateX(75vw) translateY(-140px) scale(1.1) rotate(45deg); opacity: 1; }
+            100% { transform: translateX(calc(50vw - 50px)) translateY(-200px) scale(0.8) rotate(60deg); opacity: 0.9; }
         }
         
         @keyframes messageAppear {
-            0%, 85% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            90% {
-                opacity: 1;
-                transform: translateY(0px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0px);
-            }
+            0%, 85% { opacity: 0; transform: translateY(20px); }
+            90% { opacity: 1; transform: translateY(0px); }
+            100% { opacity: 1; transform: translateY(0px); }
         }
         
         @keyframes moneyFall {
-            0% {
-                transform: translateY(-80px) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(calc(100vh + 80px)) rotate(180deg);
-                opacity: 0.8;
-            }
+            0% { transform: translateY(-80px) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(calc(100vh + 80px)) rotate(180deg); opacity: 0.8; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
         .money-rain {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            pointer-events: none;
-            overflow: hidden;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden;
         }
         
         .falling-money {
-            position: absolute;
-            width: 40px;
-            height: 17px;
+            position: absolute; width: 40px; height: 17px;
             background: linear-gradient(135deg, #2d5016 0%, #3d6b1c 25%, #4a7c22 50%, #5a8c28 75%, #6ba02e 100%);
-            border: 1px solid #1a3d0a;
-            border-radius: 2px;
+            border: 1px solid #1a3d0a; border-radius: 2px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
-            animation: moneyFall 4s ease-in infinite;
-            position: relative;
+            animation: moneyFall 4s ease-in infinite; position: relative;
         }
         
         .falling-money::before {
-            content: '$1';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #1a3d0a;
-            font-size: 10px;
-            font-weight: bold;
-            font-family: serif;
+            content: '$1'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #1a3d0a; font-size: 10px; font-weight: bold; font-family: serif;
         }
         
         .falling-money::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            right: 2px;
-            bottom: 2px;
-            border: 1px solid rgba(26, 61, 10, 0.3);
-            border-radius: 1px;
+            content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px;
+            border: 1px solid rgba(26, 61, 10, 0.3); border-radius: 1px;
+        }
+        
+        .plan-glow {
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
         }
     </style>
 </head>
@@ -120,7 +75,6 @@
         // Socket.io connection
         let socket = null;
 
-        // Debug helper
         const debugLog = (message, data = null) => {
             console.log(`🐛 [RTi DEBUG] ${message}`);
             if (data) console.log('📊 Data:', data);
@@ -129,6 +83,7 @@
         const TradingGroupDashboard = () => {
             const [user, setUser] = useState(null);
             const [showLanding, setShowLanding] = useState(true);
+            const [showSubscriptionPicker, setShowSubscriptionPicker] = useState(false);
             const [alerts, setAlerts] = useState([]);
             const [members, setMembers] = useState([]);
             const [marketData, setMarketData] = useState({});
@@ -140,7 +95,7 @@
 
             // Initialize socket connection
             useEffect(() => {
-                if (user && !socket) {
+                if (user && !socket && !showSubscriptionPicker) {
                     socket = io(API_BASE_URL.replace('/api', ''));
                     
                     socket.on('connect', () => {
@@ -170,9 +125,9 @@
                         socket = null;
                     }
                 };
-            }, [user]);
+            }, [user, showSubscriptionPicker]);
 
-            // Enhanced API Functions with better error handling
+            // Enhanced API Functions
             const apiCall = async (endpoint, options = {}) => {
                 const token = localStorage.getItem('token');
                 const headers = {
@@ -205,35 +160,25 @@
                 }
             };
 
-            // Test functions for debugging
-            const testBackend = async () => {
-                try {
-                    debugLog('Testing backend connection...');
-                    const response = await fetch(`${API_BASE_URL}/test`);
-                    const data = await response.json();
-                    debugLog('✅ Backend test successful', data);
-                    setError('Backend connection successful!');
-                    setTimeout(() => setError(''), 3000);
-                    return true;
-                } catch (error) {
-                    debugLog('❌ Backend test failed', error.message);
-                    setError('Backend connection failed: ' + error.message);
-                    return false;
-                }
+            // Check if user requires subscription selection
+            const requiresSubscriptionSelection = (user) => {
+                if (!user) return false;
+                if (user.isAdmin) return false;
+                
+                // Check if user is on FREE tier and has never had a subscription
+                const hasNeverSubscribed = !user.subscriptionId && 
+                                          !user.subscriptionStatus && 
+                                          user.tier === 'FREE';
+                
+                debugLog('Subscription check:', {
+                    tier: user.tier,
+                    hasSubscriptionId: !!user.subscriptionId,
+                    hasSubscriptionStatus: !!user.subscriptionStatus,
+                    requiresSelection: hasNeverSubscribed
+                });
+                
+                return hasNeverSubscribed;
             };
-
-            // Make test functions globally available
-            useEffect(() => {
-                window.testBackend = testBackend;
-                window.fillTestUser = () => {
-                    debugLog('Filling test user credentials');
-                    // This will be handled in the LandingPage component
-                };
-                window.fillAdmin = () => {
-                    debugLog('Filling admin credentials');
-                    // This will be handled in the LandingPage component
-                };
-            }, []);
 
             const fetchAlerts = async () => {
                 try {
@@ -260,11 +205,11 @@
             };
 
             useEffect(() => {
-                if (user) {
+                if (user && !showSubscriptionPicker) {
                     fetchAlerts();
                     fetchActiveUsers();
                 }
-            }, [user, filterType]);
+            }, [user, filterType, showSubscriptionPicker]);
 
             const formatTimeAgo = (timestamp) => {
                 const diff = Date.now() - new Date(timestamp).getTime();
@@ -302,25 +247,11 @@
                 }
             };
 
-            // Check if user requires subscription selection
-            const requiresSubscriptionSelection = (user) => {
-                if (!user) return false;
-                if (user.isAdmin) return false;
-                
-                // Check if user is on FREE tier and has never had a subscription
-                const hasNeverSubscribed = !user.subscriptionId && 
-                                          !user.subscriptionStatus && 
-                                          user.tier === 'FREE';
-                
-                return hasNeverSubscribed;
-            };
-
             const LandingPage = () => {
                 const [loginData, setLoginData] = useState({ username: '', password: '' });
                 const [isRegistering, setIsRegistering] = useState(false);
                 const [registerData, setRegisterData] = useState({ username: '', email: '', password: '' });
 
-                // Auto-fill functions for testing
                 const fillTestCredentials = (username = 'testuser', password = 'test123') => {
                     debugLog('Filling test credentials:', { username });
                     if (isRegistering) {
@@ -336,7 +267,6 @@
                     fillTestCredentials('admin', 'admin123');
                 };
 
-                // Make functions available globally
                 useEffect(() => {
                     window.fillTestUser = () => fillTestCredentials();
                     window.fillAdmin = fillAdminCredentials;
@@ -372,12 +302,8 @@
                         // Check if user needs subscription selection
                         if (requiresSubscriptionSelection(response.user)) {
                             debugLog('🔒 User requires subscription selection');
-                            setError('🔒 Subscription required! Redirecting to plans...');
-                            setTimeout(() => {
-                                // You can redirect to subscription page here
-                                // window.location.href = 'subscription.html';
-                                setError('⚠️ This user needs to select a subscription plan');
-                            }, 2000);
+                            setShowSubscriptionPicker(true);
+                            setShowLanding(false);
                             return;
                         }
 
@@ -416,6 +342,9 @@
 
                         localStorage.setItem('token', response.token);
                         setUser(response.user);
+                        
+                        // New registrations always need subscription selection
+                        setShowSubscriptionPicker(true);
                         setShowLanding(false);
                     } catch (err) {
                         debugLog('❌ Registration failed', err.message);
@@ -430,7 +359,6 @@
                         {/* Money Rain Effect */}
                         <div className="money-rain">
                             {[...Array(20)].map((_, i) => {
-                                // Use index to create pseudo-random but stable values
                                 const randomLeft = ((i * 17) % 100);
                                 const randomDelay = ((i * 7) % 40) / 10;
                                 const randomDuration = 3 + ((i * 3) % 20) / 10;
@@ -443,8 +371,7 @@
                                             animationDelay: `${randomDelay}s`,
                                             animationDuration: `${randomDuration}s`
                                         }}
-                                    >
-                                    </div>
+                                    />
                                 );
                             })}
                         </div>
@@ -456,14 +383,12 @@
                         </div>
 
                         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 pt-32">
-                            {/* Moon moved down */}
                             <div className="relative mb-6">
                                 <div className="flex justify-center">
                                     <div className="text-8xl">🌕</div>
                                 </div>
                             </div>
 
-                            {/* RTi CASHFLOWOPS moved closer to moon */}
                             <div className="text-center mb-8">
                                 <h1 
                                     className="text-6xl md:text-8xl font-black text-white mb-4 tracking-wider"
@@ -487,7 +412,6 @@
                                 </p>
                             </div>
 
-                            {/* Dollar Sign Rocket shooting across screen to land on moon */}
                             <div className="relative w-full h-24 mb-6">
                                 <div 
                                     className="absolute bottom-0 left-0"
@@ -505,7 +429,6 @@
                                         $
                                     </div>
                                     
-                                    {/* Rocket flames */}
                                     <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
                                         <div 
                                             className="w-6 h-8 bg-gradient-to-t from-red-500 via-orange-400 to-yellow-300 opacity-90"
@@ -535,7 +458,6 @@
                                 </div>
                             </div>
 
-                            {/* Success message moved down */}
                             <div className="text-center mb-6">
                                 <p 
                                     className="text-2xl font-black text-yellow-400 opacity-0"
@@ -548,7 +470,6 @@
                                 </p>
                             </div>
 
-                            {/* Login/Register Form */}
                             <div className="bg-black/80 backdrop-blur-lg border border-green-500/30 rounded-2xl shadow-2xl p-8 w-full max-w-md">
                                 {error && (
                                     <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
@@ -652,16 +573,194 @@
                                                     Test User: <span className="text-white">testuser</span> / <span className="text-white">test123</span>
                                                 </button>
                                             </div>
-                                            <div className="pt-2">
-                                                <button 
-                                                    onClick={testBackend}
-                                                    className="text-xs text-blue-400 hover:text-blue-300 underline"
-                                                >
-                                                    Test Backend Connection
-                                                </button>
-                                            </div>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // NEW: Subscription Selection Page
+            const SubscriptionPicker = () => {
+                const [selectedPlan, setSelectedPlan] = useState('');
+                const [isProcessing, setIsProcessing] = useState(false);
+
+                const plans = [
+                    {
+                        id: 'weekly',
+                        name: 'Weekly Access',
+                        price: 6,
+                        interval: 'week',
+                        popular: false,
+                        features: [
+                            'Full group access',
+                            'Custom charts & analysis', 
+                            'Unlimited live alerts',
+                            'Live news feed',
+                            'Real-time market data',
+                            'Direct trader access'
+                        ]
+                    },
+                    {
+                        id: 'monthly',
+                        name: 'Monthly Access',
+                        price: 20,
+                        interval: 'month',
+                        popular: true,
+                        features: [
+                            'Full group access',
+                            'Custom charts & analysis',
+                            'Unlimited live alerts', 
+                            'Live news feed',
+                            'Real-time market data',
+                            'Direct trader access',
+                            '🔥 Save $4/month vs weekly'
+                        ]
+                    }
+                ];
+
+                const handlePlanSelection = async (planId) => {
+                    setIsProcessing(true);
+                    debugLog('Plan selected:', planId);
+                    
+                    try {
+                        // Here you would integrate with Stripe
+                        // For now, we'll simulate the selection
+                        debugLog('Processing payment for plan:', planId);
+                        
+                        // Redirect to your Stripe payment link or create checkout session
+                        if (planId === 'weekly') {
+                            window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
+                        } else {
+                            window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
+                        }
+                        
+                        // Show message
+                        setError('🚀 Redirecting to secure payment... Complete payment to access dashboard!');
+                        
+                    } catch (error) {
+                        debugLog('Payment error:', error.message);
+                        setError('Payment failed. Please try again.');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                };
+
+                const handleSkipForNow = () => {
+                    debugLog('User chose to skip subscription selection');
+                    setShowSubscriptionPicker(false);
+                    // Let them into dashboard with limited access
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden relative">
+                        {/* Money Rain Effect */}
+                        <div className="money-rain">
+                            {[...Array(15)].map((_, i) => {
+                                const randomLeft = ((i * 23) % 100);
+                                const randomDelay = ((i * 11) % 50) / 10;
+                                const randomDuration = 4 + ((i * 5) % 15) / 10;
+                                return (
+                                    <div 
+                                        key={i} 
+                                        className="falling-money"
+                                        style={{
+                                            left: `${randomLeft}%`,
+                                            animationDelay: `${randomDelay}s`,
+                                            animationDuration: `${randomDuration}s`
+                                        }}
+                                    />
+                                );
+                            })}
+                        </div>
+
+                        <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
+                            <div className="w-full max-w-6xl">
+                                {/* Header */}
+                                <div className="text-center mb-12">
+                                    <div className="text-6xl mb-6">🚀🌕</div>
+                                    <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-wider"
+                                        style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
+                                        CHOOSE YOUR MISSION
+                                    </h1>
+                                    <p className="text-xl text-gray-300 mb-2">
+                                        Welcome to RTi Cashflowops, <span className="text-green-400 font-bold">{user?.username}</span>!
+                                    </p>
+                                    <p className="text-gray-400">
+                                        Select a plan to unlock the full trading experience and join our exclusive community.
+                                    </p>
+                                </div>
+
+                                {error && (
+                                    <div className="max-w-2xl mx-auto mb-8 bg-red-500/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg text-center">
+                                        {error}
+                                    </div>
+                                )}
+
+                                {/* Plans */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+                                    {plans.map((plan) => (
+                                        <div key={plan.id} className={`relative bg-black/80 backdrop-blur-lg border rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${
+                                            plan.popular 
+                                                ? 'border-green-500 plan-glow' 
+                                                : 'border-gray-500 hover:border-green-400'
+                                        }`}>
+                                            {plan.popular && (
+                                                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                                                    <span className="bg-green-500 text-black px-4 py-2 rounded-full text-sm font-black uppercase">
+                                                        🔥 Most Popular
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="text-center mb-6">
+                                                <h3 className="text-2xl font-black text-white mb-2">{plan.name}</h3>
+                                                <div className="text-4xl font-black text-green-400 mb-2">
+                                                    ${plan.price}
+                                                    <span className="text-lg text-gray-400">/{plan.interval}</span>
+                                                </div>
+                                                <p className="text-gray-400">
+                                                    {plan.interval === 'week' ? 'Weekly billing' : 'Monthly billing - Best value!'}
+                                                </p>
+                                            </div>
+
+                                            <ul className="space-y-3 mb-8">
+                                                {plan.features.map((feature, idx) => (
+                                                    <li key={idx} className="flex items-center text-gray-300">
+                                                        <span className="text-green-400 mr-3">✅</span>
+                                                        {feature}
+                                                    </li>
+                                                ))}
+                                            </ul>
+
+                                            <button
+                                                onClick={() => handlePlanSelection(plan.id)}
+                                                disabled={isProcessing}
+                                                className={`w-full py-4 px-6 rounded-lg font-black text-lg transition-all duration-300 ${
+                                                    plan.popular
+                                                        ? 'bg-gradient-to-r from-green-500 via-yellow-500 to-orange-500 text-black hover:from-green-600 hover:via-yellow-600 hover:to-orange-600 transform hover:scale-105'
+                                                        : 'bg-gray-700 text-white hover:bg-gray-600'
+                                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            >
+                                                {isProcessing ? '🚀 Processing...' : `🚀 SELECT ${plan.name.toUpperCase()}`}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Skip Option */}
+                                <div className="text-center">
+                                    <button
+                                        onClick={handleSkipForNow}
+                                        className="text-gray-400 hover:text-white transition-colors text-sm underline"
+                                    >
+                                        Continue with limited free access for now
+                                    </button>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        (You can upgrade anytime from the dashboard)
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -768,7 +867,10 @@
                                                 </ul>
                                             </div>
                                         </div>
-                                        <button className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg">
+                                        <button 
+                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
+                                        >
                                             💎 UPGRADE NOW
                                         </button>
                                     </div>
@@ -921,7 +1023,6 @@
                                                 {/* Paywall for free users */}
                                                 {!isPaidUser && filteredAlerts.length > 3 && (
                                                     <div className="relative">
-                                                        {/* Blurred content preview */}
                                                         <div className="filter blur-sm pointer-events-none">
                                                             {filteredAlerts.slice(3, 6).map(alert => (
                                                                 <div key={`preview-${alert._id}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
@@ -938,13 +1039,15 @@
                                                             ))}
                                                         </div>
                                                         
-                                                        {/* Paywall overlay */}
                                                         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/50 flex items-center justify-center">
                                                             <div className="text-center bg-white p-8 rounded-lg shadow-xl border border-orange-200">
                                                                 <div className="text-4xl mb-4">🔒</div>
                                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
                                                                 <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
-                                                                <button className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all">
+                                                                <button 
+                                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
+                                                                >
                                                                     🚀 UPGRADE NOW
                                                                 </button>
                                                             </div>
@@ -989,13 +1092,14 @@
                                             {!isPaidUser && members.length > 3 && (
                                                 <div className="text-center py-3 text-sm text-gray-500 border-t">
                                                     <p>+{members.length - 3} more members</p>
-                                                    <p className="text-xs text-orange-600 font-medium">Upgrade to see all</p>
+                                                    <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
+                                                        Upgrade to see all
+                                                    </p>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Market Data Widget */}
                                     <div className="bg-white rounded-lg shadow-sm p-6 relative">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                             📈 Live Markets
@@ -1025,7 +1129,10 @@
                                                 <div className="text-4xl mb-3">🔒</div>
                                                 <p className="text-gray-600 mb-3">Real-time market data</p>
                                                 <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
-                                                <button className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600">
+                                                <button 
+                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
+                                                >
                                                     Unlock Premium
                                                 </button>
                                             </div>
@@ -1047,7 +1154,15 @@
                         .then(userData => {
                             debugLog('✅ Token valid, user loaded:', userData.username);
                             setUser(userData);
-                            setShowLanding(false);
+                            
+                            // Check if user needs subscription selection
+                            if (requiresSubscriptionSelection(userData)) {
+                                debugLog('🔒 Existing user requires subscription selection');
+                                setShowSubscriptionPicker(true);
+                                setShowLanding(false);
+                            } else {
+                                setShowLanding(false);
+                            }
                         })
                         .catch((error) => {
                             debugLog('❌ Token invalid, removing:', error.message);
@@ -1057,10 +1172,14 @@
             }, []);
 
             debugLog('🚀 RTi Cashflowops Dashboard Loaded');
-            debugLog('Available test functions: testBackend(), fillTestUser(), fillAdmin()');
 
+            // Render logic
             if (showLanding) {
                 return React.createElement(LandingPage);
+            }
+
+            if (showSubscriptionPicker) {
+                return React.createElement(SubscriptionPicker);
             }
 
             return React.createElement(Dashboard);
