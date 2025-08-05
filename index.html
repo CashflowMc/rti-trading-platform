@@ -112,6 +112,170 @@
             if (data) console.log('📊 Data:', data);
         };
 
+        // FIXED: Chat Panel Component moved OUTSIDE to prevent recreation on every render
+        const ChatPanel = React.memo(({
+            user,
+            chatExpanded,
+            setChatExpanded,
+            unreadMessages,
+            setUnreadMessages,
+            chatMessages,
+            chatMessagesRef,
+            newMessage,
+            setNewMessage,
+            sendChatMessage,
+            handleChatKeyPress,
+            setShowSubscriptionPicker
+        }) => {
+            const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
+            const maxMessages = isPaidUser ? 100 : 10;
+
+            const formatChatTime = (timestamp) => {
+                return new Date(timestamp).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+            };
+
+            const getTierColor = (tier) => {
+                switch (tier) {
+                    case 'ADMIN': return 'text-red-600 bg-red-100';
+                    case 'MONTHLY': return 'text-green-600 bg-green-100';
+                    case 'WEEKLY': return 'text-blue-600 bg-blue-100';
+                    default: return 'text-gray-600 bg-gray-100';
+                }
+            };
+
+            return (
+                <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
+                    chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
+                }`}>
+                    {/* Chat Header */}
+                    <div 
+                        className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
+                        onClick={() => setChatExpanded(!chatExpanded)}
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">💬</span>
+                            <span className="font-bold">Trading Chat</span>
+                            <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {unreadMessages > 0 && (
+                                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                    {unreadMessages}
+                                </span>
+                            )}
+                            <span className="text-sm">
+                                {chatExpanded ? '▼' : '▲'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Chat Content */}
+                    {chatExpanded && (
+                        <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
+                            {/* Messages Area */}
+                            <div 
+                                ref={chatMessagesRef}
+                                className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
+                            >
+                                {chatMessages.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-8">
+                                        <span className="text-4xl mb-2 block">🚀</span>
+                                        <p className="text-sm">Welcome to RTi Trading Chat!</p>
+                                        <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
+                                    </div>
+                                ) : (
+                                    chatMessages.slice(-maxMessages).map((message) => (
+                                        <div key={message.id} className="chat-message-enter">
+                                            {message.type === 'system' ? (
+                                                <div className="text-center">
+                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                        {message.message}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-start gap-2">
+                                                    <img 
+                                                        src={message.user.avatar} 
+                                                        alt="" 
+                                                        className="w-8 h-8 rounded-full flex-shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="font-medium text-sm text-gray-900 truncate">
+                                                                {message.user.username}
+                                                            </span>
+                                                            <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
+                                                                {message.user.tier}
+                                                            </span>
+                                                            <span className="text-xs text-gray-400">
+                                                                {formatChatTime(message.timestamp)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-700 break-words">
+                                                            {message.message}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                                
+                                {!isPaidUser && chatMessages.length > maxMessages && (
+                                    <div className="text-center py-2 border-t">
+                                        <p className="text-xs text-gray-500">
+                                            Showing last {maxMessages} messages
+                                        </p>
+                                        <button 
+                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            Upgrade to see full chat history
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Chat Input - FIXED */}
+                            <div className="border-t p-3">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyPress={handleChatKeyPress}
+                                        placeholder={isPaidUser ? "Type your message..." : "Upgrade for unlimited messages..."}
+                                        className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        disabled={!isPaidUser}
+                                    />
+                                    <button
+                                        onClick={sendChatMessage}
+                                        disabled={!newMessage.trim() || !isPaidUser}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        🚀
+                                    </button>
+                                </div>
+                                {!isPaidUser && (
+                                    <p className="text-xs text-gray-500 mt-1 text-center">
+                                        <button 
+                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            className="text-blue-600 hover:text-blue-800 underline"
+                                        >
+                                            Upgrade to participate in chat
+                                        </button>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        });
+
         const TradingGroupDashboard = () => {
             const [user, setUser] = useState(null);
             const [showLanding, setShowLanding] = useState(true);
@@ -267,7 +431,7 @@
                 return hasNeverSubscribed;
             };
 
-            // Chat functions - FIXED: Using useCallback to prevent recreation
+            // FIXED: Chat functions using useCallback to prevent recreation
             const sendChatMessage = useCallback(() => {
                 if (!newMessage.trim() || !socket) return;
 
@@ -294,22 +458,6 @@
                     sendChatMessage();
                 }
             }, [sendChatMessage]);
-
-            const formatChatTime = (timestamp) => {
-                return new Date(timestamp).toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            };
-
-            const getTierColor = (tier) => {
-                switch (tier) {
-                    case 'ADMIN': return 'text-red-600 bg-red-100';
-                    case 'MONTHLY': return 'text-green-600 bg-green-100';
-                    case 'WEEKLY': return 'text-blue-600 bg-blue-100';
-                    default: return 'text-gray-600 bg-gray-100';
-                }
-            };
 
             const fetchAlerts = async () => {
                 try {
@@ -711,7 +859,7 @@
                 );
             };
 
-            // Subscription Selection Page (keeping existing implementation)
+            // Subscription Selection Page
             const SubscriptionPicker = () => {
                 const [selectedPlan, setSelectedPlan] = useState('');
                 const [isProcessing, setIsProcessing] = useState(false);
@@ -884,142 +1032,6 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                );
-            };
-
-            // Chat Panel Component - FIXED: Using stable reference with key prop
-            const ChatPanel = () => {
-                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
-                const maxMessages = isPaidUser ? 100 : 10; // Free users see fewer messages
-
-                return (
-                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
-                        chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
-                    }`}>
-                        {/* Chat Header */}
-                        <div 
-                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
-                            onClick={() => setChatExpanded(!chatExpanded)}
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">💬</span>
-                                <span className="font-bold">Trading Chat</span>
-                                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {unreadMessages > 0 && (
-                                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
-                                        {unreadMessages}
-                                    </span>
-                                )}
-                                <span className="text-sm">
-                                    {chatExpanded ? '▼' : '▲'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Chat Content */}
-                        {chatExpanded && (
-                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
-                                {/* Messages Area */}
-                                <div 
-                                    ref={chatMessagesRef}
-                                    className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
-                                >
-                                    {chatMessages.length === 0 ? (
-                                        <div className="text-center text-gray-500 py-8">
-                                            <span className="text-4xl mb-2 block">🚀</span>
-                                            <p className="text-sm">Welcome to RTi Trading Chat!</p>
-                                            <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
-                                        </div>
-                                    ) : (
-                                        chatMessages.slice(-maxMessages).map((message) => (
-                                            <div key={message.id} className="chat-message-enter">
-                                                {message.type === 'system' ? (
-                                                    <div className="text-center">
-                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                            {message.message}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-start gap-2">
-                                                        <img 
-                                                            src={message.user.avatar} 
-                                                            alt="" 
-                                                            className="w-8 h-8 rounded-full flex-shrink-0"
-                                                        />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-medium text-sm text-gray-900 truncate">
-                                                                    {message.user.username}
-                                                                </span>
-                                                                <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
-                                                                    {message.user.tier}
-                                                                </span>
-                                                                <span className="text-xs text-gray-400">
-                                                                    {formatChatTime(message.timestamp)}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm text-gray-700 break-words">
-                                                                {message.message}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    )}
-                                    
-                                    {!isPaidUser && chatMessages.length > maxMessages && (
-                                        <div className="text-center py-2 border-t">
-                                            <p className="text-xs text-gray-500">
-                                                Showing last {maxMessages} messages
-                                            </p>
-                                            <button 
-                                                onClick={() => setShowSubscriptionPicker(true)}
-                                                className="text-xs text-blue-600 hover:text-blue-800 underline"
-                                            >
-                                                Upgrade to see full chat history
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Chat Input - FIXED: Using stable key to prevent recreation */}
-                                <div className="border-t p-3">
-                                    <div className="flex gap-2">
-                                        <input
-                                            key="chat-input" 
-                                            type="text"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            onKeyPress={handleChatKeyPress}
-                                            placeholder={isPaidUser ? "Type your message..." : "Upgrade for unlimited messages..."}
-                                            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            disabled={!isPaidUser}
-                                        />
-                                        <button
-                                            onClick={sendChatMessage}
-                                            disabled={!newMessage.trim() || !isPaidUser}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            🚀
-                                        </button>
-                                    </div>
-                                    {!isPaidUser && (
-                                        <p className="text-xs text-gray-500 mt-1 text-center">
-                                            <button 
-                                                onClick={() => setShowSubscriptionPicker(true)}
-                                                className="text-blue-600 hover:text-blue-800 underline"
-                                            >
-                                                Upgrade to participate in chat
-                                            </button>
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 );
             };
@@ -1398,8 +1410,21 @@
                             </div>
                         </div>
 
-                        {/* Chat Panel */}
-                        <ChatPanel />
+                        {/* FIXED: Chat Panel with proper props */}
+                        <ChatPanel 
+                            user={user}
+                            chatExpanded={chatExpanded}
+                            setChatExpanded={setChatExpanded}
+                            unreadMessages={unreadMessages}
+                            setUnreadMessages={setUnreadMessages}
+                            chatMessages={chatMessages}
+                            chatMessagesRef={chatMessagesRef}
+                            newMessage={newMessage}
+                            setNewMessage={setNewMessage}
+                            sendChatMessage={sendChatMessage}
+                            handleChatKeyPress={handleChatKeyPress}
+                            setShowSubscriptionPicker={setShowSubscriptionPicker}
+                        />
                     </div>
                 );
             };
