@@ -1,0 +1,237 @@
+/* 📁 FILE: rti-trading-platform/css/subscription.css */
+/* Subscription Page Styling */
+
+/* Custom animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Page animations */
+.subscription-container {
+    animation: fadeIn 0.6s ease-out;
+}
+
+/* Plan cards */
+.plan-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plan-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.plan-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+}
+
+.plan-card:hover::before {
+    left: 100%;
+}
+
+/* Popular badge */
+.popular-badge {
+    animation: pulse 2s infinite;
+}
+
+/* Buttons */
+.upgrade-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.upgrade-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.upgrade-button:active {
+    transform: translateY(0);
+}
+
+/* Loading states */
+.loading {
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success/Error messages */
+.message {
+    animation: slideDown 0.3s ease-out;
+}
+
+/* Tier badges */
+.tier-badge {
+    transition: all 0.2s ease;
+}
+
+.tier-badge:hover {
+    transform: scale(1.1);
+}
+
+/* Feature list styling */
+.feature-list li {
+    transition: all 0.2s ease;
+}
+
+.feature-list li:hover {
+    background-color: rgba(34, 197, 94, 0.05);
+    border-radius: 4px;
+    padding-left: 8px;
+    margin-left: -8px;
+}
+
+/* Custom gradient text */
+.gradient-text {
+    background: linear-gradient(135deg, #22c55e, #eab308, #f97316);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .plan-card {
+        margin-bottom: 2rem;
+    }
+    
+    .plan-card:hover {
+        transform: none;
+    }
+    
+    .feature-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .plan-card {
+        background-color: #1f2937;
+        border-color: #374151;
+    }
+    
+    .plan-card:hover {
+        background-color: #111827;
+    }
+}
+
+/* Print styles */
+@media print {
+    .upgrade-button, .popular-badge {
+        display: none;
+    }
+    
+    .plan-card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ccc;
+    }
+}
+
+/* Accessibility improvements */
+.upgrade-button:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+.plan-card:focus-within {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Loading overlay */
+#loadingOverlay {
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+/* Feature icons */
+.feature-icon {
+    transition: transform 0.2s ease;
+}
+
+.feature-icon:hover {
+    transform: scale(1.2);
+}
+
+/* Plan comparison highlight */
+.plan-highlight {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+    border: 2px solid;
+    border-image: linear-gradient(135deg, #3b82f6, #9333ea) 1;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, 
+                transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
