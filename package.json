@@ -1,0 +1,18 @@
+{
+  "name": "rti-frontend-proxy",
+  "version": "1.0.0",
+  "description": "RTi Cashflowops Frontend with Node.js Proxy",
+  "main": "api_proxy.js",
+  "scripts": {
+    "start": "node api_proxy.js",
+    "dev": "node api_proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.6.7"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
