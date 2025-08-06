@@ -3,61 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTi Cashflowops - Trading Group Dashboard</title>
+    <title>RTi Design Studio - Complete Edition</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @keyframes rocketLaunch {
-            0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 1; }
-            25% { transform: translateX(25vw) translateY(-100px) scale(1.2) rotate(15deg); opacity: 1; }
-            50% { transform: translateX(50vw) translateY(-200px) scale(1.4) rotate(30deg); opacity: 1; }
-            75% { transform: translateX(75vw) translateY(-350px) scale(1.2) rotate(45deg); opacity: 0.8; }
-            100% { transform: translateX(calc(100vw - 100px)) translateY(-500px) scale(0.8) rotate(60deg); opacity: 0.3; }
-        }
-
-        @keyframes dollarAcrossToMoon {
-            0% { transform: translateX(0px) translateY(0px) scale(1) rotate(0deg); opacity: 1; }
-            25% { transform: translateX(25vw) translateY(-30px) scale(1.1) rotate(15deg); opacity: 1; }
-            50% { transform: translateX(50vw) translateY(-80px) scale(1.2) rotate(30deg); opacity: 1; }
-            75% { transform: translateX(75vw) translateY(-140px) scale(1.1) rotate(45deg); opacity: 1; }
-            100% { transform: translateX(calc(50vw - 50px)) translateY(-200px) scale(0.8) rotate(60deg); opacity: 0.9; }
+        .design-panel {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
         }
         
-        @keyframes messageAppear {
-            0%, 85% { opacity: 0; transform: translateY(20px); }
-            90% { opacity: 1; transform: translateY(0px); }
-            100% { opacity: 1; transform: translateY(0px); }
-        }
-        
-        @keyframes moneyFall {
-            0% { transform: translateY(-80px) rotate(0deg); opacity: 0; }
-            10% { opacity: 1; }
-            100% { transform: translateY(calc(100vh + 80px)) rotate(180deg); opacity: 0.8; }
+        .rocket-glow {
+            filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+            animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
-
+        
         @keyframes slideIn {
-            from { transform: translateY(10px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes slideInFromRight {
-            from { transform: translateX(20px); opacity: 0; }
+            from { transform: translateX(-100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-
-        .chat-message-enter {
-            animation: slideIn 0.3s ease-out;
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .user-item-enter {
-            animation: slideInFromRight 0.2s ease-out;
+        
+        .slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        .preview-frame {
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        
+        .preview-frame:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .tool-button {
+            transition: all 0.2s ease;
+        }
+        
+        .tool-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .code-editor {
+            background: #1a202c;
+            color: #68d391;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #22c55e, #eab308, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .component-library {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .component-library::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .component-library::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .component-library::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .deploy-button {
+            background: linear-gradient(135deg, #22c55e 0%, #eab308 50%, #f97316 100%);
+            background-size: 200% 200%;
+            animation: gradient-shift 3s ease infinite;
+        }
+        
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 300px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
         
         .money-rain {
@@ -77,173 +144,15 @@
             color: #1a3d0a; font-size: 10px; font-weight: bold; font-family: serif;
         }
         
-        .falling-money::after {
-            content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px;
-            border: 1px solid rgba(26, 61, 10, 0.3); border-radius: 1px;
+        @keyframes moneyFall {
+            0% { transform: translateY(-80px) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(calc(100vh + 80px)) rotate(180deg); opacity: 0.8; }
         }
         
         .plan-glow {
             animation: pulse 2s infinite;
             box-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
-        }
-
-        .chat-scrollbar {
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f7fafc;
-        }
-
-        .chat-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .chat-scrollbar::-webkit-scrollbar-track {
-            background: #f7fafc;
-            border-radius: 3px;
-        }
-
-        .chat-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e0;
-            border-radius: 3px;
-        }
-
-        .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #a0aec0;
-        }
-
-        .chat-tab-active {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            color: white;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-        }
-
-        .chat-tab-inactive {
-            background: #f3f4f6;
-            color: #6b7280;
-        }
-
-        .user-online-indicator {
-            animation: pulse 2s infinite;
-        }
-
-        .photo-upload-hover:hover {
-            transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .avatar-preview {
-            transition: all 0.3s ease;
-        }
-
-        .upload-progress {
-            background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
-            animation: slideRight 2s ease-in-out infinite;
-        }
-
-        @keyframes slideRight {
-            0% { transform: translateX(-100%); }
-            50% { transform: translateX(0%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Debug Panel Styles */
-        .debug-panel {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.9);
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 12px;
-            max-width: 300px;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .proxy-status {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-
-        .proxy-status.online {
-            background: #00ff00;
-            animation: pulse 2s infinite;
-        }
-
-        .proxy-status.offline {
-            background: #ff0000;
-        }
-
-        /* 🚀 ROCKET SHIP STYLES */
-        .rocket-ship {
-            font-size: 2rem;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            display: inline-block;
-            filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.6));
-        }
-
-        .rocket-ship:hover {
-            transform: scale(1.2) rotate(10deg);
-        }
-
-        .rocket-launching {
-            animation: rocketLaunch 3s ease-out forwards;
-        }
-
-        .rocket-flames {
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1rem;
-            animation: flicker 0.2s infinite alternate;
-        }
-
-        @keyframes flicker {
-            0% { opacity: 0.8; transform: translateX(-50%) scale(1); }
-            100% { opacity: 1; transform: translateX(-50%) scale(1.2); }
-        }
-
-        .moon {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 3rem;
-            animation: moonGlow 2s ease-in-out infinite alternate;
-        }
-
-        @keyframes moonGlow {
-            0% { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
-            100% { filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.9)); }
-        }
-
-        .launch-trail {
-            position: absolute;
-            width: 4px;
-            background: linear-gradient(to bottom, 
-                rgba(255, 255, 0, 1), 
-                rgba(255, 165, 0, 0.8), 
-                rgba(255, 69, 0, 0.6),
-                transparent);
-            border-radius: 2px;
-            opacity: 0;
-        }
-
-        .trail-active {
-            opacity: 1;
-            animation: trailFade 2s ease-out forwards;
-        }
-
-        @keyframes trailFade {
-            0% { height: 0; }
-            50% { height: 200px; }
-            100% { height: 400px; opacity: 0; }
         }
     </style>
 </head>
@@ -253,325 +162,155 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // 🛡️ BULLETPROOF Configuration - Node.js Proxy Only!
-        const PROXY_BASE_URL = '/api_proxy'; // Railway Node.js proxy
-        
-        // Global debug state
-        let debugLogs = [];
-        
-        const debugLog = (message, data = null) => {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] ${message}`;
-            console.log(`🐛 [RTi DEBUG] ${message}`);
-            if (data) console.log('📊 Data:', data);
-            
-            debugLogs.unshift({ timestamp, message, data });
-            if (debugLogs.length > 50) debugLogs.pop(); // Keep last 50 logs
-            
-            // Update debug panel
-            window.updateDebugPanel && window.updateDebugPanel();
+        // Notification Component
+        const Notification = ({ message, type = 'success', onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    onClose();
+                }, 3000);
+                
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgColor = type === 'success' ? 'bg-green-500' : 
+                           type === 'error' ? 'bg-red-500' : 
+                           'bg-blue-500';
+
+            return (
+                <div className={`notification ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg`}>
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{message}</span>
+                        <button onClick={onClose} className="ml-3 text-white hover:text-gray-200">
+                            <i className="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            );
         };
 
-        // 🛡️ Bulletproof Array Validator
-        const ensureArray = (data, fallback = []) => {
-            if (Array.isArray(data)) return data;
-            debugLog(`⚠️ Data is not array, got: ${typeof data}`, data);
-            return fallback;
-        };
-
-        // 🛡️ Bulletproof API Call Function - Node.js Proxy Only
+        // API Helper Functions
         const apiCall = async (endpoint, options = {}) => {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             
-            debugLog(`🔄 API Call via Node.js Proxy: ${endpoint}`, { options, hasToken: !!token });
-
             try {
-                // Build form data for Node.js proxy
-                const formData = new FormData();
-                formData.append('endpoint', endpoint);
-                formData.append('method', options.method || 'GET');
-                
-                if (options.body) {
-                    formData.append('data', options.body);
-                }
-                
-                if (token) {
-                    formData.append('token', token);
-                }
-
-                const response = await fetch(PROXY_BASE_URL, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                debugLog(`📡 Proxy Response: ${endpoint}`, { 
-                    status: response.status, 
-                    ok: response.ok 
+                const response = await fetch(endpoint, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        ...options.headers
+                    }
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Proxy error: ${response.status}`);
+                    const errorData = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorData}`);
                 }
 
-                const result = await response.json();
-                
-                if (result.error) {
-                    throw new Error(result.error);
-                }
-
-                debugLog(`✅ Proxy Success: ${endpoint}`, result);
-                return result;
-
+                return await response.json();
             } catch (error) {
-                debugLog(`❌ Proxy Error: ${endpoint}`, error.message);
+                console.error('API Call Error:', error);
                 throw error;
             }
         };
 
-        // 🚀 Rocket Ship Component
-        const RocketShip = ({ onLaunch, size = "2rem" }) => {
-            const [isLaunching, setIsLaunching] = useState(false);
-            const [showTrail, setShowTrail] = useState(false);
-            const rocketRef = useRef(null);
-
-            const launchRocket = () => {
-                if (isLaunching) return;
-                
-                setIsLaunching(true);
-                setShowTrail(true);
-                
-                // Add flame effects
-                if (rocketRef.current) {
-                    const flames = document.createElement('div');
-                    flames.className = 'rocket-flames';
-                    flames.innerHTML = '🔥💨';
-                    rocketRef.current.appendChild(flames);
-                    
-                    // Remove flames after animation
-                    setTimeout(() => {
-                        flames.remove();
-                    }, 3000);
-                }
-                
-                // Call parent launch handler
-                onLaunch && onLaunch();
-                
-                // Reset after animation
-                setTimeout(() => {
-                    setIsLaunching(false);
-                    setShowTrail(false);
-                }, 3000);
-            };
-
-            return (
-                <div className="relative inline-block">
-                    <div 
-                        ref={rocketRef}
-                        className={`rocket-ship ${isLaunching ? 'rocket-launching' : ''}`}
-                        onClick={launchRocket}
-                        title="🚀 Click to launch to the moon!"
-                        style={{ fontSize: size }}
-                    >
-                        🚀
-                    </div>
-                    {showTrail && (
-                        <div 
-                            className="launch-trail trail-active"
-                            style={{
-                                bottom: '-50px',
-                                left: '50%',
-                                transform: 'translateX(-50%)'
-                            }}
-                        />
-                    )}
-                </div>
-            );
-        };
-
-        // 🛡️ Debug Panel Component
-        const DebugPanel = ({ isVisible, onToggle }) => {
-            if (!isVisible) {
-                return (
-                    <div className="fixed top-4 right-4 z-50">
-                        <button
-                            onClick={onToggle}
-                            className="bg-black text-green-400 px-3 py-1 rounded text-xs font-mono"
-                        >
-                            🐛 Debug
-                        </button>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="debug-panel">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-yellow-400 font-bold">🛡️ RTi Debug Panel</span>
-                        <button onClick={onToggle} className="text-red-400">✕</button>
-                    </div>
-                    
-                    <div className="mb-2">
-                        <span className="proxy-status online"></span>
-                        <span className="text-green-400">Node.js Proxy Active</span>
-                    </div>
-                    
-                    <div className="text-xs space-y-1 max-h-32 overflow-y-auto">
-                        {debugLogs.slice(0, 10).map((log, idx) => (
-                            <div key={idx} className="text-gray-300">
-                                <span className="text-blue-400">[{log.timestamp}]</span> {log.message}
-                            </div>
-                        ))}
-                    </div>
-                    
-                    <div className="mt-2 text-xs">
-                        <button 
-                            onClick={() => window.testProxyConnection && window.testProxyConnection()}
-                            className="bg-blue-600 text-white px-2 py-1 rounded mr-1"
-                        >
-                            Test Proxy
-                        </button>
-                        <button 
-                            onClick={() => debugLogs = []}
-                            className="bg-red-600 text-white px-2 py-1 rounded"
-                        >
-                            Clear
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        const TradingGroupDashboard = () => {
+        // Main RTi Design Studio Component
+        const RTiDesignStudio = () => {
+            const [activeTab, setActiveTab] = useState('design');
+            const [selectedComponent, setSelectedComponent] = useState(null);
+            const [previewMode, setPreviewMode] = useState('desktop');
+            const [isLoading, setIsLoading] = useState(false);
+            const [savedChanges, setSavedChanges] = useState(true);
+            const [currentProject, setCurrentProject] = useState('RTi Cashflowops');
+            const [deployStatus, setDeployStatus] = useState('idle');
+            const [notifications, setNotifications] = useState([]);
             const [user, setUser] = useState(null);
-            const [showLanding, setShowLanding] = useState(true);
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [showSubscriptionPicker, setShowSubscriptionPicker] = useState(false);
-            const [alerts, setAlerts] = useState([]);
-            const [members, setMembers] = useState([]);
-            const [marketData, setMarketData] = useState({});
-            const [filterType, setFilterType] = useState('ALL');
-            const [newAlert, setNewAlert] = useState({ title: '', message: '', priority: 'MEDIUM', type: 'NEWS' });
-            const [showAdminPanel, setShowAdminPanel] = useState(false);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
-
-            // Enhanced Chat state
-            const [chatMessages, setChatMessages] = useState([]);
-            const [newMessage, setNewMessage] = useState('');
-            const [chatExpanded, setChatExpanded] = useState(false);
-            const [unreadMessages, setUnreadMessages] = useState(0);
-            const [activeTab, setActiveTab] = useState('chat');
-            const chatMessagesRef = useRef(null);
-
-            // User status and DM state
-            const [userStatus, setUserStatus] = useState('online');
-            const [directMessages, setDirectMessages] = useState({});
-            const [activeDMUser, setActiveDMUser] = useState(null);
-            const [dmUnreadCounts, setDmUnreadCounts] = useState({});
-
-            // Profile state
-            const [showProfile, setShowProfile] = useState(null);
-            const [isEditingProfile, setIsEditingProfile] = useState(false);
-            const [userProfiles, setUserProfiles] = useState({});
-            const [profileForm, setProfileForm] = useState({
-                bio: '',
-                tradingExperience: 'Beginner',
-                favoriteMarkets: [],
-                achievements: [],
-                socialLinks: { twitter: '', discord: '', telegram: '' },
-                isPublic: true,
-                tradingStats: { winRate: 0, totalTrades: 0, favoriteStrategy: '' }
+            const [showLanding, setShowLanding] = useState(true);
+            
+            // Website structure state
+            const [websiteData, setWebsiteData] = useState({
+                header: {
+                    logo: 'RTi Cashflowops 🚀',
+                    navigation: ['Dashboard', 'Alerts', 'Market Data', 'Profile'],
+                    style: 'gradient'
+                },
+                hero: {
+                    title: 'RTi CASHFLOWOPS',
+                    subtitle: '🛡️ BULLETPROOF EDITION 🚀',
+                    description: 'Professional trading group with real-time alerts and market analysis',
+                    ctaText: 'Launch Dashboard',
+                    backgroundType: 'gradient'
+                },
+                features: [
+                    { icon: '🤖', title: 'Bot Signals', description: 'AI-powered trading signals' },
+                    { icon: '📊', title: 'Live Charts', description: 'Real-time market data' },
+                    { icon: '🔔', title: 'Instant Alerts', description: 'Never miss a trade' },
+                    { icon: '👥', title: 'Community', description: 'Connect with traders' }
+                ],
+                subscription: {
+                    plans: [
+                        { name: 'Weekly', price: 6, popular: false },
+                        { name: 'Monthly', price: 20, popular: true }
+                    ]
+                }
             });
 
-            // Photo upload state
-            const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-            const [photoPreview, setPhotoPreview] = useState(null);
-            const fileInputRef = useRef(null);
-            
-            // 🛡️ Debug Panel State
-            const [showDebugPanel, setShowDebugPanel] = useState(false);
+            const [customCSS, setCustomCSS] = useState('');
+            const [customJS, setCustomJS] = useState('');
 
-            // 🚀 Rocket launch state
-            const [rocketLaunched, setRocketLaunched] = useState(false);
+            const previewRef = useRef(null);
 
-            // 🛡️ Test Functions for Console
-            useEffect(() => {
-                window.testProxyConnection = async () => {
-                    debugLog('🧪 Testing Node.js Proxy Connection...');
-                    try {
-                        const response = await fetch('/health');
-                        const data = await response.json();
-                        debugLog('✅ Proxy test successful!', data);
-                    } catch (err) {
-                        debugLog('❌ Proxy test failed:', err.message);
-                    }
-                };
+            // Add notification
+            const addNotification = (message, type = 'success') => {
+                const id = Date.now();
+                setNotifications(prev => [...prev, { id, message, type }]);
+            };
 
-                window.checkArrays = () => {
-                    debugLog('🔍 Array Status Check:');
-                    debugLog(`- alerts: ${Array.isArray(alerts)} (length: ${alerts.length})`);
-                    debugLog(`- members: ${Array.isArray(members)} (length: ${members.length})`);
-                    debugLog(`- chatMessages: ${Array.isArray(chatMessages)} (length: ${chatMessages.length})`);
-                };
+            // Remove notification
+            const removeNotification = (id) => {
+                setNotifications(prev => prev.filter(n => n.id !== id));
+            };
 
-                window.forceRefresh = () => {
-                    debugLog('🔄 Force refreshing all data...');
-                    if (user && !showSubscriptionPicker) {
-                        fetchAlerts();
-                        fetchActiveUsers();
-                    }
-                };
-
-                window.launchRocket = () => {
-                    debugLog('🚀 Manual rocket launch triggered!');
-                    setRocketLaunched(true);
-                    setTimeout(() => setRocketLaunched(false), 3000);
-                };
-
-                debugLog('🛡️ Bulletproof React Dashboard initialized with Node.js Proxy & Rocket Ship 🚀');
-            }, []);
-
-            // 🛡️ Bulletproof polling instead of Socket.IO
-            useEffect(() => {
-                let pollInterval;
-                
-                if (user && !showSubscriptionPicker) {
-                    debugLog('🔄 Starting bulletproof polling (no Socket.IO)');
-                    
-                    pollInterval = setInterval(() => {
-                        if (document.visibilityState === 'visible') {
-                            fetchAlerts();
-                            fetchActiveUsers();
-                        }
-                    }, 5000);
+            // Component Library
+            const componentLibrary = [
+                {
+                    id: 'hero-section',
+                    name: 'Hero Section',
+                    category: 'Layout',
+                    icon: '🚀',
+                    description: 'Main landing area with title and CTA'
+                },
+                {
+                    id: 'alert-card',
+                    name: 'Alert Card',
+                    category: 'Content',
+                    icon: '🔔',
+                    description: 'Trading alert display card'
+                },
+                {
+                    id: 'pricing-card',
+                    name: 'Pricing Card',
+                    category: 'Commerce',
+                    icon: '💎',
+                    description: 'Subscription pricing display'
+                },
+                {
+                    id: 'navigation',
+                    name: 'Navigation Bar',
+                    category: 'Layout', 
+                    icon: '🧭',
+                    description: 'Header navigation component'
+                },
+                {
+                    id: 'feature-grid',
+                    name: 'Feature Grid',
+                    category: 'Content',
+                    icon: '⚡',
+                    description: 'Feature showcase grid'
                 }
-
-                return () => {
-                    if (pollInterval) {
-                        clearInterval(pollInterval);
-                        debugLog('🛑 Stopped polling');
-                    }
-                };
-            }, [user, showSubscriptionPicker]);
-
-            // Auto-scroll chat to bottom
-            useEffect(() => {
-                if (chatMessagesRef.current) {
-                    chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-                }
-            }, [chatMessages]);
-
-            // Clear unread messages when appropriate
-            useEffect(() => {
-                if (chatExpanded && activeTab === 'chat' && !activeDMUser) {
-                    setUnreadMessages(0);
-                }
-                if (activeDMUser && chatExpanded) {
-                    setDmUnreadCounts(prev => ({
-                        ...prev,
-                        [activeDMUser]: 0
-                    }));
-                }
-            }, [chatExpanded, activeDMUser, activeTab]);
+            ];
 
             // Check if user requires subscription selection
             const requiresSubscriptionSelection = (user) => {
@@ -582,7 +321,7 @@
                                           !user.subscriptionStatus && 
                                           user.tier === 'FREE';
                 
-                debugLog('Subscription check:', {
+                console.log('Subscription check:', {
                     tier: user.tier,
                     hasSubscriptionId: !!user.subscriptionId,
                     hasSubscriptionStatus: !!user.subscriptionStatus,
@@ -592,316 +331,262 @@
                 return hasNeverSubscribed;
             };
 
-            // 🛡️ Bulletproof fetch alerts with array protection
-            const fetchAlerts = async () => {
-                try {
-                    debugLog('🔍 Fetching alerts via proxy...');
-                    const data = await apiCall(`/alerts?type=${filterType}`);
-                    
-                    // 🛡️ Ensure data is always an array
-                    const safeAlerts = ensureArray(data, []);
-                    setAlerts(safeAlerts);
-                    
-                    debugLog(`✅ Alerts loaded: ${safeAlerts.length} items`);
-                } catch (err) {
-                    debugLog('❌ Failed to fetch alerts:', err.message);
-                    setError('Failed to fetch alerts: ' + err.message);
-                    
-                    // 🛡️ Ensure alerts stays as array even on error
-                    setAlerts(ensureArray([]));
-                }
-            };
-
-            // 🛡️ Bulletproof fetch users with array protection
-            const fetchActiveUsers = async () => {
-                try {
-                    debugLog('🔍 Fetching active users via proxy...');
-                    const data = await apiCall('/users/active');
-                    
-                    // 🛡️ Ensure data is always an array and transform safely
-                    const rawUsers = ensureArray(data, []);
-                    const safeMembers = rawUsers.map(user => ({
-                        id: user._id,
-                        username: user.username,
-                        avatar: user.avatar,
-                        tier: user.tier,
-                        status: 'online',
-                        lastSeen: new Date()
-                    }));
-                    
-                    setMembers(safeMembers);
-                    debugLog(`✅ Users loaded: ${safeMembers.length} members`);
-                } catch (err) {
-                    debugLog('❌ Failed to fetch users:', err.message);
-                    console.error('Failed to fetch users:', err);
-                    
-                    // 🛡️ Ensure members stays as array even on error
-                    setMembers(ensureArray([]));
-                }
-            };
-
-            // Chat functions
-            const sendChatMessage = useCallback(() => {
-                if (!newMessage.trim()) return;
-
-                const messageData = {
-                    id: Date.now() + Math.random(),
-                    message: newMessage.trim(),
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        avatar: user.avatar,
-                        tier: user.tier,
-                        isAdmin: user.isAdmin
-                    },
-                    timestamp: new Date()
-                };
-
-                setChatMessages(prev => [...prev, messageData]);
-                setNewMessage('');
-                debugLog('💬 Message sent locally (no Socket.IO)');
-            }, [newMessage, user]);
-
-            const updateUserStatus = useCallback((newStatus) => {
-                setUserStatus(newStatus);
-                debugLog(`👤 User status updated to: ${newStatus}`);
-            }, []);
-
-            const startDirectMessage = useCallback((targetUser) => {
-                setActiveDMUser(targetUser);
-                setActiveTab('chat');
-                setChatExpanded(true);
-                
-                setDmUnreadCounts(prev => ({
-                    ...prev,
-                    [targetUser.id]: 0
-                }));
-                
-                debugLog(`💬 Started DM with: ${targetUser.username}`);
-            }, []);
-
-            const goBackToGroupChat = useCallback(() => {
-                setActiveDMUser(null);
-                setActiveTab('chat');
-                debugLog('🔙 Returned to group chat');
-            }, []);
-
-            // Profile functions (simplified)
-            const viewUserProfile = useCallback(async (targetUser) => {
-                setShowProfile(targetUser);
-                debugLog(`👤 Viewing profile: ${targetUser.username}`);
-            }, []);
-
-            const editMyProfile = useCallback(() => {
-                setIsEditingProfile(true);
-                setShowProfile(user);
-                debugLog(`✏️ Editing own profile: ${user.username}`);
-            }, [user]);
-
-            // Load initial data
+            // Check authentication on load
             useEffect(() => {
-                if (user && !showSubscriptionPicker) {
-                    debugLog('📊 Loading initial dashboard data...');
-                    fetchAlerts();
-                    fetchActiveUsers();
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    // Verify token with backend
+                    apiCall('/api/auth/profile')
+                        .then(userData => {
+                            setUser(userData);
+                            setIsAuthenticated(true);
+                            
+                            if (requiresSubscriptionSelection(userData)) {
+                                setShowSubscriptionPicker(true);
+                                setShowLanding(false);
+                                return;
+                            }
+                            
+                            setShowLanding(false);
+                            loadDesignConfig();
+                        })
+                        .catch(() => {
+                            localStorage.removeItem('authToken');
+                            setIsAuthenticated(false);
+                        });
+                } else {
+                    setIsAuthenticated(false);
                 }
-            }, [user, filterType, showSubscriptionPicker]);
+            }, []);
 
-            const formatTimeAgo = (timestamp) => {
-                const diff = Date.now() - new Date(timestamp).getTime();
-                const minutes = Math.floor(diff / 60000);
-                if (minutes < 1) return 'Just now';
-                if (minutes < 60) return `${minutes}m ago`;
-                return `${Math.floor(minutes / 60)}h ago`;
-            };
-
-            const handleCreateAlert = async () => {
-                if (!user.isAdmin || !newAlert.title || !newAlert.message) return;
-                
-                setLoading(true);
+            // Load design configuration
+            const loadDesignConfig = async () => {
                 try {
-                    await apiCall('/alerts', {
-                        method: 'POST',
-                        body: JSON.stringify(newAlert)
-                    });
-                    setNewAlert({ title: '', message: '', priority: 'MEDIUM', type: 'NEWS' });
-                    setError('');
-                    fetchAlerts();
-                } catch (err) {
-                    setError('Failed to create alert');
-                } finally {
-                    setLoading(false);
+                    const config = await apiCall('/api/design/config/default');
+                    if (config) {
+                        setWebsiteData({
+                            header: config.header || websiteData.header,
+                            hero: config.hero || websiteData.hero,
+                            features: config.features || websiteData.features,
+                            subscription: config.subscription || websiteData.subscription
+                        });
+                        setCustomCSS(config.customCSS || '');
+                        setCustomJS(config.customJS || '');
+                        setSavedChanges(true);
+                    }
+                } catch (error) {
+                    console.error('Failed to load design config:', error);
+                    addNotification('Failed to load design configuration', 'error');
                 }
             };
 
-            const handleDeleteAlert = async (alertId) => {
-                if (!user.isAdmin) return;
-                
-                try {
-                    await apiCall(`/alerts/${alertId}`, { method: 'DELETE' });
-                    fetchAlerts();
-                } catch (err) {
-                    setError('Failed to delete alert');
-                }
-            };
+            // Preview generation
+            const generatePreview = useCallback(() => {
+                const css = `
+                    <style>
+                        .hero-gradient { background: linear-gradient(135deg, #000 0%, #1f2937 50%, #000 100%); }
+                        .gradient-text { background: linear-gradient(135deg, #22c55e, #eab308, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+                        .rocket-glow { filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6)); animation: pulse 2s infinite; }
+                        .deploy-button { background: linear-gradient(135deg, #22c55e 0%, #eab308 50%, #f97316 100%); }
+                        .fade-in { animation: fadeIn 0.3s ease-out; }
+                        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+                        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                        ${customCSS}
+                    </style>
+                `;
 
-            // 🚀 Handle rocket launch
-            const handleRocketLaunch = () => {
-                debugLog('🚀 Rocket launched! TO THE MOON!');
-                setRocketLaunched(true);
-                setTimeout(() => setRocketLaunched(false), 3000);
-            };
+                const html = `
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>${websiteData.header.logo}</title>
+                        <script src="https://cdn.tailwindcss.com"></script>
+                        ${css}
+                    </head>
+                    <body>
+                        <!-- Navigation -->
+                        <nav class="bg-white shadow-sm border-b">
+                            <div class="max-w-7xl mx-auto px-4">
+                                <div class="flex justify-between items-center h-16">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-2xl font-black gradient-text">${websiteData.header.logo}</span>
+                                        <span class="rocket-glow text-2xl">🚀</span>
+                                    </div>
+                                    <div class="flex gap-6">
+                                        ${websiteData.header.navigation.map(item => 
+                                            `<a href="#" class="text-gray-700 hover:text-green-600">${item}</a>`
+                                        ).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </nav>
 
-            // Profile Modal Component (simplified)
-            const ProfileModal = () => {
-                if (!showProfile) return null;
-
-                return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                            <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
-                                <button
-                                    onClick={() => {
-                                        setShowProfile(null);
-                                        setIsEditingProfile(false);
-                                    }}
-                                    className="absolute top-4 right-4 text-white hover:text-gray-200 text-2xl"
-                                >
-                                    ✕
+                        <!-- Hero Section -->
+                        <section class="hero-gradient min-h-screen flex items-center justify-center text-center relative overflow-hidden">
+                            <div class="container mx-auto px-4 relative z-10">
+                                <div class="rocket-glow text-6xl mb-6">🚀</div>
+                                <h1 class="text-6xl md:text-8xl font-black text-white mb-4 fade-in">${websiteData.hero.title}</h1>
+                                <p class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 mb-4 fade-in">${websiteData.hero.subtitle}</p>
+                                <p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto fade-in">${websiteData.hero.description}</p>
+                                <button class="deploy-button text-white px-8 py-4 rounded-lg font-bold text-lg hover:scale-105 transition-transform fade-in">
+                                    ${websiteData.hero.ctaText}
                                 </button>
-                                
-                                <div className="flex items-center gap-4">
-                                    <img 
-                                        src={showProfile.avatar} 
-                                        alt={showProfile.username}
-                                        className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
-                                    />
-                                    <div className="flex-1">
-                                        <h2 className="text-2xl font-bold">{showProfile.username}</h2>
-                                        <div className="flex items-center gap-3 mt-2">
-                                            <span className={`px-3 py-1 rounded-full text-sm font-bold ${
-                                                showProfile.tier === 'ADMIN' ? 'bg-red-500 text-white' :
-                                                showProfile.tier === 'MONTHLY' ? 'bg-green-500 text-white' :
-                                                showProfile.tier === 'WEEKLY' ? 'bg-blue-500 text-white' :
-                                                'bg-gray-400 text-white'
-                                            }`}>
-                                                {showProfile.tier === 'ADMIN' ? '👑 ADMIN' : 
-                                                 showProfile.tier === 'MONTHLY' ? '💎 MONTHLY' : 
-                                                 showProfile.tier === 'WEEKLY' ? '⭐ WEEKLY' : 
-                                                 '🆓 FREE'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
+                        </section>
 
-                            <div className="p-6">
-                                <div className="text-center">
-                                    <p className="text-gray-600">Profile functionality available in full version</p>
-                                    <div className="mt-4">
-                                        <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
-                                        <p className="text-sm text-gray-500 mt-2">🚀 Click the rocket to launch!</p>
-                                    </div>
+                        <!-- Features Section -->
+                        <section class="py-16 bg-gray-50">
+                            <div class="container mx-auto px-4">
+                                <h2 class="text-3xl font-bold text-center mb-12">🛡️ Platform Features</h2>
+                                <div class="grid md:grid-cols-4 gap-6">
+                                    ${websiteData.features.map(feature => `
+                                        <div class="text-center p-6 bg-white rounded-lg shadow-sm fade-in hover:shadow-lg transition-shadow">
+                                            <div class="text-4xl mb-4">${feature.icon}</div>
+                                            <h3 class="font-bold mb-2">${feature.title}</h3>
+                                            <p class="text-gray-600 text-sm">${feature.description}</p>
+                                        </div>
+                                    `).join('')}
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                );
+                        </section>
+
+                        <!-- Subscription Section -->
+                        <section class="py-16 bg-white">
+                            <div class="container mx-auto px-4">
+                                <h2 class="text-3xl font-bold text-center mb-12">🚀 Choose Your Plan</h2>
+                                <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                                    ${websiteData.subscription.plans.map(plan => `
+                                        <div class="bg-white rounded-2xl shadow-lg border-2 ${plan.popular ? 'border-green-400' : 'border-gray-200'} p-8 relative">
+                                            ${plan.popular ? `
+                                                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                                                    <span class="bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+                                                        POPULAR 🔥
+                                                    </span>
+                                                </div>
+                                            ` : ''}
+                                            <div class="text-center mb-6">
+                                                <h3 class="text-2xl font-bold ${plan.popular ? 'text-green-600' : 'text-gray-900'} mb-2">${plan.name.toUpperCase()}</h3>
+                                                <div class="text-4xl font-black ${plan.popular ? 'text-green-600' : 'text-gray-900'} mb-2">$${plan.price}</div>
+                                                <p class="text-gray-500">Per ${plan.name.toLowerCase()}</p>
+                                            </div>
+                                            <button class="w-full deploy-button text-white py-3 rounded-lg font-bold hover:scale-105 transition-transform">
+                                                🚀 Get ${plan.name} Access
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </section>
+
+                        <script>
+                            ${customJS}
+                        </script>
+                    </body>
+                    </html>
+                `;
+
+                return html;
+            }, [websiteData, customCSS, customJS]);
+
+            // Update preview
+            useEffect(() => {
+                if (previewRef.current && isAuthenticated && !showSubscriptionPicker) {
+                    const previewDoc = previewRef.current.contentDocument;
+                    if (previewDoc) {
+                        previewDoc.open();
+                        previewDoc.write(generatePreview());
+                        previewDoc.close();
+                    }
+                }
+            }, [generatePreview, isAuthenticated, showSubscriptionPicker]);
+
+            // Handle website data updates
+            const updateWebsiteData = (path, value) => {
+                const newData = { ...websiteData };
+                const keys = path.split('.');
+                let current = newData;
+                
+                for (let i = 0; i < keys.length - 1; i++) {
+                    current = current[keys[i]];
+                }
+                current[keys[keys.length - 1]] = value;
+                
+                setWebsiteData(newData);
+                setSavedChanges(false);
             };
 
-            // Enhanced Chat Panel Component
-            const ChatPanel = () => {
-                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
+            // Save changes
+            const handleSave = async () => {
+                if (!user?.isAdmin) {
+                    addNotification('Admin access required to save changes', 'error');
+                    return;
+                }
 
-                return (
-                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
-                        chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
-                    }`}>
-                        <div 
-                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
-                            onClick={() => setChatExpanded(!chatExpanded)}
-                        >
-                            <div className="flex items-center gap-2">
-                                <span className="text-lg">💬</span>
-                                <span className="font-bold">Trading Chat (Bulletproof)</span>
-                                <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
-                                <span className="text-sm">{chatExpanded ? '▼' : '▲'}</span>
-                            </div>
-                        </div>
+                setIsLoading(true);
+                
+                try {
+                    await apiCall('/api/design/config/default', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            websiteData,
+                            customCSS,
+                            customJS
+                        })
+                    });
+                    
+                    setSavedChanges(true);
+                    addNotification('Design saved successfully!', 'success');
+                } catch (error) {
+                    console.error('Save failed:', error);
+                    addNotification('Failed to save design: ' + error.message, 'error');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
 
-                        {chatExpanded && (
-                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
-                                <div className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar" ref={chatMessagesRef}>
-                                    {chatMessages.length === 0 ? (
-                                        <div className="text-center text-gray-500 py-8">
-                                            <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
-                                            <p className="text-sm mt-2">Welcome to RTi Trading Chat!</p>
-                                            <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
-                                        </div>
-                                    ) : (
-                                        chatMessages.slice(-10).map((message) => (
-                                            <div key={message.id} className="chat-message-enter">
-                                                <div className="flex items-start gap-2">
-                                                    <img 
-                                                        src={message.user?.avatar} 
-                                                        alt="" 
-                                                        className="w-8 h-8 rounded-full flex-shrink-0"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-medium text-sm text-blue-600">
-                                                                {message.user?.username}
-                                                            </span>
-                                                            <span className="text-xs text-gray-400">
-                                                                {formatTimeAgo(message.timestamp)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-gray-700 break-words">
-                                                            {message.message}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
+            // Deploy website
+            const handleDeploy = async () => {
+                if (!user?.isAdmin) {
+                    addNotification('Admin access required to deploy', 'error');
+                    return;
+                }
 
-                                <div className="border-t p-3">
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            onKeyPress={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    sendChatMessage();
-                                                }
-                                            }}
-                                            placeholder={
-                                                !isPaidUser 
-                                                    ? "Upgrade for unlimited messages..." 
-                                                    : "Type your message..."
-                                            }
-                                            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            disabled={!isPaidUser}
-                                        />
-                                        <button
-                                            onClick={sendChatMessage}
-                                            disabled={!newMessage.trim() || !isPaidUser}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                        >
-                                            🚀
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                );
+                setDeployStatus('deploying');
+                
+                try {
+                    const result = await apiCall('/api/design/deploy/default', {
+                        method: 'POST'
+                    });
+                    
+                    setDeployStatus('success');
+                    addNotification('Website deployed successfully! 🚀', 'success');
+                    
+                    setTimeout(() => {
+                        setDeployStatus('idle');
+                    }, 3000);
+                } catch (error) {
+                    console.error('Deploy failed:', error);
+                    setDeployStatus('idle');
+                    addNotification('Deploy failed: ' + error.message, 'error');
+                }
+            };
+
+            // Export website files
+            const handleExport = () => {
+                const html = generatePreview();
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'rti-website.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                addNotification('Website exported successfully!', 'success');
             };
 
             // Landing Page Component
@@ -920,20 +605,19 @@
 
                 const handleLogin = async () => {
                     if (!loginData.username || !loginData.password) {
-                        setError('Please enter username and password');
+                        addNotification('Please enter username and password', 'error');
                         return;
                     }
 
-                    setLoading(true);
-                    setError('');
+                    setIsLoading(true);
 
                     try {
-                        const response = await apiCall('/auth/login', {
+                        const response = await apiCall('/api/auth/login', {
                             method: 'POST',
                             body: JSON.stringify(loginData)
                         });
 
-                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('authToken', response.token);
                         setUser(response.user);
 
                         if (requiresSubscriptionSelection(response.user)) {
@@ -943,45 +627,42 @@
                         }
 
                         setShowLanding(false);
+                        setIsAuthenticated(true);
                     } catch (err) {
-                        setError(err.message);
+                        addNotification(err.message, 'error');
                     } finally {
-                        setLoading(false);
+                        setIsLoading(false);
                     }
                 };
 
                 const handleRegister = async () => {
                     if (!registerData.username || !registerData.email || !registerData.password) {
-                        setError('Please fill in all fields');
+                        addNotification('Please fill in all fields', 'error');
                         return;
                     }
 
-                    setLoading(true);
-                    setError('');
+                    setIsLoading(true);
 
                     try {
-                        const response = await apiCall('/auth/register', {
+                        const response = await apiCall('/api/auth/register', {
                             method: 'POST',
                             body: JSON.stringify(registerData)
                         });
 
-                        localStorage.setItem('token', response.token);
+                        localStorage.setItem('authToken', response.token);
                         setUser(response.user);
                         
                         setShowSubscriptionPicker(true);
                         setShowLanding(false);
                     } catch (err) {
-                        setError(err.message);
+                        addNotification(err.message, 'error');
                     } finally {
-                        setLoading(false);
+                        setIsLoading(false);
                     }
                 };
 
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden relative">
-                        {/* Moon */}
-                        <div className="moon">🌕</div>
-                        
                         {/* Money Rain Effect */}
                         <div className="money-rain">
                             {[...Array(20)].map((_, i) => {
@@ -1003,74 +684,22 @@
                         </div>
 
                         <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 pt-32">
-                            {/* Rocket Ship Launch Area */}
-                            <div className="relative mb-6">
-                                <div className="flex justify-center">
-                                    <RocketShip onLaunch={handleRocketLaunch} size="4rem" />
-                                </div>
-                            </div>
-
                             <div className="text-center mb-8">
+                                <div className="rocket-glow text-6xl mb-6">🚀</div>
                                 <h1 className="text-6xl md:text-8xl font-black text-white mb-4 tracking-wider"
                                     style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
                                     RTi
                                 </h1>
                                 <h2 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500"
                                     style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
-                                    CASHFLOWOPS
+                                    DESIGN STUDIO
                                 </h2>
                                 <p className="text-xl md:text-2xl text-gray-300 mt-4 font-bold tracking-widest">
-                                    🛡️ BULLETPROOF EDITION 🚀
-                                </p>
-                            </div>
-
-                            <div className="relative w-full h-24 mb-6">
-                                <div 
-                                    className="absolute bottom-0 left-0"
-                                    style={{
-                                        animation: 'dollarAcrossToMoon 4s ease-in-out forwards'
-                                    }}
-                                >
-                                    <div 
-                                        className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 cursor-pointer select-none"
-                                        style={{
-                                            fontFamily: 'Impact, Arial Black, sans-serif',
-                                            textShadow: '0 0 30px rgba(34, 197, 94, 0.8), 0 0 60px rgba(234, 179, 8, 0.6)'
-                                        }}
-                                    >
-                                        $
-                                    </div>
-                                    
-                                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                                        <div 
-                                            className="w-6 h-8 bg-gradient-to-t from-red-500 via-orange-400 to-yellow-300 opacity-90"
-                                            style={{
-                                                clipPath: 'polygon(50% 100%, 20% 0%, 80% 0%)'
-                                            }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="text-center mb-6">
-                                <p 
-                                    className="text-2xl font-black text-yellow-400 opacity-0"
-                                    style={{
-                                        fontFamily: 'Impact, Arial Black, sans-serif',
-                                        animation: 'messageAppear 4s ease-out forwards'
-                                    }}
-                                >
-                                    🚀 BULLETPROOF MOON LANDING SUCCESSFUL! 🌕
+                                    🛡️ BULLETPROOF WEBSITE BUILDER 🚀
                                 </p>
                             </div>
 
                             <div className="bg-black/80 backdrop-blur-lg border border-green-500/30 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                                {error && (
-                                    <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
-                                        {error}
-                                    </div>
-                                )}
-
                                 <div className="flex gap-2 mb-6">
                                     <button
                                         onClick={() => setIsRegistering(false)}
@@ -1144,20 +773,20 @@
 
                                     <button
                                         onClick={isRegistering ? handleRegister : handleLogin}
-                                        disabled={loading}
+                                        disabled={isLoading}
                                         className="w-full bg-gradient-to-r from-green-500 via-yellow-500 to-orange-500 text-black py-4 rounded-lg font-black text-lg hover:from-green-600 hover:via-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        {loading ? '🚀 Loading...' : `🛡️ ${isRegistering ? 'Join' : 'Launch'} Bulletproof Dashboard`}
+                                        {isLoading ? '🚀 Loading...' : `🛡️ ${isRegistering ? 'Create Account' : 'Launch Design Studio'}`}
                                     </button>
 
                                     {!isRegistering && (
                                         <div className="text-center text-sm text-gray-400">
                                             <p className="font-bold text-green-400 mb-2">Demo Credentials:</p>
                                             <button 
-                                                onClick={() => fillTestCredentials('admin', 'admin123')}
+                                                onClick={() => fillTestCredentials('admin', 'password')}
                                                 className="block w-full text-left px-3 py-2 rounded bg-gray-800 hover:bg-gray-700 transition-colors mb-1"
                                             >
-                                                Admin: admin / admin123
+                                                Admin: admin / password
                                             </button>
                                             <button 
                                                 onClick={() => fillTestCredentials()}
@@ -1177,7 +806,7 @@
             // Subscription Selection Page
             const SubscriptionPicker = () => {
                 const handlePlanSelection = async (planId) => {
-                    debugLog('Plan selected:', planId);
+                    console.log('Plan selected:', planId);
                     
                     if (planId === 'weekly') {
                         window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
@@ -1185,18 +814,19 @@
                         window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
                     }
                     
-                    setError('🚀 Redirecting to secure payment...');
+                    addNotification('🚀 Redirecting to secure payment...', 'info');
                 };
 
                 const handleSkipForNow = () => {
                     setShowSubscriptionPicker(false);
+                    setIsAuthenticated(true);
                 };
 
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center px-4">
                         <div className="text-center">
                             <div className="mb-8">
-                                <RocketShip onLaunch={handleRocketLaunch} size="4rem" />
+                                <div className="rocket-glow text-6xl mb-4">🚀</div>
                             </div>
                             
                             <h1 className="text-4xl font-black text-white mb-8">Choose Your Rocket Fuel ⛽</h1>
@@ -1241,373 +871,430 @@
                 );
             };
 
-            const Dashboard = () => {
-                // 🛡️ Ensure alerts is always an array before filtering
-                const safeAlerts = ensureArray(alerts, []);
-                const filteredAlerts = safeAlerts.filter(alert => 
-                    filterType === 'ALL' || alert.type === filterType
-                );
-
-                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
-                const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
-
+            // Main Design Studio Dashboard
+            const DesignStudioDashboard = () => {
                 return (
-                    <div className="min-h-screen bg-gray-50 relative">
-                        {/* 🛡️ Debug Panel */}
-                        <DebugPanel 
-                            isVisible={showDebugPanel} 
-                            onToggle={() => setShowDebugPanel(!showDebugPanel)} 
-                        />
+                    <div className="h-screen flex flex-col bg-gray-100">
+                        {/* Notifications */}
+                        {notifications.map(notification => (
+                            <Notification
+                                key={notification.id}
+                                message={notification.message}
+                                type={notification.type}
+                                onClose={() => removeNotification(notification.id)}
+                            />
+                        ))}
 
-                        <header className="bg-white shadow-sm border-b">
-                            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                                <div className="flex justify-between items-center h-16">
-                                    <div className="flex items-center gap-3">
-                                        <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
-                                            RTi Cashflowops 🛡️
-                                        </div>
-                                        <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
-                                        <div className="flex items-center gap-2 text-green-600">
-                                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                            <span className="text-sm font-medium">Node.js Proxy</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-4">
-                                        {user.isAdmin && (
-                                            <button
-                                                onClick={() => setShowAdminPanel(!showAdminPanel)}
-                                                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600"
-                                            >
-                                                ⚙️ Admin
-                                            </button>
-                                        )}
-
-                                        <div className="flex items-center gap-3">
-                                            <img 
-                                                src={user.avatar} 
-                                                alt="" 
-                                                className="w-8 h-8 rounded-full cursor-pointer"
-                                                onClick={editMyProfile}
-                                            />
-                                            <div className="text-right">
-                                                <p className="text-sm font-medium">{user.username}</p>
-                                                <p className="text-xs text-gray-500">{user.tier}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    localStorage.removeItem('token');
-                                                    setUser(null);
-                                                    setShowLanding(true);
-                                                }}
-                                                className="p-1 text-gray-400 hover:text-gray-600"
-                                            >
-                                                🚪
-                                            </button>
-                                        </div>
-                                    </div>
+                        {/* Header */}
+                        <header className="design-panel text-white p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="rocket-glow text-3xl">🚀</div>
+                                <div>
+                                    <h1 className="text-2xl font-bold">RTi Design Studio</h1>
+                                    <p className="text-blue-200 text-sm">Project: {currentProject}</p>
                                 </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4">
+                                <div className="text-sm">
+                                    Welcome, {user?.username}
+                                    {user?.isAdmin && <span className="ml-2 bg-red-500 px-2 py-1 rounded text-xs">ADMIN</span>}
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-2 h-2 rounded-full ${savedChanges ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                                    <span className="text-sm">{savedChanges ? 'Saved' : 'Unsaved changes'}</span>
+                                </div>
+                                
+                                <button 
+                                    onClick={handleSave}
+                                    disabled={savedChanges || isLoading || !user?.isAdmin}
+                                    className="tool-button bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50"
+                                >
+                                    {isLoading ? <i className="fas fa-spinner loading-spinner"></i> : <i className="fas fa-save"></i>}
+                                    {isLoading ? ' Saving...' : ' Save'}
+                                </button>
+                                
+                                <button 
+                                    onClick={handleDeploy}
+                                    disabled={deployStatus === 'deploying' || !user?.isAdmin}
+                                    className="tool-button deploy-button px-4 py-2 rounded-lg text-sm font-medium text-white disabled:opacity-50"
+                                >
+                                    {deployStatus === 'deploying' ? <i className="fas fa-spinner loading-spinner"></i> : <i className="fas fa-rocket"></i>}
+                                    {deployStatus === 'deploying' ? ' Deploying...' : ' Deploy'}
+                                </button>
+                                
+                                <button 
+                                    onClick={handleExport}
+                                    className="tool-button bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-medium"
+                                >
+                                    <i className="fas fa-download"></i> Export
+                                </button>
+
+                                <button 
+                                    onClick={() => window.location.href = '/'}
+                                    className="tool-button bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg text-sm font-medium"
+                                >
+                                    <i className="fas fa-home"></i> Dashboard
+                                </button>
                             </div>
                         </header>
 
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                            {error && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                                    {error}
-                                    <button 
-                                        onClick={() => setError('')}
-                                        className="float-right text-red-500"
-                                    >
-                                        ✕
-                                    </button>
+                        <div className="flex flex-1 overflow-hidden">
+                            {/* Left Sidebar - Tools */}
+                            <div className="w-80 bg-white border-r flex flex-col">
+                                {/* Tab Navigation */}
+                                <div className="flex border-b">
+                                    {[
+                                        { id: 'design', label: 'Design', icon: 'fas fa-palette' },
+                                        { id: 'components', label: 'Components', icon: 'fas fa-cubes' },
+                                        { id: 'settings', label: 'Settings', icon: 'fas fa-cog' },
+                                        { id: 'code', label: 'Code', icon: 'fas fa-code' }
+                                    ].map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`flex-1 p-3 text-sm font-medium ${
+                                                activeTab === tab.id 
+                                                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' 
+                                                    : 'text-gray-600 hover:text-gray-900'
+                                            }`}
+                                        >
+                                            <i className={`${tab.icon} mr-2`}></i>
+                                            {tab.label}
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
 
-                            {/* Free User Upgrade Banner with Rocket */}
-                            {!isPaidUser && (
-                                <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
+                                {/* Tab Content */}
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    {activeTab === 'design' && (
+                                        <div className="space-y-6">
                                             <div>
-                                                <h3 className="text-xl font-black">🛡️ UPGRADE YOUR ROCKET FUEL!</h3>
-                                                <p>Unlimited access to all features with bulletproof reliability</p>
+                                                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                                                    <span className="text-xl">🎨</span>
+                                                    Visual Editor
+                                                </h3>
+                                                
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Hero Title</label>
+                                                        <input
+                                                            type="text"
+                                                            value={websiteData.hero.title}
+                                                            onChange={(e) => updateWebsiteData('hero.title', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Subtitle</label>
+                                                        <input
+                                                            type="text"
+                                                            value={websiteData.hero.subtitle}
+                                                            onChange={(e) => updateWebsiteData('hero.subtitle', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                                        <textarea
+                                                            value={websiteData.hero.description}
+                                                            onChange={(e) => updateWebsiteData('hero.description', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            rows="3"
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-gray-700 mb-2">CTA Button Text</label>
+                                                        <input
+                                                            type="text"
+                                                            value={websiteData.hero.ctaText}
+                                                            onChange={(e) => updateWebsiteData('hero.ctaText', e.target.value)}
+                                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <h4 className="font-medium text-gray-900 mb-3">Features</h4>
+                                                {websiteData.features.map((feature, index) => (
+                                                    <div key={index} className="bg-gray-50 rounded-lg p-3 mb-3">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <input
+                                                                type="text"
+                                                                value={feature.icon}
+                                                                onChange={(e) => {
+                                                                    const newFeatures = [...websiteData.features];
+                                                                    newFeatures[index].icon = e.target.value;
+                                                                    updateWebsiteData('features', newFeatures);
+                                                                }}
+                                                                className="w-16 px-2 py-1 text-center text-lg border border-gray-300 rounded"
+                                                                placeholder="🎯"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                value={feature.title}
+                                                                onChange={(e) => {
+                                                                    const newFeatures = [...websiteData.features];
+                                                                    newFeatures[index].title = e.target.value;
+                                                                    updateWebsiteData('features', newFeatures);
+                                                                }}
+                                                                className="flex-1 px-3 py-1 border border-gray-300 rounded"
+                                                            />
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            value={feature.description}
+                                                            onChange={(e) => {
+                                                                const newFeatures = [...websiteData.features];
+                                                                newFeatures[index].description = e.target.value;
+                                                                updateWebsiteData('features', newFeatures);
+                                                            }}
+                                                            className="w-full px-3 py-1 text-sm border border-gray-300 rounded"
+                                                        />
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={() => setShowSubscriptionPicker(true)}
-                                            className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100"
-                                        >
-                                            🚀 UPGRADE
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                    )}
 
-                            {/* Admin Panel */}
-                            {user.isAdmin && showAdminPanel && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-                                    <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
-                                        ⚙️ Admin Panel 
-                                        <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <select
-                                            value={newAlert.type}
-                                            onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
-                                            className="px-3 py-2 border rounded-lg"
-                                        >
-                                            <option value="NEWS">News Alert</option>
-                                            <option value="BOT_SIGNAL">Bot Signal</option>
-                                            <option value="MARKET_UPDATE">Market Update</option>
-                                        </select>
-                                        <select
-                                            value={newAlert.priority}
-                                            onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
-                                            className="px-3 py-2 border rounded-lg"
-                                        >
-                                            <option value="LOW">Low</option>
-                                            <option value="MEDIUM">Medium</option>
-                                            <option value="HIGH">High</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <input
-                                            type="text"
-                                            value={newAlert.title}
-                                            onChange={(e) => setNewAlert({...newAlert, title: e.target.value})}
-                                            className="w-full px-3 py-2 border rounded-lg"
-                                            placeholder="Alert title"
-                                        />
-                                        <textarea
-                                            value={newAlert.message}
-                                            onChange={(e) => setNewAlert({...newAlert, message: e.target.value})}
-                                            className="w-full px-3 py-2 border rounded-lg"
-                                            rows="3"
-                                            placeholder="Alert message"
-                                        />
-                                        <button
-                                            onClick={handleCreateAlert}
-                                            disabled={loading}
-                                            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50"
-                                        >
-                                            {loading ? 'Creating...' : '🚀 Create Alert'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                    {activeTab === 'components' && (
+                                        <div>
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                                                <span className="text-xl">🧩</span>
+                                                Component Library
+                                            </h3>
+                                            
+                                            <div className="component-library space-y-3">
+                                                {componentLibrary.map(component => (
+                                                    <div 
+                                                        key={component.id}
+                                                        className="border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <span className="text-2xl">{component.icon}</span>
+                                                            <div className="flex-1">
+                                                                <h4 className="font-medium text-sm">{component.name}</h4>
+                                                                <p className="text-xs text-gray-500">{component.category}</p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600">{component.description}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
 
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                                <div className="lg:col-span-3 space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                                            🛡️ Bulletproof Live Alerts 
-                                            <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
-                                        </h2>
-                                        <div className="flex gap-2">
-                                            {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map(type => (
+                                    {activeTab === 'settings' && (
+                                        <div className="space-y-6">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                                                <span className="text-xl">⚙️</span>
+                                                Site Settings
+                                            </h3>
+                                            
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Site Title</label>
+                                                    <input
+                                                        type="text"
+                                                        value={websiteData.header.logo}
+                                                        onChange={(e) => updateWebsiteData('header.logo', e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    />
+                                                </div>
+                                                
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Navigation Items</label>
+                                                    {websiteData.header.navigation.map((item, index) => (
+                                                        <input
+                                                            key={index}
+                                                            type="text"
+                                                            value={item}
+                                                            onChange={(e) => {
+                                                                const newNav = [...websiteData.header.navigation];
+                                                                newNav[index] = e.target.value;
+                                                                updateWebsiteData('header.navigation', newNav);
+                                                            }}
+                                                            className="w-full px-3 py-2 mb-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        />
+                                                    ))}
+                                                </div>
+                                                
+                                                <div>
+                                                    <h4 className="font-medium text-gray-900 mb-3">Subscription Plans</h4>
+                                                    {websiteData.subscription.plans.map((plan, index) => (
+                                                        <div key={index} className="bg-gray-50 rounded-lg p-3 mb-3">
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    value={plan.name}
+                                                                    onChange={(e) => {
+                                                                        const newPlans = [...websiteData.subscription.plans];
+                                                                        newPlans[index].name = e.target.value;
+                                                                        updateWebsiteData('subscription.plans', newPlans);
+                                                                    }}
+                                                                    className="px-3 py-1 border border-gray-300 rounded"
+                                                                    placeholder="Plan Name"
+                                                                />
+                                                                <input
+                                                                    type="number"
+                                                                    value={plan.price}
+                                                                    onChange={(e) => {
+                                                                        const newPlans = [...websiteData.subscription.plans];
+                                                                        newPlans[index].price = parseInt(e.target.value);
+                                                                        updateWebsiteData('subscription.plans', newPlans);
+                                                                    }}
+                                                                    className="px-3 py-1 border border-gray-300 rounded"
+                                                                    placeholder="Price"
+                                                                />
+                                                            </div>
+                                                            <label className="flex items-center mt-2">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={plan.popular}
+                                                                    onChange={(e) => {
+                                                                        const newPlans = [...websiteData.subscription.plans];
+                                                                        newPlans[index].popular = e.target.checked;
+                                                                        updateWebsiteData('subscription.plans', newPlans);
+                                                                    }}
+                                                                    className="mr-2"
+                                                                />
+                                                                <span className="text-sm">Popular Plan</span>
+                                                            </label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'code' && (
+                                        <div className="space-y-6">
+                                            <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                                                <span className="text-xl">💻</span>
+                                                Custom Code
+                                            </h3>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Custom CSS</label>
+                                                <textarea
+                                                    value={customCSS}
+                                                    onChange={(e) => {
+                                                        setCustomCSS(e.target.value);
+                                                        setSavedChanges(false);
+                                                    }}
+                                                    className="w-full h-32 px-3 py-2 text-xs font-mono code-editor rounded-lg"
+                                                    placeholder="/* Add your custom CSS here */"
+                                                />
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Custom JavaScript</label>
+                                                <textarea
+                                                    value={customJS}
+                                                    onChange={(e) => {
+                                                        setCustomJS(e.target.value);
+                                                        setSavedChanges(false);
+                                                    }}
+                                                    className="w-full h-32 px-3 py-2 text-xs font-mono code-editor rounded-lg"
+                                                    placeholder="// Add your custom JavaScript here"
+                                                />
+                                            </div>
+                                            
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <i className="fas fa-exclamation-triangle text-yellow-600"></i>
+                                                    <span className="text-sm font-medium text-yellow-800">Railway Integration</span>
+                                                </div>
+                                                <p className="text-xs text-yellow-700">
+                                                    Your custom code will be injected into the deployed website. 
+                                                    Make sure it's compatible with your existing RTi backend.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Main Preview Area */}
+                            <div className="flex-1 flex flex-col">
+                                {/* Preview Controls */}
+                                <div className="bg-white border-b p-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm font-medium text-gray-700">Preview:</span>
+                                        <div className="flex bg-gray-100 rounded-lg p-1">
+                                            {[
+                                                { id: 'mobile', label: '📱', width: '375px' },
+                                                { id: 'tablet', label: '📱', width: '768px' },
+                                                { id: 'desktop', label: '💻', width: '100%' }
+                                            ].map(mode => (
                                                 <button
-                                                    key={type}
-                                                    onClick={() => setFilterType(type)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                                                        filterType === type 
-                                                            ? 'bg-blue-500 text-white' 
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    key={mode.id}
+                                                    onClick={() => setPreviewMode(mode.id)}
+                                                    className={`px-3 py-2 text-sm font-medium rounded-md ${
+                                                        previewMode === mode.id 
+                                                            ? 'bg-white text-blue-600 shadow-sm' 
+                                                            : 'text-gray-600 hover:text-gray-900'
                                                     }`}
                                                 >
-                                                    {type === 'BOT_SIGNAL' ? 'Bot' : 
-                                                     type === 'NEWS' ? 'News' : 
-                                                     type === 'MARKET_UPDATE' ? 'Market' : 'All'}
+                                                    {mode.label} {mode.id}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-
-                                    <div className="space-y-4">
-                                        {limitedAlerts.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500">
-                                                <div className="text-4xl mb-4">🛡️</div>
-                                                <p>No alerts found. System running bulletproof!</p>
-                                                <div className="mt-4">
-                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            limitedAlerts.map(alert => (
-                                                <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
-                                                    alert.priority === 'HIGH' ? 'border-red-500' :
-                                                    alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-300'
-                                                }`}>
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-3 mb-2">
-                                                                <span className="text-xl">
-                                                                    {alert.type === 'BOT_SIGNAL' ? '🤖' : 
-                                                                     alert.type === 'MARKET_UPDATE' ? '📊' : '🔔'}
-                                                                </span>
-                                                                <h3 className="font-bold text-gray-900">{alert.title}</h3>
-                                                            </div>
-                                                            <p className="text-gray-700 mb-3">{alert.message}</p>
-                                                        </div>
-                                                        
-                                                        <div className="text-right ml-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <span>🕐</span>
-                                                                <span className="text-sm text-gray-500">{formatTimeAgo(alert.createdAt)}</span>
-                                                                {user.isAdmin && (
-                                                                    <button
-                                                                        onClick={() => handleDeleteAlert(alert._id)}
-                                                                        className="p-1 text-red-400 hover:text-red-600"
-                                                                    >
-                                                                        🗑️
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                        
-                                        {!isPaidUser && filteredAlerts.length > 3 && (
-                                            <div className="text-center bg-orange-100 p-8 rounded-lg">
-                                                <div className="text-4xl mb-4">🔒</div>
-                                                <h3 className="text-xl font-bold mb-2">Premium Content</h3>
-                                                <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} alerts</p>
-                                                <div className="flex items-center justify-center gap-4">
-                                                    <button 
-                                                        onClick={() => setShowSubscriptionPicker(true)}
-                                                        className="bg-orange-500 text-white px-6 py-3 rounded-lg font-bold hover:bg-orange-600"
-                                                    >
-                                                        🚀 UPGRADE NOW
-                                                    </button>
-                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
-                                                </div>
-                                            </div>
-                                        )}
+                                    
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-sm text-gray-500">Live Preview</span>
+                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                                     </div>
                                 </div>
 
-                                <div className="lg:col-span-1">
-                                    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            👥 Active Users ({ensureArray(members, []).length})
-                                            <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
-                                        </h3>
-                                        
-                                        <div className="space-y-3">
-                                            {(isPaidUser ? members : members.slice(0, 3)).map(member => (
-                                                <div key={member.id} className="flex items-center gap-3">
-                                                    <img 
-                                                        src={member.avatar} 
-                                                        alt="" 
-                                                        className="w-10 h-10 rounded-full cursor-pointer" 
-                                                        onClick={() => viewUserProfile(member)}
-                                                    />
-                                                    <div className="flex-1">
-                                                        <p className="font-medium text-sm">{member.username}</p>
-                                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
-                                                            {member.tier}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            
-                                            {!isPaidUser && members.length > 3 && (
-                                                <div className="text-center py-3 text-sm text-gray-500 border-t">
-                                                    <p>+{members.length - 3} more members</p>
-                                                    <button 
-                                                        onClick={() => setShowSubscriptionPicker(true)}
-                                                        className="text-orange-600 font-medium flex items-center justify-center gap-2"
-                                                    >
-                                                        Upgrade to see all <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white rounded-lg shadow-sm p-6">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            📈 Live Markets
-                                            {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded ml-2">LIMITED</span>}
-                                        </h3>
-                                        
-                                        {isPaidUser ? (
-                                            <div className="text-center py-8">
-                                                <div className="text-4xl mb-3">📊</div>
-                                                <p className="text-gray-600">Market data via bulletproof Node.js proxy</p>
-                                                <div className="text-sm text-green-600 mt-2 flex items-center justify-center gap-2">
-                                                    🛡️ Protected & Reliable <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <div className="text-4xl mb-3">🔒</div>
-                                                <p className="text-gray-600 mb-3">Real-time market data</p>
-                                                <div className="flex items-center justify-center gap-2 mb-4">
-                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
-                                                </div>
-                                                <button 
-                                                    onClick={() => setShowSubscriptionPicker(true)}
-                                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-600"
-                                                >
-                                                    Unlock Premium
-                                                </button>
-                                            </div>
-                                        )}
+                                {/* Preview Frame */}
+                                <div className="flex-1 p-4 bg-gray-100">
+                                    <div 
+                                        className="h-full mx-auto bg-white preview-frame"
+                                        style={{
+                                            width: previewMode === 'mobile' ? '375px' : 
+                                                   previewMode === 'tablet' ? '768px' : '100%',
+                                            maxWidth: '100%'
+                                        }}
+                                    >
+                                        <iframe
+                                            ref={previewRef}
+                                            className="w-full h-full rounded-lg"
+                                            title="Website Preview"
+                                        />
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <ChatPanel />
-                        <ProfileModal />
                     </div>
                 );
             };
 
-            // Check for existing auth token on load
-            useEffect(() => {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    debugLog('🔍 Found existing token, validating via proxy...');
-                    apiCall('/auth/profile')
-                        .then(userData => {
-                            debugLog('✅ Token valid, user loaded:', userData.username);
-                            setUser(userData);
-                            
-                            if (requiresSubscriptionSelection(userData)) {
-                                setShowSubscriptionPicker(true);
-                                setShowLanding(false);
-                            } else {
-                                setShowLanding(false);
-                            }
-                        })
-                        .catch((error) => {
-                            debugLog('❌ Token invalid, removing:', error.message);
-                            localStorage.removeItem('token');
-                        });
-                }
-            }, []);
-
-            debugLog('🛡️🚀 RTi Cashflowops Bulletproof Dashboard with Rocket Ship Loaded - All Errors Fixed!');
-
-            // Render logic
-            if (showLanding) {
-                return React.createElement(LandingPage);
+            // Main render logic
+            if (showLanding && !isAuthenticated) {
+                return <LandingPage />;
             }
 
-            if (showSubscriptionPicker) {
-                return React.createElement(SubscriptionPicker);
+            if (showSubscriptionPicker && isAuthenticated) {
+                return <SubscriptionPicker />;
             }
 
-            return React.createElement(Dashboard);
+            if (isAuthenticated) {
+                return <DesignStudioDashboard />;
+            }
+
+            return <LandingPage />;
         };
 
         // Render the application
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(TradingGroupDashboard));
+        root.render(<RTiDesignStudio />);
     </script>
 </body>
 </html>
