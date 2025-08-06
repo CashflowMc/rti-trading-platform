@@ -112,198 +112,6 @@
             if (data) console.log('📊 Data:', data);
         };
 
-        // FIXED: Chat Panel Component moved OUTSIDE to prevent recreation on every render
-        const ChatPanel = React.memo(({
-            user,
-            chatExpanded,
-            setChatExpanded,
-            unreadMessages,
-            setUnreadMessages,
-            chatMessages,
-            chatMessagesRef,
-            socket,
-            setShowSubscriptionPicker
-        }) => {
-            // FIXED: Move message state INSIDE ChatPanel to prevent parent re-renders
-            const [newMessage, setNewMessage] = React.useState('');
-            
-            const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
-            const maxMessages = isPaidUser ? 100 : 10;
-
-            // FIXED: Chat functions defined inside ChatPanel with local state
-            const sendChatMessage = React.useCallback(() => {
-                if (!newMessage.trim() || !socket) return;
-
-                const messageData = {
-                    message: newMessage.trim(),
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        avatar: user.avatar,
-                        tier: user.tier,
-                        isAdmin: user.isAdmin
-                    },
-                    timestamp: new Date()
-                };
-
-                debugLog('Sending chat message:', messageData);
-                socket.emit('chatMessage', messageData);
-                setNewMessage('');
-            }, [newMessage, socket, user]);
-
-            const handleChatKeyPress = React.useCallback((e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendChatMessage();
-                }
-            }, [sendChatMessage]);
-
-            const formatChatTime = (timestamp) => {
-                return new Date(timestamp).toLocaleTimeString([], { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-            };
-
-            const getTierColor = (tier) => {
-                switch (tier) {
-                    case 'ADMIN': return 'text-red-600 bg-red-100';
-                    case 'MONTHLY': return 'text-green-600 bg-green-100';
-                    case 'WEEKLY': return 'text-blue-600 bg-blue-100';
-                    default: return 'text-gray-600 bg-gray-100';
-                }
-            };
-
-            return (
-                <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
-                    chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
-                }`}>
-                    {/* Chat Header */}
-                    <div 
-                        className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
-                        onClick={() => setChatExpanded(!chatExpanded)}
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">💬</span>
-                            <span className="font-bold">Trading Chat</span>
-                            <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {unreadMessages > 0 && (
-                                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
-                                    {unreadMessages}
-                                </span>
-                            )}
-                            <span className="text-sm">
-                                {chatExpanded ? '▼' : '▲'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Chat Content */}
-                    {chatExpanded && (
-                        <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
-                            {/* Messages Area */}
-                            <div 
-                                ref={chatMessagesRef}
-                                className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
-                            >
-                                {chatMessages.length === 0 ? (
-                                    <div className="text-center text-gray-500 py-8">
-                                        <span className="text-4xl mb-2 block">🚀</span>
-                                        <p className="text-sm">Welcome to RTi Trading Chat!</p>
-                                        <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
-                                    </div>
-                                ) : (
-                                    chatMessages.slice(-maxMessages).map((message) => (
-                                        <div key={message.id} className="chat-message-enter">
-                                            {message.type === 'system' ? (
-                                                <div className="text-center">
-                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                        {message.message}
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-start gap-2">
-                                                    <img 
-                                                        src={message.user.avatar} 
-                                                        alt="" 
-                                                        className="w-8 h-8 rounded-full flex-shrink-0"
-                                                    />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="font-medium text-sm text-gray-900 truncate">
-                                                                {message.user.username}
-                                                            </span>
-                                                            <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
-                                                                {message.user.tier}
-                                                            </span>
-                                                            <span className="text-xs text-gray-400">
-                                                                {formatChatTime(message.timestamp)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-gray-700 break-words">
-                                                            {message.message}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                                
-                                {!isPaidUser && chatMessages.length > maxMessages && (
-                                    <div className="text-center py-2 border-t">
-                                        <p className="text-xs text-gray-500">
-                                            Showing last {maxMessages} messages
-                                        </p>
-                                        <button 
-                                            onClick={() => setShowSubscriptionPicker(true)}
-                                            className="text-xs text-blue-600 hover:text-blue-800 underline"
-                                        >
-                                            Upgrade to see full chat history
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Chat Input - FIXED */}
-                            <div className="border-t p-3">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyPress={handleChatKeyPress}
-                                        placeholder={isPaidUser ? "Type your message..." : "Upgrade for unlimited messages..."}
-                                        className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        disabled={!isPaidUser}
-                                    />
-                                    <button
-                                        onClick={sendChatMessage}
-                                        disabled={!newMessage.trim() || !isPaidUser}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        🚀
-                                    </button>
-                                </div>
-                                {!isPaidUser && (
-                                    <p className="text-xs text-gray-500 mt-1 text-center">
-                                        <button 
-                                            onClick={() => setShowSubscriptionPicker(true)}
-                                            className="text-blue-600 hover:text-blue-800 underline"
-                                        >
-                                            Upgrade to participate in chat
-                                        </button>
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        });
-
         const TradingGroupDashboard = () => {
             const [user, setUser] = useState(null);
             const [showLanding, setShowLanding] = useState(true);
@@ -324,6 +132,13 @@
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
 
+            // User status and DM state
+            const [userStatus, setUserStatus] = useState('online');
+            const [directMessages, setDirectMessages] = useState({});
+            const [activeDMUser, setActiveDMUser] = useState(null);
+            const [showUserMenu, setShowUserMenu] = useState(null);
+            const [dmUnreadCounts, setDmUnreadCounts] = useState({});
+
             // Initialize socket connection
             useEffect(() => {
                 if (user && !socket && !showSubscriptionPicker) {
@@ -332,6 +147,8 @@
                     socket.on('connect', () => {
                         debugLog('Connected to server');
                         socket.emit('joinTradingRoom', user.id);
+                        // Set initial user status
+                        socket.emit('updateUserStatus', { userId: user.id, status: userStatus });
                     });
 
                     socket.on('newAlert', (alert) => {
@@ -364,6 +181,39 @@
                         }
                     });
 
+                    // Direct message events
+                    socket.on('directMessage', (message) => {
+                        debugLog('Direct message received:', message);
+                        const otherUserId = message.fromUser.id === user.id ? message.toUser.id : message.fromUser.id;
+                        
+                        setDirectMessages(prev => ({
+                            ...prev,
+                            [otherUserId]: [...(prev[otherUserId] || []), {
+                                ...message,
+                                id: Date.now() + Math.random(),
+                                timestamp: new Date()
+                            }]
+                        }));
+
+                        // Update unread count if not viewing this DM
+                        if (activeDMUser !== otherUserId) {
+                            setDmUnreadCounts(prev => ({
+                                ...prev,
+                                [otherUserId]: (prev[otherUserId] || 0) + 1
+                            }));
+                        }
+                    });
+
+                    // User status events
+                    socket.on('userStatusUpdated', (userData) => {
+                        debugLog('User status updated:', userData);
+                        setMembers(prev => prev.map(member => 
+                            member.id === userData.userId 
+                                ? { ...member, status: userData.status }
+                                : member
+                        ));
+                    });
+
                     socket.on('userJoined', (userData) => {
                         debugLog('User joined:', userData);
                         setChatMessages(prev => [...prev, {
@@ -391,7 +241,7 @@
                         socket = null;
                     }
                 };
-            }, [user, showSubscriptionPicker]);
+            }, [user, showSubscriptionPicker, userStatus]);
 
             // Auto-scroll chat to bottom
             useEffect(() => {
@@ -400,12 +250,18 @@
                 }
             }, [chatMessages]);
 
-            // Clear unread messages when chat is expanded
+            // Clear unread messages when chat is expanded or DM is opened
             useEffect(() => {
-                if (chatExpanded) {
+                if (chatExpanded && !activeDMUser) {
                     setUnreadMessages(0);
                 }
-            }, [chatExpanded]);
+                if (activeDMUser && chatExpanded) {
+                    setDmUnreadCounts(prev => ({
+                        ...prev,
+                        [activeDMUser]: 0
+                    }));
+                }
+            }, [chatExpanded, activeDMUser]);
 
             // Enhanced API Functions
             const apiCall = async (endpoint, options = {}) => {
@@ -461,26 +317,64 @@
 
             // FIXED: Chat functions using useCallback to prevent recreation
             const sendChatMessage = useCallback(() => {
-                // Read newMessage directly to avoid dependency on it
-                const currentMessage = newMessage.trim();
-                if (!currentMessage || !socket) return;
+                if (!newMessage.trim() || !socket) return;
 
-                const messageData = {
-                    message: currentMessage,
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        avatar: user.avatar,
-                        tier: user.tier,
-                        isAdmin: user.isAdmin
-                    },
-                    timestamp: new Date()
-                };
+                if (activeDMUser) {
+                    // Send direct message
+                    const dmData = {
+                        message: newMessage.trim(),
+                        fromUser: {
+                            id: user.id,
+                            username: user.username,
+                            avatar: user.avatar,
+                            tier: user.tier,
+                            isAdmin: user.isAdmin
+                        },
+                        toUser: activeDMUser,
+                        timestamp: new Date()
+                    };
+                    socket.emit('directMessage', dmData);
+                } else {
+                    // Send group chat message
+                    const messageData = {
+                        message: newMessage.trim(),
+                        user: {
+                            id: user.id,
+                            username: user.username,
+                            avatar: user.avatar,
+                            tier: user.tier,
+                            isAdmin: user.isAdmin
+                        },
+                        timestamp: new Date()
+                    };
+                    socket.emit('chatMessage', messageData);
+                }
 
-                debugLog('Sending chat message:', messageData);
-                socket.emit('chatMessage', messageData);
                 setNewMessage('');
-            }, [socket, user]); // Removed newMessage from dependencies
+            }, [newMessage, socket, user, activeDMUser]);
+
+            const updateUserStatus = useCallback((newStatus) => {
+                if (socket && user) {
+                    setUserStatus(newStatus);
+                    socket.emit('updateUserStatus', { userId: user.id, status: newStatus });
+                }
+            }, [socket, user]);
+
+            const startDirectMessage = useCallback((targetUser) => {
+                setActiveDMUser(targetUser);
+                setShowUserMenu(null);
+                setChatExpanded(true);
+                
+                // Clear unread count for this user
+                setDmUnreadCounts(prev => ({
+                    ...prev,
+                    [targetUser.id]: 0
+                }));
+            }, []);
+
+            const goBackToGroupChat = useCallback(() => {
+                setActiveDMUser(null);
+            }, []);
 
             const handleChatKeyPress = useCallback((e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -554,6 +448,242 @@
                 } catch (err) {
                     setError('Failed to delete alert');
                 }
+            };
+
+            // FIXED: Chat Panel Component with proper message handling
+            const ChatPanel = () => {
+                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
+                const maxMessages = isPaidUser ? 100 : 10;
+
+                const formatChatTime = (timestamp) => {
+                    return new Date(timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                };
+
+                const getTierColor = (tier) => {
+                    switch (tier) {
+                        case 'ADMIN': return 'text-red-600 bg-red-100';
+                        case 'MONTHLY': return 'text-green-600 bg-green-100';
+                        case 'WEEKLY': return 'text-blue-600 bg-blue-100';
+                        default: return 'text-gray-600 bg-gray-100';
+                    }
+                };
+
+                const getStatusColor = (status) => {
+                    switch (status) {
+                        case 'online': return 'bg-green-500';
+                        case 'away': return 'bg-yellow-500';
+                        case 'offline': return 'bg-gray-400';
+                        default: return 'bg-gray-400';
+                    }
+                };
+
+                // FIXED: Proper event handlers that don't recreate on every render
+                const handleMessageChange = (e) => {
+                    setNewMessage(e.target.value);
+                };
+
+                const handleSendClick = () => {
+                    sendChatMessage();
+                };
+
+                const handleKeyPress = (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                };
+
+                // Get current messages (group chat or DM)
+                const currentMessages = activeDMUser 
+                    ? directMessages[activeDMUser.id] || [] 
+                    : chatMessages;
+
+                const totalUnread = unreadMessages + Object.values(dmUnreadCounts).reduce((sum, count) => sum + count, 0);
+
+                return (
+                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
+                        chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
+                    }`}>
+                        {/* Chat Header */}
+                        <div 
+                            className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
+                            onClick={() => setChatExpanded(!chatExpanded)}
+                        >
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">
+                                    {activeDMUser ? '💬' : '💬'}
+                                </span>
+                                <span className="font-bold">
+                                    {activeDMUser ? `DM: ${activeDMUser.username}` : 'Trading Chat'}
+                                </span>
+                                {activeDMUser && (
+                                    <div className={`w-2 h-2 ${getStatusColor(activeDMUser.status)} rounded-full`}></div>
+                                )}
+                                {!activeDMUser && (
+                                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {totalUnread > 0 && (
+                                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+                                        {totalUnread}
+                                    </span>
+                                )}
+                                <span className="text-sm">
+                                    {chatExpanded ? '▼' : '▲'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Chat Content */}
+                        {chatExpanded && (
+                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
+                                {/* Chat Navigation */}
+                                <div className="border-b px-3 py-2 bg-gray-50 flex items-center justify-between">
+                                    {activeDMUser ? (
+                                        <button
+                                            onClick={goBackToGroupChat}
+                                            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
+                                        >
+                                            ← Back to Group Chat
+                                        </button>
+                                    ) : (
+                                        <span className="text-sm text-gray-600">Group Chat</span>
+                                    )}
+                                    
+                                    {/* User Status Selector */}
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-gray-500">Status:</span>
+                                        <select
+                                            value={userStatus}
+                                            onChange={(e) => updateUserStatus(e.target.value)}
+                                            className="text-xs border border-gray-300 rounded px-2 py-1"
+                                        >
+                                            <option value="online">🟢 Online</option>
+                                            <option value="away">🟡 Away</option>
+                                            <option value="offline">⚫ Offline</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Messages Area */}
+                                <div 
+                                    ref={chatMessagesRef}
+                                    className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
+                                >
+                                    {currentMessages.length === 0 ? (
+                                        <div className="text-center text-gray-500 py-8">
+                                            <span className="text-4xl mb-2 block">🚀</span>
+                                            <p className="text-sm">
+                                                {activeDMUser 
+                                                    ? `Start your conversation with ${activeDMUser.username}!` 
+                                                    : 'Welcome to RTi Trading Chat!'
+                                                }
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
+                                        </div>
+                                    ) : (
+                                        currentMessages.slice(-maxMessages).map((message) => (
+                                            <div key={message.id} className="chat-message-enter">
+                                                {message.type === 'system' ? (
+                                                    <div className="text-center">
+                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                            {message.message}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-start gap-2">
+                                                        <div className="relative">
+                                                            <img 
+                                                                src={message.user?.avatar || message.fromUser?.avatar} 
+                                                                alt="" 
+                                                                className="w-8 h-8 rounded-full flex-shrink-0"
+                                                            />
+                                                            {activeDMUser && (
+                                                                <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(message.user?.status || 'online')} rounded-full border border-white`}></div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="font-medium text-sm text-gray-900 truncate">
+                                                                    {message.user?.username || message.fromUser?.username}
+                                                                </span>
+                                                                <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user?.tier || message.fromUser?.tier)}`}>
+                                                                    {message.user?.tier || message.fromUser?.tier}
+                                                                </span>
+                                                                <span className="text-xs text-gray-400">
+                                                                    {formatChatTime(message.timestamp)}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-sm text-gray-700 break-words">
+                                                                {message.message}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                    
+                                    {!isPaidUser && currentMessages.length > maxMessages && (
+                                        <div className="text-center py-2 border-t">
+                                            <p className="text-xs text-gray-500">
+                                                Showing last {maxMessages} messages
+                                            </p>
+                                            <button 
+                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                Upgrade to see full chat history
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Chat Input */}
+                                <div className="border-t p-3">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newMessage}
+                                            onChange={handleMessageChange}
+                                            onKeyPress={handleKeyPress}
+                                            placeholder={
+                                                !isPaidUser 
+                                                    ? "Upgrade for unlimited messages..." 
+                                                    : activeDMUser 
+                                                        ? `Message ${activeDMUser.username}...`
+                                                        : "Type your message..."
+                                            }
+                                            className="flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            disabled={!isPaidUser}
+                                        />
+                                        <button
+                                            onClick={handleSendClick}
+                                            disabled={!newMessage.trim() || !isPaidUser}
+                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            🚀
+                                        </button>
+                                    </div>
+                                    {!isPaidUser && (
+                                        <p className="text-xs text-gray-500 mt-1 text-center">
+                                            <button 
+                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                className="text-blue-600 hover:text-blue-800 underline"
+                                            >
+                                                Upgrade to participate in chat
+                                            </button>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
             };
 
             const LandingPage = () => {
@@ -1365,25 +1495,69 @@
                                         
                                         <div className="space-y-3">
                                             {(isPaidUser ? members : members.slice(0, 3)).map(member => (
-                                                <div key={member.id} className="flex items-center gap-3">
+                                                <div key={member.id} className="flex items-center gap-3 group">
                                                     <div className="relative">
                                                         <img src={member.avatar} alt="" className="w-10 h-10 rounded-full" />
                                                         <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
                                                             member.status === 'online' ? 'bg-green-500' :
-                                                            member.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
+                                                            member.status === 'away' ? 'bg-yellow-500' : 
+                                                            member.status === 'offline' ? 'bg-gray-400' : 'bg-green-500'
                                                         }`}></div>
                                                     </div>
                                                     <div className="flex-1">
                                                         <p className="font-medium text-gray-900 text-sm">{member.username}</p>
-                                                        <span className={`text-xs px-2 py-0.5 rounded ${
-                                                            member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
-                                                            member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
-                                                            member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                            {member.tier}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`text-xs px-2 py-0.5 rounded ${
+                                                                member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
+                                                                member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
+                                                                member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                                {member.tier}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500">
+                                                                {member.status === 'online' ? '🟢 Online' :
+                                                                 member.status === 'away' ? '🟡 Away' :
+                                                                 member.status === 'offline' ? '⚫ Offline' : '🟢 Online'}
+                                                            </span>
+                                                        </div>
                                                     </div>
+                                                    {/* User Actions Menu */}
+                                                    {isPaidUser && member.id !== user.id && (
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={() => setShowUserMenu(showUserMenu === member.id ? null : member.id)}
+                                                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded text-gray-500"
+                                                            >
+                                                                ⋮
+                                                            </button>
+                                                            
+                                                            {showUserMenu === member.id && (
+                                                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-32">
+                                                                    <button
+                                                                        onClick={() => startDirectMessage(member)}
+                                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                                                                    >
+                                                                        💬 Message
+                                                                        {dmUnreadCounts[member.id] > 0 && (
+                                                                            <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full ml-auto">
+                                                                                {dmUnreadCounts[member.id]}
+                                                                            </span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            // Add user info modal or profile view
+                                                                            setShowUserMenu(null);
+                                                                        }}
+                                                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2"
+                                                                    >
+                                                                        👤 Profile
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                             
@@ -1391,8 +1565,14 @@
                                                 <div className="text-center py-3 text-sm text-gray-500 border-t">
                                                     <p>+{members.length - 3} more members</p>
                                                     <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
-                                                        Upgrade to see all
+                                                        Upgrade to see all & send DMs
                                                     </p>
+                                                </div>
+                                            )}
+                                            
+                                            {isPaidUser && (
+                                                <div className="text-center py-2 text-xs text-gray-500 border-t">
+                                                    <p>💬 Click ⋮ next to users to send direct messages</p>
                                                 </div>
                                             )}
                                         </div>
@@ -1440,18 +1620,8 @@
                             </div>
                         </div>
 
-                        {/* FIXED: Chat Panel with proper props */}
-                        <ChatPanel 
-                            user={user}
-                            chatExpanded={chatExpanded}
-                            setChatExpanded={setChatExpanded}
-                            unreadMessages={unreadMessages}
-                            setUnreadMessages={setUnreadMessages}
-                            chatMessages={chatMessages}
-                            chatMessagesRef={chatMessagesRef}
-                            socket={socket}
-                            setShowSubscriptionPicker={setShowSubscriptionPicker}
-                        />
+                        {/* Chat Panel */}
+                        <ChatPanel />
                     </div>
                 );
             };
@@ -1479,6 +1649,16 @@
                             localStorage.removeItem('token');
                         });
                 }
+            }, []);
+
+            // Click outside handler to close user menus
+            useEffect(() => {
+                const handleClickOutside = () => {
+                    setShowUserMenu(null);
+                };
+
+                document.addEventListener('click', handleClickOutside);
+                return () => document.removeEventListener('click', handleClickOutside);
             }, []);
 
             debugLog('🚀 RTi Cashflowops Dashboard Loaded');
