@@ -1,5 +1,5 @@
 // 🚀 RTi Cashflowops - Node.js Proxy for Railway
-// Location: api_proxy.js (root directory)
+// Replace your PHP file with this: api_proxy.js
 
 const express = require('express');
 const cors = require('cors');
