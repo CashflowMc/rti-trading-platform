@@ -181,11 +181,11 @@
 
         /* 🚀 ROCKET SHIP STYLES */
         .rocket-ship {
-            font-size: 4rem;
+            font-size: 2rem;
             cursor: pointer;
             transition: transform 0.3s ease;
             display: inline-block;
-            filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.6));
+            filter: drop-shadow(0 0 10px rgba(255, 255, 0, 0.6));
         }
 
         .rocket-ship:hover {
@@ -201,7 +201,7 @@
             bottom: -20px;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 2rem;
+            font-size: 1rem;
             animation: flicker 0.2s infinite alternate;
         }
 
@@ -253,8 +253,8 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        // 🛡️ BULLETPROOF Configuration - PHP Proxy Only!
-        const PROXY_BASE_URL = 'api_proxy.php'; // Always use PHP proxy
+        // 🛡️ BULLETPROOF Configuration - Node.js Proxy Only!
+        const PROXY_BASE_URL = '/api_proxy'; // Railway Node.js proxy
         
         // Global debug state
         let debugLogs = [];
@@ -279,14 +279,14 @@
             return fallback;
         };
 
-        // 🛡️ Bulletproof API Call Function - PHP Proxy Only
+        // 🛡️ Bulletproof API Call Function - Node.js Proxy Only
         const apiCall = async (endpoint, options = {}) => {
             const token = localStorage.getItem('token');
             
-            debugLog(`🔄 API Call via PHP Proxy: ${endpoint}`, { options, hasToken: !!token });
+            debugLog(`🔄 API Call via Node.js Proxy: ${endpoint}`, { options, hasToken: !!token });
 
             try {
-                // Build form data for PHP proxy
+                // Build form data for Node.js proxy
                 const formData = new FormData();
                 formData.append('endpoint', endpoint);
                 formData.append('method', options.method || 'GET');
@@ -329,7 +329,7 @@
         };
 
         // 🚀 Rocket Ship Component
-        const RocketShip = ({ onLaunch }) => {
+        const RocketShip = ({ onLaunch, size = "2rem" }) => {
             const [isLaunching, setIsLaunching] = useState(false);
             const [showTrail, setShowTrail] = useState(false);
             const rocketRef = useRef(null);
@@ -370,6 +370,7 @@
                         className={`rocket-ship ${isLaunching ? 'rocket-launching' : ''}`}
                         onClick={launchRocket}
                         title="🚀 Click to launch to the moon!"
+                        style={{ fontSize: size }}
                     >
                         🚀
                     </div>
@@ -411,7 +412,7 @@
                     
                     <div className="mb-2">
                         <span className="proxy-status online"></span>
-                        <span className="text-green-400">PHP Proxy Active</span>
+                        <span className="text-green-400">Node.js Proxy Active</span>
                     </div>
                     
                     <div className="text-xs space-y-1 max-h-32 overflow-y-auto">
@@ -458,7 +459,7 @@
             const [newMessage, setNewMessage] = useState('');
             const [chatExpanded, setChatExpanded] = useState(false);
             const [unreadMessages, setUnreadMessages] = useState(0);
-            const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'users'
+            const [activeTab, setActiveTab] = useState('chat');
             const chatMessagesRef = useRef(null);
 
             // User status and DM state
@@ -476,17 +477,9 @@
                 tradingExperience: 'Beginner',
                 favoriteMarkets: [],
                 achievements: [],
-                socialLinks: {
-                    twitter: '',
-                    discord: '',
-                    telegram: ''
-                },
+                socialLinks: { twitter: '', discord: '', telegram: '' },
                 isPublic: true,
-                tradingStats: {
-                    winRate: 0,
-                    totalTrades: 0,
-                    favoriteStrategy: ''
-                }
+                tradingStats: { winRate: 0, totalTrades: 0, favoriteStrategy: '' }
             });
 
             // Photo upload state
@@ -503,10 +496,11 @@
             // 🛡️ Test Functions for Console
             useEffect(() => {
                 window.testProxyConnection = async () => {
-                    debugLog('🧪 Testing PHP Proxy Connection...');
+                    debugLog('🧪 Testing Node.js Proxy Connection...');
                     try {
-                        await apiCall('/auth/profile');
-                        debugLog('✅ Proxy test successful!');
+                        const response = await fetch('/health');
+                        const data = await response.json();
+                        debugLog('✅ Proxy test successful!', data);
                     } catch (err) {
                         debugLog('❌ Proxy test failed:', err.message);
                     }
@@ -533,7 +527,7 @@
                     setTimeout(() => setRocketLaunched(false), 3000);
                 };
 
-                debugLog('🛡️ Bulletproof React Dashboard initialized with PHP Proxy & Rocket Ship 🚀');
+                debugLog('🛡️ Bulletproof React Dashboard initialized with Node.js Proxy & Rocket Ship 🚀');
             }, []);
 
             // 🛡️ Bulletproof polling instead of Socket.IO
@@ -548,7 +542,7 @@
                             fetchAlerts();
                             fetchActiveUsers();
                         }
-                    }, 5000); // Poll every 5 seconds when tab is visible
+                    }, 5000);
                 }
 
                 return () => {
@@ -650,7 +644,6 @@
             const sendChatMessage = useCallback(() => {
                 if (!newMessage.trim()) return;
 
-                // Since we don't have Socket.IO, simulate adding message locally
                 const messageData = {
                     id: Date.now() + Math.random(),
                     message: newMessage.trim(),
@@ -693,135 +686,17 @@
                 debugLog('🔙 Returned to group chat');
             }, []);
 
-            // Profile functions
-            const fetchUserProfile = async (userId) => {
-                try {
-                    const profile = await apiCall(`/users/${userId}/profile`);
-                    setUserProfiles(prev => ({
-                        ...prev,
-                        [userId]: profile
-                    }));
-                    return profile;
-                } catch (err) {
-                    // If profile doesn't exist, return default
-                    const defaultProfile = {
-                        bio: '',
-                        tradingExperience: 'Beginner',
-                        favoriteMarkets: [],
-                        achievements: [],
-                        socialLinks: { twitter: '', discord: '', telegram: '' },
-                        isPublic: true,
-                        tradingStats: { winRate: 0, totalTrades: 0, favoriteStrategy: '' }
-                    };
-                    setUserProfiles(prev => ({
-                        ...prev,
-                        [userId]: defaultProfile
-                    }));
-                    return defaultProfile;
-                }
-            };
-
-            const updateUserProfile = async (profileData) => {
-                try {
-                    const updatedProfile = await apiCall('/users/profile', {
-                        method: 'PUT',
-                        body: JSON.stringify(profileData)
-                    });
-                    
-                    setUserProfiles(prev => ({
-                        ...prev,
-                        [user.id]: updatedProfile
-                    }));
-                    
-                    setIsEditingProfile(false);
-                    setError('Profile updated successfully! 🎉');
-                    setTimeout(() => setError(''), 3000);
-                    
-                    return updatedProfile;
-                } catch (err) {
-                    setError('Failed to update profile: ' + err.message);
-                }
-            };
-
+            // Profile functions (simplified)
             const viewUserProfile = useCallback(async (targetUser) => {
                 setShowProfile(targetUser);
-                
-                // Fetch profile data if not already loaded
-                if (!userProfiles[targetUser.id]) {
-                    await fetchUserProfile(targetUser.id);
-                }
-            }, [userProfiles]);
+                debugLog(`👤 Viewing profile: ${targetUser.username}`);
+            }, []);
 
-            const editMyProfile = useCallback(async () => {
+            const editMyProfile = useCallback(() => {
                 setIsEditingProfile(true);
                 setShowProfile(user);
-                
-                // Load current profile data
-                let currentProfile = userProfiles[user.id];
-                if (!currentProfile) {
-                    currentProfile = await fetchUserProfile(user.id);
-                }
-                
-                setProfileForm(currentProfile);
-                setPhotoPreview(null);
-            }, [user, userProfiles]);
-
-            // Photo upload functions (simplified for proxy)
-            const handlePhotoSelect = (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
-
-                if (!file.type.startsWith('image/')) {
-                    setError('Please select a valid image file');
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-
-                if (file.size > 5 * 1024 * 1024) {
-                    setError('Image must be smaller than 5MB');
-                    setTimeout(() => setError(''), 3000);
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    setPhotoPreview(e.target.result);
-                };
-                reader.readAsDataURL(file);
-            };
-
-            const uploadPhoto = async () => {
-                const file = fileInputRef.current?.files[0];
-                if (!file) return;
-
-                setIsUploadingPhoto(true);
-                
-                try {
-                    // For now, simulate upload (you'd implement actual upload via proxy)
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    setPhotoPreview(null);
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = '';
-                    }
-
-                    setError('Profile photo updated successfully! 📸');
-                    setTimeout(() => setError(''), 3000);
-
-                } catch (err) {
-                    setError('Failed to upload photo: ' + err.message);
-                    setTimeout(() => setError(''), 5000);
-                } finally {
-                    setIsUploadingPhoto(false);
-                }
-            };
-
-            const cancelPhotoUpload = () => {
-                setPhotoPreview(null);
-                if (fileInputRef.current) {
-                    fileInputRef.current.value = '';
-                }
-            };
+                debugLog(`✏️ Editing own profile: ${user.username}`);
+            }, [user]);
 
             // Load initial data
             useEffect(() => {
@@ -851,7 +726,7 @@
                     });
                     setNewAlert({ title: '', message: '', priority: 'MEDIUM', type: 'NEWS' });
                     setError('');
-                    fetchAlerts(); // Refresh alerts
+                    fetchAlerts();
                 } catch (err) {
                     setError('Failed to create alert');
                 } finally {
@@ -864,36 +739,9 @@
                 
                 try {
                     await apiCall(`/alerts/${alertId}`, { method: 'DELETE' });
-                    fetchAlerts(); // Refresh alerts
+                    fetchAlerts();
                 } catch (err) {
                     setError('Failed to delete alert');
-                }
-            };
-
-            // Drag and drop handlers for photo upload
-            const handleDragOver = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-
-            const handleDrop = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    const file = files[0];
-                    if (file.type.startsWith('image/')) {
-                        const dt = new DataTransfer();
-                        dt.items.add(file);
-                        if (fileInputRef.current) {
-                            fileInputRef.current.files = dt.files;
-                            handlePhotoSelect({ target: { files: dt.files } });
-                        }
-                    } else {
-                        setError('Please drop a valid image file');
-                        setTimeout(() => setError(''), 3000);
-                    }
                 }
             };
 
@@ -951,7 +799,7 @@
                                 <div className="text-center">
                                     <p className="text-gray-600">Profile functionality available in full version</p>
                                     <div className="mt-4">
-                                        <RocketShip onLaunch={handleRocketLaunch} />
+                                        <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
                                         <p className="text-sm text-gray-500 mt-2">🚀 Click the rocket to launch!</p>
                                     </div>
                                 </div>
@@ -961,7 +809,7 @@
                 );
             };
 
-            // Enhanced Chat Panel Component (simplified)
+            // Enhanced Chat Panel Component
             const ChatPanel = () => {
                 const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
 
@@ -979,18 +827,18 @@
                                 <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
                             </div>
                             <div className="flex items-center gap-2">
-                                <RocketShip onLaunch={handleRocketLaunch} />
+                                <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
                                 <span className="text-sm">{chatExpanded ? '▼' : '▲'}</span>
                             </div>
                         </div>
 
                         {chatExpanded && (
                             <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
-                                <div className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar">
+                                <div className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar" ref={chatMessagesRef}>
                                     {chatMessages.length === 0 ? (
                                         <div className="text-center text-gray-500 py-8">
-                                            <span className="text-4xl mb-2 block">🚀</span>
-                                            <p className="text-sm">Welcome to RTi Trading Chat!</p>
+                                            <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
+                                            <p className="text-sm mt-2">Welcome to RTi Trading Chat!</p>
                                             <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
                                         </div>
                                     ) : (
@@ -1056,7 +904,7 @@
                 );
             };
 
-            // Landing Page Component (with rocket ship)
+            // Landing Page Component
             const LandingPage = () => {
                 const [loginData, setLoginData] = useState({ username: '', password: '' });
                 const [isRegistering, setIsRegistering] = useState(false);
@@ -1158,7 +1006,7 @@
                             {/* Rocket Ship Launch Area */}
                             <div className="relative mb-6">
                                 <div className="flex justify-center">
-                                    <RocketShip onLaunch={handleRocketLaunch} />
+                                    <RocketShip onLaunch={handleRocketLaunch} size="4rem" />
                                 </div>
                             </div>
 
@@ -1326,7 +1174,7 @@
                 );
             };
 
-            // Subscription Selection Page (simplified with rocket)
+            // Subscription Selection Page
             const SubscriptionPicker = () => {
                 const handlePlanSelection = async (planId) => {
                     debugLog('Plan selected:', planId);
@@ -1348,7 +1196,7 @@
                     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center px-4">
                         <div className="text-center">
                             <div className="mb-8">
-                                <RocketShip onLaunch={handleRocketLaunch} />
+                                <RocketShip onLaunch={handleRocketLaunch} size="4rem" />
                             </div>
                             
                             <h1 className="text-4xl font-black text-white mb-8">Choose Your Rocket Fuel ⛽</h1>
@@ -1418,10 +1266,10 @@
                                         <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
                                             RTi Cashflowops 🛡️
                                         </div>
-                                        <RocketShip onLaunch={handleRocketLaunch} />
+                                        <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
                                         <div className="flex items-center gap-2 text-green-600">
                                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                            <span className="text-sm font-medium">PHP Proxy</span>
+                                            <span className="text-sm font-medium">Node.js Proxy</span>
                                         </div>
                                     </div>
 
@@ -1480,7 +1328,7 @@
                                 <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
-                                            <RocketShip onLaunch={handleRocketLaunch} />
+                                            <RocketShip onLaunch={handleRocketLaunch} size="3rem" />
                                             <div>
                                                 <h3 className="text-xl font-black">🛡️ UPGRADE YOUR ROCKET FUEL!</h3>
                                                 <p>Unlimited access to all features with bulletproof reliability</p>
@@ -1501,7 +1349,7 @@
                                 <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
                                     <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
                                         ⚙️ Admin Panel 
-                                        <RocketShip onLaunch={handleRocketLaunch} />
+                                        <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                         <select
@@ -1554,7 +1402,7 @@
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                                             🛡️ Bulletproof Live Alerts 
-                                            <RocketShip onLaunch={handleRocketLaunch} />
+                                            <RocketShip onLaunch={handleRocketLaunch} size="1.5rem" />
                                         </h2>
                                         <div className="flex gap-2">
                                             {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map(type => (
@@ -1581,7 +1429,7 @@
                                                 <div className="text-4xl mb-4">🛡️</div>
                                                 <p>No alerts found. System running bulletproof!</p>
                                                 <div className="mt-4">
-                                                    <RocketShip onLaunch={handleRocketLaunch} />
+                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
                                                 </div>
                                             </div>
                                         ) : (
@@ -1633,7 +1481,7 @@
                                                     >
                                                         🚀 UPGRADE NOW
                                                     </button>
-                                                    <RocketShip onLaunch={handleRocketLaunch} />
+                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
                                                 </div>
                                             </div>
                                         )}
@@ -1644,7 +1492,7 @@
                                     <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                             👥 Active Users ({ensureArray(members, []).length})
-                                            <RocketShip onLaunch={handleRocketLaunch} />
+                                            <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
                                         </h3>
                                         
                                         <div className="space-y-3">
@@ -1672,7 +1520,7 @@
                                                         onClick={() => setShowSubscriptionPicker(true)}
                                                         className="text-orange-600 font-medium flex items-center justify-center gap-2"
                                                     >
-                                                        Upgrade to see all <RocketShip onLaunch={handleRocketLaunch} />
+                                                        Upgrade to see all <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
                                                     </button>
                                                 </div>
                                             )}
@@ -1688,9 +1536,9 @@
                                         {isPaidUser ? (
                                             <div className="text-center py-8">
                                                 <div className="text-4xl mb-3">📊</div>
-                                                <p className="text-gray-600">Market data via bulletproof proxy</p>
+                                                <p className="text-gray-600">Market data via bulletproof Node.js proxy</p>
                                                 <div className="text-sm text-green-600 mt-2 flex items-center justify-center gap-2">
-                                                    🛡️ Protected & Reliable <RocketShip onLaunch={handleRocketLaunch} />
+                                                    🛡️ Protected & Reliable <RocketShip onLaunch={handleRocketLaunch} size="1rem" />
                                                 </div>
                                             </div>
                                         ) : (
@@ -1698,7 +1546,7 @@
                                                 <div className="text-4xl mb-3">🔒</div>
                                                 <p className="text-gray-600 mb-3">Real-time market data</p>
                                                 <div className="flex items-center justify-center gap-2 mb-4">
-                                                    <RocketShip onLaunch={handleRocketLaunch} />
+                                                    <RocketShip onLaunch={handleRocketLaunch} size="2rem" />
                                                 </div>
                                                 <button 
                                                     onClick={() => setShowSubscriptionPicker(true)}
