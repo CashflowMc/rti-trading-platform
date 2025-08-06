@@ -1,0 +1,353 @@
+// 🛡️ BULLETPROOF FRONTEND API - USES PHP PROXY
+// Replace your current API configuration with this
+
+// API Configuration
+const PROXY_URL = 'https://cashflowops.pro/api-proxy.php';
+
+const getAuthToken = () => localStorage.getItem('authToken');
+
+// Enhanced fetch using PHP proxy (bypasses CORS completely)
+const proxyFetch = async (endpoint, options = {}) => {
+  const token = getAuthToken();
+  
+  // Clean endpoint (remove leading /api if present)
+  const cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '');
+  
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+
+  const config = {
+    method: 'GET',
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
+  };
+
+  // Build proxy URL
+  const proxyEndpoint = `${PROXY_URL}?endpoint=${encodeURIComponent(cleanEndpoint)}`;
+  
+  console.log(`🔄 Proxy request: ${config.method} ${cleanEndpoint}`);
+  
+  const response = await fetch(proxyEndpoint, config);
+  
+  // Handle auth errors
+  if (response.status === 401) {
+    console.log('🔑 Unauthorized - clearing token');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    window.location.href = '/login.html';
+    return;
+  }
+  
+  return response;
+};
+
+// Complete API object using proxy
+const API = {
+  // Test endpoints
+  testConnection: async () => {
+    try {
+      const response = await proxyFetch('test');
+      const data = await response.json();
+      console.log('✅ Connection test:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Connection test failed:', error);
+      throw error;
+    }
+  },
+
+  corsTest: async () => {
+    try {
+      const response = await proxyFetch('cors-test');
+      const data = await response.json();
+      console.log('✅ CORS test:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ CORS test failed:', error);
+      throw error;
+    }
+  },
+
+  // Authentication
+  register: async (userData) => {
+    try {
+      const response = await proxyFetch('auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+      });
+      const data = await response.json();
+      console.log('📝 Registration result:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Registration error:', error);
+      throw error;
+    }
+  },
+
+  login: async (credentials) => {
+    try {
+      console.log('🔑 Login attempt via proxy:', credentials.username);
+      const response = await proxyFetch('auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Login successful via proxy:', data);
+      
+      // Store auth data
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log('💾 Auth data stored');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Login error:', error);
+      throw error;
+    }
+  },
+
+  getProfile: async () => {
+    try {
+      const response = await proxyFetch('auth/profile');
+      const data = await response.json();
+      console.log('👤 Profile data:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Profile error:', error);
+      throw error;
+    }
+  },
+
+  // User Profile Management
+  getUserProfile: async () => {
+    try {
+      const response = await proxyFetch('users/profile');
+      const data = await response.json();
+      console.log('👤 User profile:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ User profile error:', error);
+      throw error;
+    }
+  },
+
+  updateProfile: async (profileData) => {
+    try {
+      const response = await proxyFetch('users/profile', {
+        method: 'PUT',
+        body: JSON.stringify(profileData)
+      });
+      const data = await response.json();
+      console.log('📝 Profile updated:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      throw error;
+    }
+  },
+
+  // Alerts with proper error handling
+  getAlerts: async (type = 'ALL', page = 1, limit = 50) => {
+    try {
+      const response = await proxyFetch(`alerts?type=${type}&page=${page}&limit=${limit}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('🚨 Alerts data:', data);
+      
+      // Handle both old and new response formats
+      if (Array.isArray(data)) {
+        return {
+          alerts: data,
+          pagination: { page: 1, limit: data.length, total: data.length, hasMore: false }
+        };
+      } else if (data && Array.isArray(data.alerts)) {
+        return data;
+      } else {
+        console.warn('⚠️ Invalid alerts response:', data);
+        return {
+          alerts: [],
+          pagination: { page: 1, limit: 0, total: 0, hasMore: false }
+        };
+      }
+    } catch (error) {
+      console.error('❌ Alerts error:', error);
+      return {
+        alerts: [],
+        pagination: { page: 1, limit: 0, total: 0, hasMore: false }
+      };
+    }
+  },
+
+  createAlert: async (alertData) => {
+    try {
+      const response = await proxyFetch('alerts', {
+        method: 'POST',
+        body: JSON.stringify(alertData)
+      });
+      const data = await response.json();
+      console.log('🚨 Alert created:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Create alert error:', error);
+      throw error;
+    }
+  },
+
+  deleteAlert: async (alertId) => {
+    try {
+      const response = await proxyFetch(`alerts/${alertId}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+      console.log('🗑️ Alert deleted:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Delete alert error:', error);
+      throw error;
+    }
+  },
+
+  // Active Users
+  getActiveUsers: async () => {
+    try {
+      const response = await proxyFetch('users/active');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('👥 Active users:', data);
+      
+      // Ensure we always return an array
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('❌ Active users error:', error);
+      return [];
+    }
+  },
+
+  // Market Data
+  getMarketData: async () => {
+    try {
+      const response = await proxyFetch('market/data');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('📈 Market data:', data);
+      return data || {};
+    } catch (error) {
+      console.error('❌ Market data error:', error);
+      return {};
+    }
+  },
+
+  // Avatar Upload
+  uploadAvatar: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const response = await proxyFetch('users/avatar', {
+        method: 'POST',
+        headers: {}, // Don't set Content-Type for FormData
+        body: formData
+      });
+      
+      const data = await response.json();
+      console.log('📸 Avatar uploaded:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Avatar upload error:', error);
+      throw error;
+    }
+  },
+
+  // Subscription
+  getSubscriptionPlans: async () => {
+    try {
+      const response = await proxyFetch('subscription/plans');
+      const data = await response.json();
+      console.log('💳 Subscription plans:', data);
+      return Array.isArray(data) ? data : [];
+    } catch (error) {
+      console.error('❌ Subscription plans error:', error);
+      return [];
+    }
+  },
+
+  createCheckoutSession: async (priceId) => {
+    try {
+      const response = await proxyFetch('subscription/create-checkout-session', {
+        method: 'POST',
+        body: JSON.stringify({ priceId })
+      });
+      const data = await response.json();
+      console.log('💳 Checkout session:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Checkout session error:', error);
+      throw error;
+    }
+  }
+};
+
+// Test functions for browser console
+window.testProxy = async () => {
+  console.log('🧪 Testing PHP proxy...');
+  
+  try {
+    const result = await API.testConnection();
+    console.log('✅ Proxy test successful:', result);
+    alert('✅ Proxy is working!');
+    return true;
+  } catch (error) {
+    console.error('❌ Proxy test failed:', error);
+    alert('❌ Proxy failed: ' + error.message);
+    return false;
+  }
+};
+
+window.testProxyLogin = async (username = 'testuser', password = 'test123') => {
+  console.log('🔑 Testing login via proxy...');
+  
+  try {
+    const result = await API.login({ username, password });
+    console.log('✅ Proxy login successful:', result);
+    alert('✅ Login via proxy works!');
+    return result;
+  } catch (error) {
+    console.error('❌ Proxy login failed:', error);
+    alert('❌ Proxy login failed: ' + error.message);
+    return null;
+  }
+};
+
+window.testProxyAdmin = async () => {
+  return await testProxyLogin('admin', 'admin123');
+};
+
+// Auto-test on load (remove in production)
+console.log('🛡️ PHP Proxy API loaded');
+console.log('🧪 Run testProxy() or testProxyLogin() in console to test');
+
+export default API;
