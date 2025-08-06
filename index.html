@@ -121,14 +121,42 @@
             setUnreadMessages,
             chatMessages,
             chatMessagesRef,
-            newMessage,
-            setNewMessage,
-            sendChatMessage,
-            handleChatKeyPress,
+            socket,
             setShowSubscriptionPicker
         }) => {
+            // FIXED: Move message state INSIDE ChatPanel to prevent parent re-renders
+            const [newMessage, setNewMessage] = React.useState('');
+            
             const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
             const maxMessages = isPaidUser ? 100 : 10;
+
+            // FIXED: Chat functions defined inside ChatPanel with local state
+            const sendChatMessage = React.useCallback(() => {
+                if (!newMessage.trim() || !socket) return;
+
+                const messageData = {
+                    message: newMessage.trim(),
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        avatar: user.avatar,
+                        tier: user.tier,
+                        isAdmin: user.isAdmin
+                    },
+                    timestamp: new Date()
+                };
+
+                debugLog('Sending chat message:', messageData);
+                socket.emit('chatMessage', messageData);
+                setNewMessage('');
+            }, [newMessage, socket, user]);
+
+            const handleChatKeyPress = React.useCallback((e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            }, [sendChatMessage]);
 
             const formatChatTime = (timestamp) => {
                 return new Date(timestamp).toLocaleTimeString([], { 
@@ -253,7 +281,7 @@
                                     />
                                     <button
                                         onClick={sendChatMessage}
-                                        disabled={!isPaidUser}
+                                        disabled={!newMessage.trim() || !isPaidUser}
                                         className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                     >
                                         🚀
@@ -1421,10 +1449,7 @@
                             setUnreadMessages={setUnreadMessages}
                             chatMessages={chatMessages}
                             chatMessagesRef={chatMessagesRef}
-                            newMessage={newMessage}
-                            setNewMessage={setNewMessage}
-                            sendChatMessage={sendChatMessage}
-                            handleChatKeyPress={handleChatKeyPress}
+                            socket={socket}
                             setShowSubscriptionPicker={setShowSubscriptionPicker}
                         />
                     </div>
