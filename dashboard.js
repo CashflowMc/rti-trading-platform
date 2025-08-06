@@ -1,7 +1,8 @@
 // 📁 FILE: rti-trading-platform/js/dashboard.js
-// Trading Dashboard JavaScript - PRODUCTION READY WITH SUBSCRIPTION CHECK
+// Trading Dashboard JavaScript - PRODUCTION READY WITH PHP PROXY
 
-// Configuration - UPDATED FOR PRODUCTION
+// 🛡️ UPDATED CONFIGURATION - PHP PROXY SYSTEM
+const PROXY_URL = 'https://cashflowops.pro/api-proxy.php';
 const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
 
 // Global variables
@@ -35,9 +36,48 @@ const marketData = document.getElementById('marketData');
 const marketPaywall = document.getElementById('marketPaywall');
 const marketLimitedBadge = document.getElementById('marketLimitedBadge');
 
+// 🛡️ PHP PROXY FETCH FUNCTION - BYPASSES CORS
+const proxyFetch = async (endpoint, options = {}) => {
+    const token = localStorage.getItem('token');
+    
+    // Clean endpoint (remove leading /api if present)
+    const cleanEndpoint = endpoint.replace(/^\/api\//, '').replace(/^\//, '');
+    
+    const defaultHeaders = {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+    };
+
+    const config = {
+        method: 'GET',
+        ...options,
+        headers: {
+            ...defaultHeaders,
+            ...options.headers
+        }
+    };
+
+    // Build proxy URL
+    const proxyEndpoint = `${PROXY_URL}?endpoint=${encodeURIComponent(cleanEndpoint)}`;
+    
+    console.log(`🔄 Proxy request: ${config.method} ${cleanEndpoint}`);
+    
+    const response = await fetch(proxyEndpoint, config);
+    
+    // Handle auth errors
+    if (response.status === 401) {
+        console.log('🔑 Unauthorized - clearing token');
+        localStorage.removeItem('token');
+        window.location.href = 'index.html';
+        return;
+    }
+    
+    return response;
+};
+
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Dashboard loaded');
+    console.log('🚀 Dashboard loaded with PHP Proxy');
     
     // Check for payment success
     checkPaymentSuccess();
@@ -273,15 +313,31 @@ function initializeSocket() {
     });
 }
 
-// Fetch alerts
+// 🔧 FIXED: Fetch alerts with proper error handling
 async function fetchAlerts() {
     try {
         if (loadingAlerts) loadingAlerts.style.display = 'block';
-        const alerts = await apiCall(`/alerts?type=${currentFilter}`);
-        allAlerts = alerts;
+        
+        const alertsResponse = await apiCall(`/alerts?type=${currentFilter}`);
+        
+        // Handle different response formats - FIXES alerts.filter ERROR
+        if (Array.isArray(alertsResponse)) {
+            allAlerts = alertsResponse;
+        } else if (alertsResponse && Array.isArray(alertsResponse.alerts)) {
+            allAlerts = alertsResponse.alerts;
+        } else if (alertsResponse && alertsResponse.data && Array.isArray(alertsResponse.data)) {
+            allAlerts = alertsResponse.data;
+        } else {
+            console.warn('⚠️ Unexpected alerts response format:', alertsResponse);
+            allAlerts = [];
+        }
+        
+        console.log('🚨 Alerts loaded:', allAlerts.length);
         displayAlerts();
+        
     } catch (error) {
         console.error('Error fetching alerts:', error);
+        allAlerts = []; // Ensure allAlerts is always an array
         showError('Failed to fetch alerts');
     } finally {
         if (loadingAlerts) loadingAlerts.style.display = 'none';
@@ -293,6 +349,12 @@ function displayAlerts() {
     if (!alertsContainer) return;
     
     const isPaidUser = currentUser.tier === 'WEEKLY' || currentUser.tier === 'MONTHLY' || currentUser.isAdmin;
+    
+    // Ensure allAlerts is always an array
+    if (!Array.isArray(allAlerts)) {
+        console.warn('⚠️ allAlerts is not an array, resetting:', allAlerts);
+        allAlerts = [];
+    }
     
     if (allAlerts.length === 0) {
         alertsContainer.innerHTML = `
@@ -417,14 +479,29 @@ function filterAlerts(type) {
     fetchAlerts();
 }
 
-// Fetch active users
+// 🔧 FIXED: Fetch active users with proper error handling
 async function fetchActiveUsers() {
     try {
-        const users = await apiCall('/users/active');
-        allUsers = users;
+        const usersResponse = await apiCall('/users/active');
+        
+        // Handle different response formats
+        if (Array.isArray(usersResponse)) {
+            allUsers = usersResponse;
+        } else if (usersResponse && Array.isArray(usersResponse.users)) {
+            allUsers = usersResponse.users;
+        } else if (usersResponse && usersResponse.data && Array.isArray(usersResponse.data)) {
+            allUsers = usersResponse.data;
+        } else {
+            console.warn('⚠️ Unexpected users response format:', usersResponse);
+            allUsers = [];
+        }
+        
+        console.log('👥 Active users loaded:', allUsers.length);
         displayActiveUsers();
+        
     } catch (error) {
         console.error('Error fetching active users:', error);
+        allUsers = []; // Ensure allUsers is always an array
     }
 }
 
@@ -433,6 +510,13 @@ function displayActiveUsers() {
     if (!activeUsers || !userCount) return;
     
     const isPaidUser = currentUser.tier === 'WEEKLY' || currentUser.tier === 'MONTHLY' || currentUser.isAdmin;
+    
+    // Ensure allUsers is always an array
+    if (!Array.isArray(allUsers)) {
+        console.warn('⚠️ allUsers is not an array, resetting:', allUsers);
+        allUsers = [];
+    }
+    
     const displayUsers = isPaidUser ? allUsers : allUsers.slice(0, 3);
     
     userCount.textContent = allUsers.length;
@@ -489,16 +573,16 @@ async function fetchMarketData() {
     try {
         const data = await apiCall('/market/data');
         
-        if (marketData) {
+        if (marketData && data && typeof data === 'object') {
             marketData.innerHTML = Object.entries(data).map(([symbol, info]) => `
                 <div class="flex justify-between items-center">
                     <span class="font-medium text-gray-900">${symbol}</span>
                     <div class="text-right">
                         <div class="font-bold text-gray-900">
-                            $${info.price.toFixed(2)}
+                            $${typeof info.price === 'number' ? info.price.toFixed(2) : 'N/A'}
                         </div>
                         <div class="text-xs ${info.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}">
-                            ${info.changePercent >= 0 ? '+' : ''}${info.changePercent.toFixed(2)}%
+                            ${info.changePercent >= 0 ? '+' : ''}${typeof info.changePercent === 'number' ? info.changePercent.toFixed(2) : '0.00'}%
                         </div>
                     </div>
                 </div>
@@ -581,25 +665,21 @@ async function deleteAlert(alertId) {
     }
 }
 
-// Utility functions
+// 🛡️ UPDATED: API Call function using PHP Proxy
 async function apiCall(endpoint, options = {}) {
-    const token = localStorage.getItem('token');
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-    };
+    try {
+        const response = await proxyFetch(endpoint, options);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Network Error' }));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers,
-        ...options
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'API Error');
+        return await response.json();
+    } catch (error) {
+        console.error('❌ API call failed:', error);
+        throw error;
     }
-
-    return response.json();
 }
 
 function showSuccess(message) {
@@ -636,6 +716,22 @@ function logout() {
     window.location.href = 'index.html';
 }
 
+// Test functions for browser console
+window.testProxy = async () => {
+    console.log('🧪 Testing PHP proxy with trading platform...');
+    
+    try {
+        const result = await apiCall('/auth/profile');
+        console.log('✅ Proxy test successful:', result);
+        alert('✅ PHP Proxy is working with your trading platform!');
+        return true;
+    } catch (error) {
+        console.error('❌ Proxy test failed:', error);
+        alert('❌ Proxy failed: ' + error.message);
+        return false;
+    }
+};
+
 // Make functions globally available
 window.filterAlerts = filterAlerts;
 window.toggleAdminPanel = toggleAdminPanel;
@@ -644,5 +740,7 @@ window.deleteAlert = deleteAlert;
 window.hideError = hideError;
 window.logout = logout;
 window.redirectToSubscription = redirectToSubscription;
+window.testProxy = testProxy;
 
-console.log('📦 Dashboard.js loaded successfully');
+console.log('📦 Production Trading Dashboard.js loaded with PHP Proxy system ✅');
+console.log('🧪 Run testProxy() in console to test connection');
