@@ -1,55 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import io from 'socket.io-client';
 
-/**
- * Error Boundary for catching component errors
- */
-class DashboardErrorBoundary extends React.Component {
-  state = { hasError: false, error: null };
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('Dashboard Error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="dashboard-error">
-          <h2>Dashboard Error</h2>
-          <p>{this.state.error.message}</p>
-          <button onClick={() => window.location.reload()}>Reload Dashboard</button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-/**
- * Main Dashboard Component
- */
-const Dashboard = ({ initialAlerts = [] }) => {
-  // State initialization with proper defaults
-  const [alerts, setAlerts] = useState(
-    Array.isArray(initialAlerts) ? initialAlerts : []
-  );
-  const [isLoading, setIsLoading] = useState(false);
+const Dashboard = () => {
+  // State with proper initialization
+  const [alerts, setAlerts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [socket, setSocket] = useState(null);
+  const [activeUsers, setActiveUsers] = useState(0);
 
-  /**
-   * Safely fetch alerts from API
-   */
+  // API Configuration
+  const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
+  const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
+
+  // Fetch alerts from API
   const fetchAlerts = async () => {
-    setIsLoading(true);
-    setError(null);
-    
     try {
-      const response = await fetch('/api/alerts', {
+      const response = await fetch(`${API_BASE_URL}/alerts?type=ALL`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
@@ -61,72 +29,85 @@ const Dashboard = ({ initialAlerts = [] }) => {
 
       const data = await response.json();
       
-      // Validate and sanitize alerts data
-      const validatedAlerts = validateAlerts(data.alerts);
-      setAlerts(validatedAlerts);
-      setLastUpdated(new Date());
-      
+      // Validate and set alerts
+      if (data && Array.isArray(data.alerts)) {
+        setAlerts(data.alerts);
+      } else {
+        setAlerts([]);
+        console.warn('Unexpected alerts format:', data);
+      }
     } catch (err) {
       console.error('Failed to fetch alerts:', err);
       setError(err.message);
-      setAlerts([]); // Reset to empty array on error
+      setAlerts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  /**
-   * Validate and sanitize alerts data
-   */
-  const validateAlerts = (alertsData) => {
-    if (!Array.isArray(alertsData)) {
-      console.warn('Alerts data is not an array:', alertsData);
-      return [];
+  // Fetch active users
+  const fetchActiveUsers = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/active`);
+      const data = await response.json();
+      setActiveUsers(data.count || 0);
+    } catch (err) {
+      console.error('Failed to fetch active users:', err);
     }
-
-    return alertsData.filter(alert => (
-      alert &&
-      typeof alert === 'object' &&
-      alert.id &&
-      alert.title &&
-      alert.priority
-    )).map(alert => ({
-      id: alert.id,
-      title: alert.title || 'Untitled Alert',
-      message: alert.message || '',
-      priority: alert.priority || 'medium',
-      timestamp: alert.timestamp || new Date().toISOString()
-    }));
   };
 
-  /**
-   * Safe filtering of alerts
-   */
-  const getFilteredAlerts = (priority) => {
-    if (!Array.isArray(alerts)) return [];
-    return alerts.filter(alert => alert.priority === priority);
+  // Initialize socket connection
+  const initSocket = () => {
+    try {
+      const newSocket = io(SOCKET_URL, {
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        transports: ['websocket']
+      });
+
+      newSocket.on('connect', () => {
+        console.log('Socket connected');
+      });
+
+      newSocket.on('connect_error', (err) => {
+        console.log('Socket connection error:', err);
+      });
+
+      newSocket.on('newAlert', (alert) => {
+        setAlerts(prev => [alert, ...prev]);
+      });
+
+      setSocket(newSocket);
+
+      return () => newSocket.disconnect();
+    } catch (err) {
+      console.error('Socket initialization error:', err);
+    }
   };
 
-  // Load alerts on component mount
+  // Safe filtering of alerts
+  const getFilteredAlerts = (type) => {
+    return Array.isArray(alerts) ? alerts.filter(alert => alert.type === type) : [];
+  };
+
+  // Initial data loading
   useEffect(() => {
     fetchAlerts();
-    
-    // Set up refresh interval (5 minutes)
-    const interval = setInterval(fetchAlerts, 300000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchActiveUsers();
+    const cleanup = initSocket();
 
-  // Get filtered alerts
-  const highPriorityAlerts = getFilteredAlerts('high');
-  const mediumPriorityAlerts = getFilteredAlerts('medium');
-  const lowPriorityAlerts = getFilteredAlerts('low');
+    return () => {
+      if (cleanup) cleanup();
+      if (socket) socket.disconnect();
+    };
+  }, []);
 
   // Render loading state
   if (isLoading) {
     return (
       <div className="dashboard-loading">
         <div className="spinner"></div>
-        <p>Loading alerts...</p>
+        <p>Loading dashboard data...</p>
       </div>
     );
   }
@@ -135,7 +116,7 @@ const Dashboard = ({ initialAlerts = [] }) => {
   if (error) {
     return (
       <div className="dashboard-error">
-        <h3>Error Loading Alerts</h3>
+        <h3>Dashboard Error</h3>
         <p>{error}</p>
         <button onClick={fetchAlerts}>Retry</button>
       </div>
@@ -147,89 +128,61 @@ const Dashboard = ({ initialAlerts = [] }) => {
     <div className="dashboard-container">
       <header className="dashboard-header">
         <h1>Cashflow Operations Dashboard</h1>
-        {lastUpdated && (
-          <p className="last-updated">
-            Last updated: {lastUpdated.toLocaleTimeString()}
-          </p>
-        )}
+        <div className="dashboard-stats">
+          <span>Active Users: {activeUsers}</span>
+          <span>Alerts: {alerts.length}</span>
+        </div>
       </header>
 
       <section className="alerts-section">
-        <h2>Alerts</h2>
+        <h2>Alerts Overview</h2>
         
-        {alerts.length === 0 ? (
-          <p className="no-alerts">No alerts found</p>
-        ) : (
-          <>
-            {highPriorityAlerts.length > 0 && (
-              <AlertGroup priority="high" alerts={highPriorityAlerts} />
-            )}
-            {mediumPriorityAlerts.length > 0 && (
-              <AlertGroup priority="medium" alerts={mediumPriorityAlerts} />
-            )}
-            {lowPriorityAlerts.length > 0 && (
-              <AlertGroup priority="low" alerts={lowPriorityAlerts} />
-            )}
-          </>
-        )}
+        <div className="alert-filters">
+          <button onClick={() => setAlerts(getFilteredAlerts('critical'))}>
+            Critical
+          </button>
+          <button onClick={() => setAlerts(getFilteredAlerts('warning'))}>
+            Warnings
+          </button>
+          <button onClick={() => setAlerts(getFilteredAlerts('info'))}>
+            Info
+          </button>
+          <button onClick={fetchAlerts}>
+            Show All
+          </button>
+        </div>
+
+        <div className="alerts-list">
+          {alerts.length === 0 ? (
+            <p className="no-alerts">No alerts to display</p>
+          ) : (
+            alerts.map(alert => (
+              <div key={alert.id} className={`alert-item ${alert.type}`}>
+                <h3>{alert.title}</h3>
+                <p>{alert.message}</p>
+                <div className="alert-meta">
+                  <span>{new Date(alert.timestamp).toLocaleString()}</span>
+                  <span>{alert.type.toUpperCase()}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </section>
-
-      <button 
-        className="refresh-button"
-        onClick={fetchAlerts}
-        disabled={isLoading}
-      >
-        {isLoading ? 'Refreshing...' : 'Refresh Alerts'}
-      </button>
     </div>
   );
 };
 
-/**
- * Alert Group Subcomponent
- */
-const AlertGroup = ({ priority, alerts }) => {
-  const priorityClass = `alert-priority-${priority}`;
-  
-  return (
-    <div className={`alert-group ${priorityClass}`}>
-      <h3>{priority.toUpperCase()} Priority Alerts</h3>
-      <ul>
-        {alerts.map(alert => (
-          <li key={alert.id} className="alert-item">
-            <h4>{alert.title}</h4>
-            <p>{alert.message}</p>
-            <time>{new Date(alert.timestamp).toLocaleString()}</time>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-// PropTypes validation
 Dashboard.propTypes = {
   initialAlerts: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
-      title: PropTypes.string,
+      title: PropTypes.string.isRequired,
       message: PropTypes.string,
-      priority: PropTypes.oneOf(['high', 'medium', 'low']),
+      type: PropTypes.oneOf(['critical', 'warning', 'info']),
       timestamp: PropTypes.string
     })
   )
 };
 
-AlertGroup.propTypes = {
-  priority: PropTypes.oneOf(['high', 'medium', 'low']).isRequired,
-  alerts: PropTypes.array.isRequired
-};
-
-// Wrap Dashboard with Error Boundary
-export default function SafeDashboard(props) {
-  return (
-    <DashboardErrorBoundary>
-      <Dashboard {...props} />
-    </DashboardErrorBoundary>
-  );
-}
+export default Dashboard;
