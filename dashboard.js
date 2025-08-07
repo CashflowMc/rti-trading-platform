@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import io from 'socket.io-client';
 
 const Dashboard = () => {
@@ -10,18 +9,17 @@ const Dashboard = () => {
   const [socket, setSocket] = useState(null);
   const [activeUsers, setActiveUsers] = useState(0);
 
-  // API Configuration
   const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
   const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
 
-  // Enhanced error handling wrapper
+  // Error handler
   const handleError = (error, context) => {
     console.error(`Error in ${context}:`, error);
     setError(error.message || 'An unexpected error occurred');
     return null;
   };
 
-  // Safe API fetch with error handling
+  // Safe fetch wrapper
   const safeFetch = async (url, options = {}) => {
     try {
       const response = await fetch(url, options);
@@ -34,19 +32,26 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch alerts from API with error handling
+  // Fetch alerts
   const fetchAlerts = async () => {
     setIsLoading(true);
+
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setError("You're not logged in.");
+      setIsLoading(false);
+      return;
+    }
+
     const data = await safeFetch(`${API_BASE_URL}/alerts?type=ALL`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        'Authorization': `Bearer ${token}`
       }
     });
 
     if (data) {
       try {
-        // Validate alerts data structure
-        if (data && Array.isArray(data.alerts)) {
+        if (Array.isArray(data.alerts)) {
           setAlerts(data.alerts);
         } else {
           throw new Error('Invalid alerts data structure');
@@ -56,10 +61,11 @@ const Dashboard = () => {
         setAlerts([]);
       }
     }
+
     setIsLoading(false);
   };
 
-  // Fetch active users with error handling
+  // Fetch active users
   const fetchActiveUsers = async () => {
     const data = await safeFetch(`${API_BASE_URL}/users/active`);
     if (data && typeof data.count === 'number') {
@@ -67,7 +73,7 @@ const Dashboard = () => {
     }
   };
 
-  // Initialize socket connection with error handling
+  // Socket init
   const initSocket = () => {
     try {
       const newSocket = io(SOCKET_URL, {
@@ -103,29 +109,27 @@ const Dashboard = () => {
     }
   };
 
-  // Safe filtering of alerts
   const getFilteredAlerts = (type) => {
     try {
-      return Array.isArray(alerts) ? 
-        alerts.filter(alert => alert && alert.type === type) : 
-        [];
+      return Array.isArray(alerts)
+        ? alerts.filter(alert => alert && alert.type === type)
+        : [];
     } catch (error) {
       handleError(error, 'filtering alerts');
       return [];
     }
   };
 
-  // Initial data loading
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadData = async () => {
       try {
         await Promise.all([
           fetchAlerts(),
           fetchActiveUsers()
         ]);
-        
+
         if (isMounted) {
           initSocket();
         }
@@ -142,7 +146,7 @@ const Dashboard = () => {
     };
   }, []);
 
-  // Render loading state
+  // UI: Loading
   if (isLoading) {
     return (
       <div className="dashboard-loading">
@@ -152,7 +156,7 @@ const Dashboard = () => {
     );
   }
 
-  // Render error state
+  // UI: Error
   if (error) {
     return (
       <div className="dashboard-error">
@@ -165,22 +169,29 @@ const Dashboard = () => {
             setError(null);
             setIsLoading(true);
             initSocket();
-          }}>Reconnect
-          </button>
+          }}>Reconnect</button>
         </div>
       </div>
     );
   }
 
-  // Main render
+  // UI: Dashboard
   return (
     <div className="dashboard-container">
-      {/* ... rest of your dashboard JSX ... */}
+      <h2>📡 Active Users: {activeUsers}</h2>
+      <h3>🚨 Latest Alerts</h3>
+      <ul className="alert-list">
+        {getFilteredAlerts('ALL').map((alert, i) => (
+          <li key={i} className="alert-item">
+            <strong>[{alert.type}]</strong> {alert.message}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
 
-// Error Boundary for the Dashboard
+// Error Boundary wrapper
 class DashboardErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
@@ -210,7 +221,7 @@ class DashboardErrorBoundary extends React.Component {
   }
 }
 
-// Enhanced Dashboard export
+// Export with boundary
 export default function SafeDashboard() {
   return (
     <DashboardErrorBoundary>
