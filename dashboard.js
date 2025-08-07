@@ -1,222 +1,235 @@
-// dashboard.js - Complete Working Version with Alerts Fix
+import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 
-// ======================
-// INITIALIZATION
-// ======================
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('RTi Dashboard Initializing...');
+/**
+ * Error Boundary for catching component errors
+ */
+class DashboardErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
 
-  // State variables
-  let authToken = localStorage.getItem('authToken') || null;
-  let currentUser = JSON.parse(localStorage.getItem('userInfo')) || null;
-  let alerts = []; // Initialize alerts as empty array (FIXED)
-
-  // DOM Elements
-  const loginForm = document.querySelector('#login-form');
-  const dashboard = document.querySelector('#dashboard');
-  const alertsContainer = document.querySelector('#alerts-container');
-  const usernameDisplay = document.querySelector('#username-display');
-
-  // ======================
-  // AUTHENTICATION FUNCTIONS
-  // ======================
-  async function handleLogin(credentials = {}) {
-    const username = credentials.username || 'admin';
-    const password = credentials.password || 'password';
-
-    console.log('Attempting login with:', { username });
-
-    try {
-      // Show loading state
-      const loginBtn = document.querySelector('#login-btn');
-      if (loginBtn) {
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Authenticating...';
-      }
-
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Login failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      authToken = data.token;
-      currentUser = data.user;
-
-      // Store in localStorage
-      localStorage.setItem('authToken', authToken);
-      localStorage.setItem('userInfo', JSON.stringify(currentUser));
-
-      // Initialize dashboard
-      initializeDashboard();
-
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      showErrorMessage(error.message);
-      return false;
-    } finally {
-      const loginBtn = document.querySelector('#login-btn');
-      if (loginBtn) {
-        loginBtn.disabled = false;
-        loginBtn.textContent = 'Login';
-      }
-    }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
 
-  // ======================
-  // DASHBOARD FUNCTIONS (WITH ALERTS FIX)
-  // ======================
-  async function fetchAlerts() {
-    if (!authToken) return;
-    
-    console.log('Fetching alerts...');
+  componentDidCatch(error, errorInfo) {
+    console.error('Dashboard Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="dashboard-error">
+          <h2>Dashboard Error</h2>
+          <p>{this.state.error.message}</p>
+          <button onClick={() => window.location.reload()}>Reload Dashboard</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Main Dashboard Component
+ */
+const Dashboard = ({ initialAlerts = [] }) => {
+  // State initialization with proper defaults
+  const [alerts, setAlerts] = useState(
+    Array.isArray(initialAlerts) ? initialAlerts : []
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  /**
+   * Safely fetch alerts from API
+   */
+  const fetchAlerts = async () => {
+    setIsLoading(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/alerts', {
         headers: {
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch alerts: ${response.status}`);
+        throw new Error(`API Error: ${response.status}`);
       }
 
       const data = await response.json();
       
-      // FIX: Ensure alerts is always an array
-      alerts = Array.isArray(data.alerts) ? data.alerts : [];
-      renderAlerts();
-
-    } catch (error) {
-      console.error('Alerts fetch error:', error);
-      alerts = []; // Reset to empty array on error
-      renderAlerts(error.message);
+      // Validate and sanitize alerts data
+      const validatedAlerts = validateAlerts(data.alerts);
+      setAlerts(validatedAlerts);
+      setLastUpdated(new Date());
+      
+    } catch (err) {
+      console.error('Failed to fetch alerts:', err);
+      setError(err.message);
+      setAlerts([]); // Reset to empty array on error
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
 
-  function renderAlerts(error = null) {
-    if (!alertsContainer) return;
-
-    // Clear previous content
-    alertsContainer.innerHTML = '';
-
-    if (error) {
-      alertsContainer.innerHTML = `
-        <div class="alert-error">
-          Error loading alerts: ${error}
-        </div>
-      `;
-      return;
+  /**
+   * Validate and sanitize alerts data
+   */
+  const validateAlerts = (alertsData) => {
+    if (!Array.isArray(alertsData)) {
+      console.warn('Alerts data is not an array:', alertsData);
+      return [];
     }
 
-    // FIXED: Safe filtering of alerts
-    const filteredAlerts = alerts.filter(alert => {
-      return alert && alert.priority === 'high';
-    });
+    return alertsData.filter(alert => (
+      alert &&
+      typeof alert === 'object' &&
+      alert.id &&
+      alert.title &&
+      alert.priority
+    )).map(alert => ({
+      id: alert.id,
+      title: alert.title || 'Untitled Alert',
+      message: alert.message || '',
+      priority: alert.priority || 'medium',
+      timestamp: alert.timestamp || new Date().toISOString()
+    }));
+  };
 
-    if (filteredAlerts.length === 0) {
-      alertsContainer.innerHTML = `
-        <div class="no-alerts">
-          No high priority alerts found
-        </div>
-      `;
-      return;
-    }
+  /**
+   * Safe filtering of alerts
+   */
+  const getFilteredAlerts = (priority) => {
+    if (!Array.isArray(alerts)) return [];
+    return alerts.filter(alert => alert.priority === priority);
+  };
 
-    filteredAlerts.forEach(alert => {
-      const alertElement = document.createElement('div');
-      alertElement.className = 'alert-item';
-      alertElement.innerHTML = `
-        <h4>${alert.title || 'No title'}</h4>
-        <p>${alert.message || 'No message'}</p>
-        <small>${new Date(alert.timestamp).toLocaleString()}</small>
-      `;
-      alertsContainer.appendChild(alertElement);
-    });
-  }
-
-  // ======================
-  // DASHBOARD INITIALIZATION
-  // ======================
-  function initializeDashboard() {
-    console.log('Initializing dashboard...');
-
-    // Hide login form, show dashboard
-    if (loginForm) loginForm.style.display = 'none';
-    if (dashboard) dashboard.style.display = 'block';
-
-    // Update user display
-    if (usernameDisplay && currentUser) {
-      usernameDisplay.textContent = currentUser.username;
-    }
-
-    // Load initial data
+  // Load alerts on component mount
+  useEffect(() => {
     fetchAlerts();
-
-    // Set up periodic refresh
-    setInterval(fetchAlerts, 300000); // 5 minutes
-  }
-
-  // ======================
-  // UTILITY FUNCTIONS
-  // ======================
-  function showErrorMessage(message) {
-    const errorElement = document.querySelector('.error-message') || 
-      document.createElement('div');
     
-    errorElement.className = 'error-message';
-    errorElement.textContent = message;
+    // Set up refresh interval (5 minutes)
+    const interval = setInterval(fetchAlerts, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
-    if (!errorElement.parentNode) {
-      const container = loginForm || document.body;
-      container.prepend(errorElement);
-    }
+  // Get filtered alerts
+  const highPriorityAlerts = getFilteredAlerts('high');
+  const mediumPriorityAlerts = getFilteredAlerts('medium');
+  const lowPriorityAlerts = getFilteredAlerts('low');
 
-    setTimeout(() => {
-      errorElement.remove();
-    }, 5000);
+  // Render loading state
+  if (isLoading) {
+    return (
+      <div className="dashboard-loading">
+        <div className="spinner"></div>
+        <p>Loading alerts...</p>
+      </div>
+    );
   }
 
-  // ======================
-  // EVENT LISTENERS
-  // ======================
-  if (loginForm) {
-    loginForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const username = this.elements.username.value;
-      const password = this.elements.password.value;
-      handleLogin({ username, password });
-    });
+  // Render error state
+  if (error) {
+    return (
+      <div className="dashboard-error">
+        <h3>Error Loading Alerts</h3>
+        <p>{error}</p>
+        <button onClick={fetchAlerts}>Retry</button>
+      </div>
+    );
   }
 
-  // ======================
-  // INITIAL CHECK
-  // ======================
-  if (authToken && currentUser) {
-    initializeDashboard();
-  }
+  // Main render
+  return (
+    <div className="dashboard-container">
+      <header className="dashboard-header">
+        <h1>Cashflow Operations Dashboard</h1>
+        {lastUpdated && (
+          <p className="last-updated">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
+      </header>
 
-  console.log('Dashboard initialization complete');
-});
+      <section className="alerts-section">
+        <h2>Alerts</h2>
+        
+        {alerts.length === 0 ? (
+          <p className="no-alerts">No alerts found</p>
+        ) : (
+          <>
+            {highPriorityAlerts.length > 0 && (
+              <AlertGroup priority="high" alerts={highPriorityAlerts} />
+            )}
+            {mediumPriorityAlerts.length > 0 && (
+              <AlertGroup priority="medium" alerts={mediumPriorityAlerts} />
+            )}
+            {lowPriorityAlerts.length > 0 && (
+              <AlertGroup priority="low" alerts={lowPriorityAlerts} />
+            )}
+          </>
+        )}
+      </section>
 
-// Debug exports
-window.dashboardDebug = {
-  reloadAlerts: function() {
-    const event = new Event('DOMContentLoaded');
-    document.dispatchEvent(event);
-  },
-  forceLogin: function(username, password) {
-    document.querySelector('#username').value = username || 'admin';
-    document.querySelector('#password').value = password || 'password';
-    document.querySelector('#login-form').dispatchEvent(new Event('submit'));
-  }
+      <button 
+        className="refresh-button"
+        onClick={fetchAlerts}
+        disabled={isLoading}
+      >
+        {isLoading ? 'Refreshing...' : 'Refresh Alerts'}
+      </button>
+    </div>
+  );
 };
+
+/**
+ * Alert Group Subcomponent
+ */
+const AlertGroup = ({ priority, alerts }) => {
+  const priorityClass = `alert-priority-${priority}`;
+  
+  return (
+    <div className={`alert-group ${priorityClass}`}>
+      <h3>{priority.toUpperCase()} Priority Alerts</h3>
+      <ul>
+        {alerts.map(alert => (
+          <li key={alert.id} className="alert-item">
+            <h4>{alert.title}</h4>
+            <p>{alert.message}</p>
+            <time>{new Date(alert.timestamp).toLocaleString()}</time>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+// PropTypes validation
+Dashboard.propTypes = {
+  initialAlerts: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      title: PropTypes.string,
+      message: PropTypes.string,
+      priority: PropTypes.oneOf(['high', 'medium', 'low']),
+      timestamp: PropTypes.string
+    })
+  )
+};
+
+AlertGroup.propTypes = {
+  priority: PropTypes.oneOf(['high', 'medium', 'low']).isRequired,
+  alerts: PropTypes.array.isRequired
+};
+
+// Wrap Dashboard with Error Boundary
+export default function SafeDashboard(props) {
+  return (
+    <DashboardErrorBoundary>
+      <Dashboard {...props} />
+    </DashboardErrorBoundary>
+  );
+}
