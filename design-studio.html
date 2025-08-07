@@ -63,6 +63,7 @@
           });
           if (!response.ok) throw new Error(`API Error: ${response.status}`);
           const data = await response.json();
+
           let fallbackArray = [];
 
           if (Array.isArray(data)) {
@@ -75,11 +76,11 @@
             fallbackArray = data.payload;
           }
 
-          setAlerts(Array.isArray(fallbackArray) ? fallbackArray : []);
+          setAlerts(fallbackArray);
         } catch (err) {
           console.error('Failed to fetch alerts:', err);
           setError(err.message);
-          setAlerts([]); // Ensure it's always an array
+          setAlerts([]);
         } finally {
           setIsLoading(false);
         }
