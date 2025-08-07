@@ -75,7 +75,7 @@
             fallbackArray = data.payload;
           }
 
-          setAlerts(fallbackArray);
+          setAlerts(Array.isArray(fallbackArray) ? fallbackArray : []);
         } catch (err) {
           console.error('Failed to fetch alerts:', err);
           setError(err.message);
