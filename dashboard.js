@@ -1,273 +1,222 @@
-// Updated dashboard.js with WORKING authentication
-// Replace your existing handleLogin function with this working version
+// dashboard.js - Complete Working Version with Alerts Fix
 
-// WORKING LOGIN FUNCTION - Replace your existing one
-const handleLogin = async () => {
-  console.log('🔐 Starting login with WORKING credentials...');
-  
-  // Get credentials from form fields (or use working defaults)
-  const usernameField = document.querySelector('input[name="username"], input[type="text"]');
-  const passwordField = document.querySelector('input[name="password"], input[type="password"]');
-  
-  // Use form values or working defaults
-  const username = usernameField?.value?.trim() || 'admin';
-  const password = passwordField?.value?.trim() || 'password';
-  
-  console.log('📝 Using credentials:', { username, password: password ? '[PROVIDED]' : '[MISSING]' });
-  
-  try {
-    // Show loading state
-    const loginBtn = document.querySelector('#login-btn, .login-button, button[type="submit"]');
-    if (loginBtn) {
-      loginBtn.disabled = true;
-      loginBtn.textContent = 'Logging in...';
-    }
-    
-    console.log('🚀 Making authentication request...');
-    
-    // Use the WORKING data format that we discovered
-    const formData = new FormData();
-    formData.append('endpoint', '/auth/login');
-    formData.append('method', 'POST');
-    formData.append('headers', JSON.stringify({
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'X-Requested-With': 'XMLHttpRequest'
-    }));
-    formData.append('data', JSON.stringify({
-      username: username,
-      password: password
-    }));
-    
-    const response = await fetch('/api_proxy', {
-      method: 'POST',
-      body: formData
-    });
-    
-    console.log('📊 Response status:', response.status);
-    
-    if (response.status === 200) {
-      const result = await response.json();
-      console.log('✅ Login successful!', result);
-      
-      // Extract the response data (might be nested in result.data)
-      const authData = result.data || result;
-      
-      if (authData.token) {
-        // Store authentication data
-        localStorage.setItem('authToken', authData.token);
-        localStorage.setItem('userInfo', JSON.stringify(authData.user));
-        
-        console.log('💾 Auth data stored successfully');
-        console.log('🔑 Token:', authData.token.substring(0, 20) + '...');
-        console.log('👤 User:', authData.user.username);
-        
-        // Handle successful login
-        handleLoginSuccess(authData);
-        return true;
-        
-      } else {
-        console.log('❌ No token received:', authData);
-        showError('Login failed: No authentication token received');
-        return false;
-      }
-      
-    } else {
-      console.log('❌ Login failed with status:', response.status);
-      const errorText = await response.text();
-      console.log('Error details:', errorText);
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        showError(errorData.error || 'Login failed');
-      } catch (e) {
-        showError('Login failed: Invalid response from server');
-      }
-      
-      return false;
-    }
-    
-  } catch (error) {
-    console.error('💥 Network error during login:', error);
-    showError('Login failed: Network error. Please check your connection.');
-    return false;
-    
-  } finally {
-    // Reset login button
-    const loginBtn = document.querySelector('#login-btn, .login-button, button[type="submit"]');
-    if (loginBtn) {
-      loginBtn.disabled = false;
-      loginBtn.textContent = 'Login';
-    }
-  }
-};
+// ======================
+// INITIALIZATION
+// ======================
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('RTi Dashboard Initializing...');
 
-// Handle successful login - integrate with your existing dashboard
-const handleLoginSuccess = (authData) => {
-  console.log('🎉 Processing successful login...');
-  
-  try {
-    // Update page state
-    const loginContainer = document.querySelector('.login-container, .auth-container, #login-form');
-    const dashboardContainer = document.querySelector('.dashboard-container, #dashboard, .main-dashboard');
-    
-    if (loginContainer) {
-      loginContainer.style.display = 'none';
-      console.log('✅ Login form hidden');
-    }
-    
-    if (dashboardContainer) {
-      dashboardContainer.style.display = 'block';
-      console.log('✅ Dashboard shown');
-    }
-    
-    // Update user info in UI
-    const usernameDisplays = document.querySelectorAll('.username-display, .user-name, .current-user');
-    usernameDisplays.forEach(element => {
-      element.textContent = authData.user.username;
-    });
-    
-    const avatarElements = document.querySelectorAll('.user-avatar, .avatar-img');
-    avatarElements.forEach(element => {
-      if (element.tagName === 'IMG') {
-        element.src = authData.user.avatar;
-      } else {
-        element.style.backgroundImage = `url(${authData.user.avatar})`;
-      }
-    });
-    
-    // Add admin class if user is admin
-    if (authData.user.isAdmin) {
-      document.body.classList.add('admin-user');
-      console.log('🛡️ Admin privileges enabled');
-    }
-    
-    // Update page title
-    document.title = `RTi Cashflow Dashboard - ${authData.user.username}`;
-    
-    // Initialize dashboard data if you have init functions
-    if (typeof initDashboard === 'function') {
-      initDashboard();
-    }
-    
-    console.log('✅ Login success handling completed');
-    
-  } catch (error) {
-    console.error('❌ Error in login success handler:', error);
-  }
-};
+  // State variables
+  let authToken = localStorage.getItem('authToken') || null;
+  let currentUser = JSON.parse(localStorage.getItem('userInfo')) || null;
+  let alerts = []; // Initialize alerts as empty array (FIXED)
 
-// Show error message to user
-const showError = (message) => {
-  console.log('❌ Showing error:', message);
-  
-  // Try to find and update existing error display
-  const errorElements = document.querySelectorAll('.error-message, .login-error, .alert-error');
-  
-  if (errorElements.length > 0) {
-    errorElements.forEach(element => {
-      element.textContent = message;
-      element.style.display = 'block';
-      element.classList.add('show');
-    });
-  } else {
-    // Create error message if none exists
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.textContent = message;
-    errorDiv.style.cssText = `
-      background: #fee;
-      color: #c53030;
-      padding: 12px;
-      border: 1px solid #fed7d7;
-      border-radius: 6px;
-      margin: 10px 0;
-      display: block;
-    `;
-    
-    const loginForm = document.querySelector('.login-form, .auth-form');
-    if (loginForm) {
-      loginForm.insertBefore(errorDiv, loginForm.firstChild);
-    }
-  }
-  
-  // Auto-hide error after 5 seconds
-  setTimeout(() => {
-    errorElements.forEach(element => {
-      element.style.display = 'none';
-    });
-  }, 5000);
-};
+  // DOM Elements
+  const loginForm = document.querySelector('#login-form');
+  const dashboard = document.querySelector('#dashboard');
+  const alertsContainer = document.querySelector('#alerts-container');
+  const usernameDisplay = document.querySelector('#username-display');
 
-// Check if user is already authenticated
-const checkExistingAuth = () => {
-  const token = localStorage.getItem('authToken');
-  const userInfo = localStorage.getItem('userInfo');
-  
-  if (token && userInfo) {
-    console.log('🔍 Found existing authentication');
+  // ======================
+  // AUTHENTICATION FUNCTIONS
+  // ======================
+  async function handleLogin(credentials = {}) {
+    const username = credentials.username || 'admin';
+    const password = credentials.password || 'password';
+
+    console.log('Attempting login with:', { username });
+
     try {
-      const user = JSON.parse(userInfo);
-      handleLoginSuccess({ token, user });
+      // Show loading state
+      const loginBtn = document.querySelector('#login-btn');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Authenticating...';
+      }
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Login failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      authToken = data.token;
+      currentUser = data.user;
+
+      // Store in localStorage
+      localStorage.setItem('authToken', authToken);
+      localStorage.setItem('userInfo', JSON.stringify(currentUser));
+
+      // Initialize dashboard
+      initializeDashboard();
+
       return true;
     } catch (error) {
-      console.log('❌ Invalid stored auth data, clearing...');
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userInfo');
+      console.error('Login error:', error);
+      showErrorMessage(error.message);
+      return false;
+    } finally {
+      const loginBtn = document.querySelector('#login-btn');
+      if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
     }
   }
-  
-  return false;
-};
 
-// Initialize authentication system
-const initAuth = () => {
-  console.log('🔧 Initializing authentication system...');
-  
-  // Check for existing auth
-  if (checkExistingAuth()) {
-    console.log('✅ User already authenticated');
-    return;
-  }
-  
-  // Bind login form submission
-  const loginForm = document.querySelector('form, .login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      handleLogin();
-    });
-  }
-  
-  // Bind login button
-  const loginButton = document.querySelector('#login-btn, .login-button, button[type="submit"]');
-  if (loginButton) {
-    loginButton.addEventListener('click', (e) => {
-      if (loginButton.type !== 'submit') {
-        e.preventDefault();
-        handleLogin();
+  // ======================
+  // DASHBOARD FUNCTIONS (WITH ALERTS FIX)
+  // ======================
+  async function fetchAlerts() {
+    if (!authToken) return;
+    
+    console.log('Fetching alerts...');
+    
+    try {
+      const response = await fetch('/api/alerts', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch alerts: ${response.status}`);
       }
+
+      const data = await response.json();
+      
+      // FIX: Ensure alerts is always an array
+      alerts = Array.isArray(data.alerts) ? data.alerts : [];
+      renderAlerts();
+
+    } catch (error) {
+      console.error('Alerts fetch error:', error);
+      alerts = []; // Reset to empty array on error
+      renderAlerts(error.message);
+    }
+  }
+
+  function renderAlerts(error = null) {
+    if (!alertsContainer) return;
+
+    // Clear previous content
+    alertsContainer.innerHTML = '';
+
+    if (error) {
+      alertsContainer.innerHTML = `
+        <div class="alert-error">
+          Error loading alerts: ${error}
+        </div>
+      `;
+      return;
+    }
+
+    // FIXED: Safe filtering of alerts
+    const filteredAlerts = alerts.filter(alert => {
+      return alert && alert.priority === 'high';
+    });
+
+    if (filteredAlerts.length === 0) {
+      alertsContainer.innerHTML = `
+        <div class="no-alerts">
+          No high priority alerts found
+        </div>
+      `;
+      return;
+    }
+
+    filteredAlerts.forEach(alert => {
+      const alertElement = document.createElement('div');
+      alertElement.className = 'alert-item';
+      alertElement.innerHTML = `
+        <h4>${alert.title || 'No title'}</h4>
+        <p>${alert.message || 'No message'}</p>
+        <small>${new Date(alert.timestamp).toLocaleString()}</small>
+      `;
+      alertsContainer.appendChild(alertElement);
     });
   }
-  
-  console.log('✅ Authentication system initialized');
-};
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initAuth);
-} else {
-  initAuth();
-}
+  // ======================
+  // DASHBOARD INITIALIZATION
+  // ======================
+  function initializeDashboard() {
+    console.log('Initializing dashboard...');
 
-// WORKING CREDENTIALS FOR TESTING
-console.log('🎉 WORKING Dashboard.js loaded!');
-console.log('🔑 Working credentials: admin / password');
-console.log('💡 Authentication system ready');
+    // Hide login form, show dashboard
+    if (loginForm) loginForm.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'block';
 
-// Make functions available globally for debugging
-window.handleLogin = handleLogin;
-window.testWorkingAuth = () => {
-  console.log('🧪 Testing working authentication...');
-  return handleLogin();
+    // Update user display
+    if (usernameDisplay && currentUser) {
+      usernameDisplay.textContent = currentUser.username;
+    }
+
+    // Load initial data
+    fetchAlerts();
+
+    // Set up periodic refresh
+    setInterval(fetchAlerts, 300000); // 5 minutes
+  }
+
+  // ======================
+  // UTILITY FUNCTIONS
+  // ======================
+  function showErrorMessage(message) {
+    const errorElement = document.querySelector('.error-message') || 
+      document.createElement('div');
+    
+    errorElement.className = 'error-message';
+    errorElement.textContent = message;
+
+    if (!errorElement.parentNode) {
+      const container = loginForm || document.body;
+      container.prepend(errorElement);
+    }
+
+    setTimeout(() => {
+      errorElement.remove();
+    }, 5000);
+  }
+
+  // ======================
+  // EVENT LISTENERS
+  // ======================
+  if (loginForm) {
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = this.elements.username.value;
+      const password = this.elements.password.value;
+      handleLogin({ username, password });
+    });
+  }
+
+  // ======================
+  // INITIAL CHECK
+  // ======================
+  if (authToken && currentUser) {
+    initializeDashboard();
+  }
+
+  console.log('Dashboard initialization complete');
+});
+
+// Debug exports
+window.dashboardDebug = {
+  reloadAlerts: function() {
+    const event = new Event('DOMContentLoaded');
+    document.dispatchEvent(event);
+  },
+  forceLogin: function(username, password) {
+    document.querySelector('#username').value = username || 'admin';
+    document.querySelector('#password').value = password || 'password';
+    document.querySelector('#login-form').dispatchEvent(new Event('submit'));
+  }
 };
