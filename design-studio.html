@@ -1,842 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTi Design Studio - Website Builder</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        /* Existing styles remain the same */
-        .design-panel {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
-        }
-        
-        /* ... (keep all existing styles) ... */
-        
-        /* New accessibility styles */
-        .focus-visible:focus-visible {
-            outline: 2px solid #3b82f6;
-            outline-offset: 2px;
-        }
-        
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border-width: 0;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTi Cashflowops Dashboard</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback, useMemo, useReducer } = React;
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
 
-        // ==============================================
-        // UTILITIES & HELPERS
-        // ==============================================
+    // ======================
+    // MAIN DASHBOARD COMPONENT
+    // ======================
+    const Dashboard = () => {
+      // State management
+      const [alerts, setAlerts] = useState([]); // Initialize as empty array
+      const [isLoading, setIsLoading] = useState(false);
+      const [error, setError] = useState(null);
+      const [socket, setSocket] = useState(null);
+      const [activeUsers, setActiveUsers] = useState(0);
+
+      // API Configuration
+      const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
+      const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
+
+      // Initialize Socket.io connection with error handling
+      useEffect(() => {
+        const newSocket = io(SOCKET_URL, {
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          transports: ['websocket'],
+          path: '/socket.io',
+          extraHeaders: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        });
+
+        newSocket.on('connect', () => {
+          console.log('Socket connected');
+        });
+
+        newSocket.on('connect_error', (err) => {
+          console.error('Socket connection error:', err);
+          // Fallback to polling if websocket fails
+          newSocket.io.opts.transports = ['polling', 'websocket'];
+        });
+
+        newSocket.on('newAlert', (alert) => {
+          setAlerts(prev => [alert, ...prev]);
+        });
+
+        setSocket(newSocket);
+
+        return () => newSocket.disconnect();
+      }, []);
+
+      // Safe fetch alerts function
+      const fetchAlerts = async () => {
+        setIsLoading(true);
+        setError(null);
         
-        // HTML Sanitizer
-        const sanitizeHTML = (html) => {
-            return DOMPurify.sanitize(html, {
-                ALLOWED_TAGS: ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'ul', 'ol', 'li', 'strong', 'em', 'img', 'style', 'script'],
-                ALLOWED_ATTR: ['class', 'href', 'src', 'alt', 'style', 'id'],
-                ALLOW_DATA_ATTR: false
-            });
-        };
-
-        // Debounce function
-        const useDebounce = (value, delay) => {
-            const [debouncedValue, setDebouncedValue] = useState(value);
-            
-            useEffect(() => {
-                const handler = setTimeout(() => {
-                    setDebouncedValue(value);
-                }, delay);
-                
-                return () => {
-                    clearTimeout(handler);
-                };
-            }, [value, delay]);
-            
-            return debouncedValue;
-        };
-
-        // ==============================================
-        // COMPONENTS
-        // ==============================================
-
-        // Error Boundary
-        class ErrorBoundary extends React.Component {
-            state = { hasError: false, error: null };
-            
-            static getDerivedStateFromError(error) {
-                return { hasError: true, error };
+        try {
+          const response = await fetch(`${API_BASE_URL}/alerts?type=ALL`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             }
-            
-            componentDidCatch(error, errorInfo) {
-                console.error('Component Error:', error, errorInfo);
-            }
-            
-            render() {
-                if (this.state.hasError) {
-                    return (
-                        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <h3 className="text-lg font-medium text-red-800">Component Error</h3>
-                            <p className="text-red-700">{this.state.error.message}</p>
-                            <button 
-                                onClick={() => this.setState({ hasError: false, error: null })}
-                                className="mt-2 px-3 py-1 bg-red-100 text-red-800 rounded text-sm"
-                            >
-                                Try Again
-                            </button>
-                        </div>
-                    );
-                }
-                return this.props.children;
-            }
+          });
+
+          if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          
+          // Validate and ensure alerts is always an array
+          setAlerts(Array.isArray(data?.alerts) ? data.alerts : []);
+          
+        } catch (err) {
+          console.error('Failed to fetch alerts:', err);
+          setError(err.message);
+          setAlerts([]); // Reset to empty array on error
+        } finally {
+          setIsLoading(false);
         }
+      };
 
-        // Notification Component (Improved)
-        const Notification = ({ message, type = 'success', onClose }) => {
-            const [isClosing, setIsClosing] = useState(false);
-            
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    handleClose();
-                }, 3000);
-                
-                return () => clearTimeout(timer);
-            }, []);
-            
-            const handleClose = () => {
-                setIsClosing(true);
-                setTimeout(() => {
-                    onClose();
-                }, 300);
-            };
-            
-            const bgColor = type === 'success' ? 'bg-green-500' : 
-                         type === 'error' ? 'bg-red-500' : 
-                         'bg-blue-500';
-            
-            return (
-                <div className={`notification ${bgColor} text-white px-4 py-3 rounded-lg shadow-lg transition-all duration-300 ${
-                    isClosing ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
-                }`}>
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{message}</span>
-                        <button 
-                            onClick={handleClose}
-                            className="ml-3 text-white hover:text-gray-200 focus-visible"
-                            aria-label="Close notification"
-                        >
-                            <i className="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            );
-        };
-
-        // ==============================================
-        // STATE MANAGEMENT
-        // ==============================================
-        
-        // Initial state
-        const initialState = {
-            activeTab: 'design',
-            selectedComponent: null,
-            previewMode: 'desktop',
-            isLoading: false,
-            savedChanges: true,
-            currentProject: 'RTi Cashflowops',
-            deployStatus: 'idle',
-            notifications: [],
-            user: null,
-            isAuthenticated: false,
-            websiteData: {
-                header: {
-                    logo: 'RTi Cashflowops 🚀',
-                    navigation: ['Dashboard', 'Alerts', 'Market Data', 'Profile'],
-                    style: 'gradient'
-                },
-                hero: {
-                    title: 'RTi CASHFLOWOPS',
-                    subtitle: '🛡️ BULLETPROOF EDITION 🚀',
-                    description: 'Professional trading group with real-time alerts and market analysis',
-                    ctaText: 'Launch Dashboard',
-                    backgroundType: 'gradient'
-                },
-                features: [
-                    { icon: '🤖', title: 'Bot Signals', description: 'AI-powered trading signals' },
-                    { icon: '📊', title: 'Live Charts', description: 'Real-time market data' },
-                    { icon: '🔔', title: 'Instant Alerts', description: 'Never miss a trade' },
-                    { icon: '👥', title: 'Community', description: 'Connect with traders' }
-                ],
-                subscription: {
-                    plans: [
-                        { name: 'Weekly', price: 6, popular: false },
-                        { name: 'Monthly', price: 20, popular: true }
-                    ]
-                }
-            },
-            customCSS: '',
-            customJS: ''
-        };
-
-        // Reducer function
-        function appReducer(state, action) {
-            switch (action.type) {
-                case 'SET_ACTIVE_TAB':
-                    return { ...state, activeTab: action.payload };
-                
-                case 'UPDATE_WEBSITE_DATA':
-                    return { 
-                        ...state, 
-                        websiteData: action.payload,
-                        savedChanges: false 
-                    };
-                
-                case 'UPDATE_CUSTOM_CODE':
-                    return {
-                        ...state,
-                        customCSS: action.payload.css,
-                        customJS: action.payload.js,
-                        savedChanges: false
-                    };
-                
-                case 'SET_LOADING':
-                    return { ...state, isLoading: action.payload };
-                
-                case 'SET_USER':
-                    return { 
-                        ...state, 
-                        user: action.payload.user,
-                        isAuthenticated: action.payload.isAuthenticated 
-                    };
-                
-                case 'ADD_NOTIFICATION':
-                    return {
-                        ...state,
-                        notifications: [
-                            ...state.notifications,
-                            {
-                                id: Date.now(),
-                                message: action.payload.message,
-                                type: action.payload.type
-                            }
-                        ]
-                    };
-                
-                case 'REMOVE_NOTIFICATION':
-                    return {
-                        ...state,
-                        notifications: state.notifications.filter(
-                            n => n.id !== action.payload
-                        )
-                    };
-                
-                case 'SET_DEPLOY_STATUS':
-                    return { ...state, deployStatus: action.payload };
-                
-                case 'SET_SAVED_CHANGES':
-                    return { ...state, savedChanges: action.payload };
-                
-                case 'LOAD_CONFIG':
-                    return {
-                        ...state,
-                        websiteData: {
-                            ...state.websiteData,
-                            ...action.payload.websiteData
-                        },
-                        customCSS: action.payload.customCSS || '',
-                        customJS: action.payload.customJS || '',
-                        savedChanges: true
-                    };
-                
-                default:
-                    return state;
-            }
+      // Safe filtering function
+      const getFilteredAlerts = (priority) => {
+        try {
+          return Array.isArray(alerts) ? 
+            alerts.filter(alert => alert?.priority === priority) : 
+            [];
+        } catch (err) {
+          console.error('Filter error:', err);
+          return [];
         }
+      };
 
-        // ==============================================
-        // API SERVICE
-        // ==============================================
+      // Fetch active users
+      const fetchActiveUsers = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/users/active`);
+          const data = await response.json();
+          setActiveUsers(data.count || 0);
+        } catch (err) {
+          console.error('Failed to fetch active users:', err);
+        }
+      };
+
+      // Initial data loading
+      useEffect(() => {
+        fetchAlerts();
+        fetchActiveUsers();
         
-        const createApiService = (dispatch) => {
-            const apiCall = async (endpoint, options = {}) => {
-                const token = localStorage.getItem('authToken');
-                
-                try {
-                    const response = await fetch(endpoint, {
-                        ...options,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': token ? `Bearer ${token}` : '',
-                            ...options.headers
-                        }
-                    });
+        // Set up refresh interval (5 minutes)
+        const interval = setInterval(fetchAlerts, 300000);
+        return () => clearInterval(interval);
+      }, []);
 
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.message || `HTTP ${response.status}`);
-                    }
-
-                    return await response.json();
-                } catch (error) {
-                    console.error('API Error:', error);
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: `API Error: ${error.message}`,
-                            type: 'error'
-                        }
-                    });
-                    throw error;
-                }
-            };
-
-            return {
-                login: async (credentials) => {
-                    try {
-                        const response = await apiCall('/api/auth/login', {
-                            method: 'POST',
-                            body: JSON.stringify(credentials)
-                        });
-                        
-                        localStorage.setItem('authToken', response.token);
-                        dispatch({
-                            type: 'SET_USER',
-                            payload: {
-                                user: response.user,
-                                isAuthenticated: true
-                            }
-                        });
-                        
-                        return response;
-                    } catch (error) {
-                        throw error;
-                    }
-                },
-                
-                loadConfig: async () => {
-                    try {
-                        const config = await apiCall('/api/design/config/default');
-                        dispatch({
-                            type: 'LOAD_CONFIG',
-                            payload: config
-                        });
-                        return config;
-                    } catch (error) {
-                        throw error;
-                    }
-                },
-                
-                saveConfig: async (config) => {
-                    try {
-                        await apiCall('/api/design/config/default', {
-                            method: 'POST',
-                            body: JSON.stringify(config)
-                        });
-                        
-                        dispatch({
-                            type: 'SET_SAVED_CHANGES',
-                            payload: true
-                        });
-                        
-                        return true;
-                    } catch (error) {
-                        throw error;
-                    }
-                },
-                
-                deploy: async () => {
-                    try {
-                        dispatch({
-                            type: 'SET_DEPLOY_STATUS',
-                            payload: 'deploying'
-                        });
-                        
-                        const result = await apiCall('/api/design/deploy/default', {
-                            method: 'POST'
-                        });
-                        
-                        dispatch({
-                            type: 'SET_DEPLOY_STATUS',
-                            payload: 'success'
-                        });
-                        
-                        setTimeout(() => {
-                            dispatch({
-                                type: 'SET_DEPLOY_STATUS',
-                                payload: 'idle'
-                            });
-                        }, 3000);
-                        
-                        return result;
-                    } catch (error) {
-                        dispatch({
-                            type: 'SET_DEPLOY_STATUS',
-                            payload: 'idle'
-                        });
-                        throw error;
-                    }
-                }
-            };
-        };
-
-        // ==============================================
-        // MAIN COMPONENT
-        // ==============================================
-
-        const RTiDesignStudio = () => {
-            const [state, dispatch] = useReducer(appReducer, initialState);
-            const {
-                activeTab,
-                selectedComponent,
-                previewMode,
-                isLoading,
-                savedChanges,
-                currentProject,
-                deployStatus,
-                notifications,
-                user,
-                isAuthenticated,
-                websiteData,
-                customCSS,
-                customJS
-            } = state;
-            
-            const api = useMemo(() => createApiService(dispatch), []);
-            const previewRef = useRef(null);
-            
-            // Debounced website data for preview
-            const debouncedWebsiteData = useDebounce(websiteData, 500);
-            const debouncedCustomCSS = useDebounce(customCSS, 500);
-            const debouncedCustomJS = useDebounce(customJS, 500);
-
-            // Component Library (moved to constant outside reducer)
-            const componentLibrary = [
-                {
-                    id: 'hero-section',
-                    name: 'Hero Section',
-                    category: 'Layout',
-                    icon: '🚀',
-                    description: 'Main landing area with title and CTA',
-                    code: `<section className="hero-gradient min-h-screen flex items-center justify-center text-center">
-                        <!-- ... -->
-                    </section>`
-                },
-                // ... other components remain the same
-            ];
-
-            // Generate sanitized preview HTML
-            const generatePreview = useCallback(() => {
-                const css = `
-                    <style>
-                        .hero-gradient { background: linear-gradient(135deg, #000 0%, #1f2937 50%, #000 100%); }
-                        ${debouncedCustomCSS}
-                    </style>
-                `;
-
-                const html = `
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                        <title>${debouncedWebsiteData.header.logo}</title>
-                        <script src="https://cdn.tailwindcss.com"></script>
-                        ${css}
-                    </head>
-                    <body>
-                        <!-- Navigation -->
-                        <nav class="bg-white shadow-sm border-b">
-                            <div class="max-w-7xl mx-auto px-4">
-                                <div class="flex justify-between items-center h-16">
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-2xl font-black gradient-text">${debouncedWebsiteData.header.logo}</span>
-                                        <span class="rocket-glow text-2xl">🚀</span>
-                                    </div>
-                                    <div class="flex gap-6">
-                                        ${debouncedWebsiteData.header.navigation.map(item => 
-                                            `<a href="#" class="text-gray-700 hover:text-green-600">${item}</a>`
-                                        ).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                        </nav>
-
-                        <!-- ... rest of the HTML template ... -->
-
-                        <script>
-                            ${debouncedCustomJS}
-                        </script>
-                    </body>
-                    </html>
-                `;
-
-                return sanitizeHTML(html);
-            }, [debouncedWebsiteData, debouncedCustomCSS, debouncedCustomJS]);
-
-            // Update preview
-            useEffect(() => {
-                if (previewRef.current && isAuthenticated) {
-                    const previewDoc = previewRef.current.contentDocument;
-                    if (previewDoc) {
-                        previewDoc.open();
-                        previewDoc.write(generatePreview());
-                        previewDoc.close();
-                    }
-                }
-            }, [generatePreview, isAuthenticated]);
-
-            // Check authentication on load
-            useEffect(() => {
-                const token = localStorage.getItem('authToken');
-                if (token) {
-                    api.loadConfig().catch(() => {
-                        localStorage.removeItem('authToken');
-                        dispatch({
-                            type: 'SET_USER',
-                            payload: {
-                                user: null,
-                                isAuthenticated: false
-                            }
-                        });
-                    });
-                }
-            }, []);
-
-            // Handle component selection
-            const handleComponentSelect = (component) => {
-                dispatch({
-                    type: 'SET_SELECTED_COMPONENT',
-                    payload: component
-                });
-            };
-
-            // Handle website data updates
-            const updateWebsiteData = (path, value) => {
-                const newData = JSON.parse(JSON.stringify(websiteData));
-                const keys = path.split('.');
-                let current = newData;
-                
-                for (let i = 0; i < keys.length - 1; i++) {
-                    current = current[keys[i]];
-                }
-                current[keys[keys.length - 1]] = value;
-                
-                dispatch({
-                    type: 'UPDATE_WEBSITE_DATA',
-                    payload: newData
-                });
-            };
-
-            // Save changes
-            const handleSave = async () => {
-                if (!user?.isAdmin) {
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Admin access required to save changes',
-                            type: 'error'
-                        }
-                    });
-                    return;
-                }
-
-                dispatch({ type: 'SET_LOADING', payload: true });
-                
-                try {
-                    await api.saveConfig({
-                        websiteData,
-                        customCSS,
-                        customJS
-                    });
-                    
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Design saved successfully!',
-                            type: 'success'
-                        }
-                    });
-                } catch (error) {
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Failed to save design: ' + error.message,
-                            type: 'error'
-                        }
-                    });
-                } finally {
-                    dispatch({ type: 'SET_LOADING', payload: false });
-                }
-            };
-
-            // Deploy website
-            const handleDeploy = async () => {
-                if (!user?.isAdmin) {
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Admin access required to deploy',
-                            type: 'error'
-                        }
-                    });
-                    return;
-                }
-
-                try {
-                    await api.deploy();
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Website deployed successfully! 🚀',
-                            type: 'success'
-                        }
-                    });
-                } catch (error) {
-                    dispatch({
-                        type: 'ADD_NOTIFICATION',
-                        payload: {
-                            message: 'Deploy failed: ' + error.message,
-                            type: 'error'
-                        }
-                    });
-                }
-            };
-
-            // Export website files
-            const handleExport = () => {
-                const html = generatePreview();
-                const blob = new Blob([html], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'rti-website.html';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                dispatch({
-                    type: 'ADD_NOTIFICATION',
-                    payload: {
-                        message: 'Website exported successfully!',
-                        type: 'success'
-                    }
-                });
-            };
-
-            // Login Component
-            const LoginForm = () => {
-                const [credentials, setCredentials] = useState({ 
-                    username: '', 
-                    password: '' 
-                });
-                const [loginLoading, setLoginLoading] = useState(false);
-
-                const handleLogin = async (e) => {
-                    e.preventDefault();
-                    setLoginLoading(true);
-
-                    try {
-                        const response = await api.login(credentials);
-                        await api.loadConfig();
-                    } catch (error) {
-                        console.error('Login failed:', error);
-                    } finally {
-                        setLoginLoading(false);
-                    }
-                };
-
-                return (
-                    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
-                        {/* ... login form JSX remains the same ... */}
-                    </div>
-                );
-            };
-
-            // Show login form if not authenticated
-            if (!isAuthenticated) {
-                return <LoginForm />;
-            }
-
-            return (
-                <div className="h-screen flex flex-col bg-gray-100">
-                    {/* Notifications */}
-                    <div className="fixed top-4 right-4 z-50 space-y-2">
-                        {notifications.map(notification => (
-                            <Notification
-                                key={notification.id}
-                                message={notification.message}
-                                type={notification.type}
-                                onClose={() => dispatch({
-                                    type: 'REMOVE_NOTIFICATION',
-                                    payload: notification.id
-                                })}
-                            />
-                        ))}
-                    </div>
-
-                    {/* Header */}
-                    <header className="design-panel text-white p-4 flex items-center justify-between">
-                        {/* ... header JSX remains the same ... */}
-                    </header>
-
-                    <div className="flex flex-1 overflow-hidden">
-                        {/* Left Sidebar - Tools */}
-                        <div className="w-80 bg-white border-r flex flex-col">
-                            {/* Tab Navigation */}
-                            <div className="flex border-b">
-                                {[
-                                    { id: 'design', label: 'Design', icon: 'fas fa-palette' },
-                                    { id: 'components', label: 'Components', icon: 'fas fa-cubes' },
-                                    { id: 'settings', label: 'Settings', icon: 'fas fa-cog' },
-                                    { id: 'code', label: 'Code', icon: 'fas fa-code' }
-                                ].map(tab => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => dispatch({
-                                            type: 'SET_ACTIVE_TAB',
-                                            payload: tab.id
-                                        })}
-                                        className={`flex-1 p-3 text-sm font-medium ${
-                                            activeTab === tab.id 
-                                                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600' 
-                                                : 'text-gray-600 hover:text-gray-900'
-                                        } focus-visible`}
-                                        aria-current={activeTab === tab.id ? 'page' : undefined}
-                                    >
-                                        <i className={`${tab.icon} mr-2`} aria-hidden="true"></i>
-                                        {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Tab Content */}
-                            <div className="flex-1 overflow-y-auto p-4">
-                                <ErrorBoundary>
-                                    {activeTab === 'design' && (
-                                        <DesignTab 
-                                            websiteData={websiteData}
-                                            updateWebsiteData={updateWebsiteData}
-                                        />
-                                    )}
-
-                                    {activeTab === 'components' && (
-                                        <ComponentsTab
-                                            componentLibrary={componentLibrary}
-                                            selectedComponent={selectedComponent}
-                                            onSelectComponent={handleComponentSelect}
-                                        />
-                                    )}
-
-                                    {activeTab === 'settings' && (
-                                        <SettingsTab
-                                            websiteData={websiteData}
-                                            updateWebsiteData={updateWebsiteData}
-                                        />
-                                    )}
-
-                                    {activeTab === 'code' && (
-                                        <CodeTab
-                                            customCSS={customCSS}
-                                            customJS={customJS}
-                                            onChange={(css, js) => dispatch({
-                                                type: 'UPDATE_CUSTOM_CODE',
-                                                payload: { css, js }
-                                            })}
-                                        />
-                                    )}
-                                </ErrorBoundary>
-                            </div>
-                        </div>
-
-                        {/* Main Preview Area */}
-                        <div className="flex-1 flex flex-col">
-                            {/* Preview Controls */}
-                            <div className="bg-white border-b p-4 flex items-center justify-between">
-                                {/* ... preview controls JSX remains the same ... */}
-                            </div>
-
-                            {/* Preview Frame */}
-                            <div className="flex-1 p-4 bg-gray-100">
-                                <div 
-                                    className="h-full mx-auto bg-white preview-frame"
-                                    style={{
-                                        width: previewMode === 'mobile' ? '375px' : 
-                                               previewMode === 'tablet' ? '768px' : '100%',
-                                        maxWidth: '100%'
-                                    }}
-                                >
-                                    <iframe
-                                        ref={previewRef}
-                                        className="w-full h-full rounded-lg"
-                                        title="Website Preview"
-                                        aria-label="Live website preview"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // Sub-components (extracted for better organization)
-        const DesignTab = ({ websiteData, updateWebsiteData }) => {
-            return (
-                <div className="space-y-6">
-                    {/* ... design tab content ... */}
-                </div>
-            );
-        };
-
-        const ComponentsTab = ({ componentLibrary, selectedComponent, onSelectComponent }) => {
-            return (
-                <div>
-                    {/* ... components tab content ... */}
-                </div>
-            );
-        };
-
-        const SettingsTab = ({ websiteData, updateWebsiteData }) => {
-            return (
-                <div className="space-y-6">
-                    {/* ... settings tab content ... */}
-                </div>
-            );
-        };
-
-        const CodeTab = ({ customCSS, customJS, onChange }) => {
-            return (
-                <div className="space-y-6">
-                    {/* ... code tab content ... */}
-                </div>
-            );
-        };
-
-        // Render the application
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(
-            <React.StrictMode>
-                <RTiDesignStudio />
-            </React.StrictMode>
+      // ======================
+      // RENDER LOGIC
+      // ======================
+      
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center">
+              <i className="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
+              <p className="text-xl">Loading dashboard data...</p>
+            </div>
+          </div>
         );
-    </script>
+      }
+
+      if (error) {
+        return (
+          <div className="flex items-center justify-center h-screen">
+            <div className="text-center p-6 bg-red-50 rounded-lg max-w-md">
+              <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+              <h3 className="text-xl font-bold mb-2">Dashboard Error</h3>
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={fetchAlerts}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      const highPriorityAlerts = getFilteredAlerts('high');
+      const mediumPriorityAlerts = getFilteredAlerts('medium');
+      const lowPriorityAlerts = getFilteredAlerts('low');
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          {/* Header */}
+          <header className="bg-white shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-gray-900">RTi Cashflowops Dashboard</h1>
+                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                  Active Users: {activeUsers}
+                </span>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className={`h-3 w-3 rounded-full ${
+                  socket?.connected ? 'bg-green-500' : 'bg-red-500'
+                }`}></span>
+                <span className="text-sm text-gray-500">
+                  {socket?.connected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 py-6">
+            {/* Alerts Section */}
+            <section className="mb-8">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">Alerts</h2>
+              
+              {/* High Priority Alerts */}
+              {highPriorityAlerts.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-md font-medium text-red-700 mb-2">High Priority</h3>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {highPriorityAlerts.map((alert, index) => (
+                      <AlertCard key={`high-${index}`} alert={alert} priority="high" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Medium Priority Alerts */}
+              {mediumPriorityAlerts.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-md font-medium text-yellow-700 mb-2">Medium Priority</h3>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {mediumPriorityAlerts.map((alert, index) => (
+                      <AlertCard key={`medium-${index}`} alert={alert} priority="medium" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Low Priority Alerts */}
+              {lowPriorityAlerts.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-md font-medium text-blue-700 mb-2">Low Priority</h3>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {lowPriorityAlerts.map((alert, index) => (
+                      <AlertCard key={`low-${index}`} alert={alert} priority="low" />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {alerts.length === 0 && (
+                <div className="bg-white p-6 rounded-lg shadow text-center">
+                  <p className="text-gray-500">No alerts found</p>
+                </div>
+              )}
+            </section>
+          </main>
+        </div>
+      );
+    };
+
+    // Alert Card Component
+    const AlertCard = ({ alert, priority }) => {
+      const priorityColors = {
+        high: 'bg-red-50 border-red-200 text-red-800',
+        medium: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+        low: 'bg-blue-50 border-blue-200 text-blue-800'
+      };
+
+      return (
+        <div className={`border-l-4 rounded-r-lg p-4 ${priorityColors[priority]}`}>
+          <div className="flex justify-between items-start">
+            <h4 className="font-medium">{alert.title || 'Untitled Alert'}</h4>
+            <span className="text-xs uppercase font-bold">{priority}</span>
+          </div>
+          <p className="mt-2 text-sm">{alert.message || 'No message provided'}</p>
+          {alert.timestamp && (
+            <p className="mt-3 text-xs opacity-75">
+              {new Date(alert.timestamp).toLocaleString()}
+            </p>
+          )}
+        </div>
+      );
+    };
+
+    // Error Boundary (for production)
+    class ErrorBoundary extends React.Component {
+      state = { hasError: false, error: null };
+
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+
+      componentDidCatch(error, errorInfo) {
+        console.error('Dashboard Error:', error, errorInfo);
+      }
+
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div className="flex items-center justify-center h-screen bg-gray-50">
+              <div className="text-center p-6 max-w-md">
+                <h2 className="text-xl font-bold text-red-600 mb-2">Dashboard Error</h2>
+                <p className="text-gray-700 mb-4">{this.state.error.message}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Reload Dashboard
+                </button>
+              </div>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
+    // Render the app with error boundary
+    const App = () => (
+      <ErrorBoundary>
+        <Dashboard />
+      </ErrorBoundary>
+    );
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
