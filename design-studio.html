@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>RTi Cashflowops Dashboard</title>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -63,10 +63,16 @@
           });
           if (!response.ok) throw new Error(`API Error: ${response.status}`);
           const data = await response.json();
-          const fallbackArray =
-            Array.isArray(data?.alerts) ? data.alerts :
-            Array.isArray(data?.data) ? data.data :
-            Array.isArray(data?.payload) ? data.payload : [];
+          let fallbackArray = [];
+          if (Array.isArray(data)) {
+            fallbackArray = data;
+          } else if (Array.isArray(data?.alerts)) {
+            fallbackArray = data.alerts;
+          } else if (Array.isArray(data?.data)) {
+            fallbackArray = data.data;
+          } else if (Array.isArray(data?.payload)) {
+            fallbackArray = data.payload;
+          }
           setAlerts(fallbackArray);
         } catch (err) {
           console.error('Failed to fetch alerts:', err);
@@ -78,12 +84,8 @@
       };
 
       const getFilteredAlerts = (priority) => {
-        try {
-          return Array.isArray(alerts) ? alerts.filter(alert => alert?.priority === priority) : [];
-        } catch (err) {
-          console.error('Filter error:', err);
-          return [];
-        }
+        if (!Array.isArray(alerts)) return [];
+        return alerts.filter(alert => alert?.priority === priority);
       };
 
       const fetchActiveUsers = async () => {
