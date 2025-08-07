@@ -15,24 +15,18 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
-    // ======================
-    // MAIN DASHBOARD COMPONENT
-    // ======================
     const Dashboard = () => {
-      // State management
-      const [alerts, setAlerts] = useState([]); // Initialize as empty array
+      const [alerts, setAlerts] = useState([]);
       const [isLoading, setIsLoading] = useState(false);
       const [error, setError] = useState(null);
       const [socket, setSocket] = useState(null);
       const [activeUsers, setActiveUsers] = useState(0);
 
-      // API Configuration
       const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
       const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
 
-      // Initialize Socket.io connection with error handling
       useEffect(() => {
         const newSocket = io(SOCKET_URL, {
           reconnectionAttempts: 5,
@@ -44,13 +38,9 @@
           }
         });
 
-        newSocket.on('connect', () => {
-          console.log('Socket connected');
-        });
-
+        newSocket.on('connect', () => console.log('Socket connected'));
         newSocket.on('connect_error', (err) => {
           console.error('Socket connection error:', err);
-          // Fallback to polling if websocket fails
           newSocket.io.opts.transports = ['polling', 'websocket'];
         });
 
@@ -59,53 +49,43 @@
         });
 
         setSocket(newSocket);
-
         return () => newSocket.disconnect();
       }, []);
 
-      // Safe fetch alerts function
       const fetchAlerts = async () => {
         setIsLoading(true);
         setError(null);
-        
         try {
           const response = await fetch(`${API_BASE_URL}/alerts?type=ALL`, {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('authToken')}`
             }
           });
-
-          if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
-          }
-
+          if (!response.ok) throw new Error(`API Error: ${response.status}`);
           const data = await response.json();
-          
-          // Validate and ensure alerts is always an array
-          setAlerts(Array.isArray(data?.alerts) ? data.alerts : []);
-          
+          const fallbackArray =
+            Array.isArray(data?.alerts) ? data.alerts :
+            Array.isArray(data?.data) ? data.data :
+            Array.isArray(data?.payload) ? data.payload : [];
+          setAlerts(fallbackArray);
         } catch (err) {
           console.error('Failed to fetch alerts:', err);
           setError(err.message);
-          setAlerts([]); // Reset to empty array on error
+          setAlerts([]);
         } finally {
           setIsLoading(false);
         }
       };
 
-      // Safe filtering function
       const getFilteredAlerts = (priority) => {
         try {
-          return Array.isArray(alerts) ? 
-            alerts.filter(alert => alert?.priority === priority) : 
-            [];
+          return Array.isArray(alerts) ? alerts.filter(alert => alert?.priority === priority) : [];
         } catch (err) {
           console.error('Filter error:', err);
           return [];
         }
       };
 
-      // Fetch active users
       const fetchActiveUsers = async () => {
         try {
           const response = await fetch(`${API_BASE_URL}/users/active`);
@@ -116,20 +96,13 @@
         }
       };
 
-      // Initial data loading
       useEffect(() => {
         fetchAlerts();
         fetchActiveUsers();
-        
-        // Set up refresh interval (5 minutes)
         const interval = setInterval(fetchAlerts, 300000);
         return () => clearInterval(interval);
       }, []);
 
-      // ======================
-      // RENDER LOGIC
-      // ======================
-      
       if (isLoading) {
         return (
           <div className="flex items-center justify-center h-screen">
@@ -165,7 +138,6 @@
 
       return (
         <div className="min-h-screen bg-gray-100">
-          {/* Header */}
           <header className="bg-white shadow-sm">
             <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
               <div className="flex items-center">
@@ -175,9 +147,7 @@
                 </span>
               </div>
               <div className="flex items-center space-x-4">
-                <span className={`h-3 w-3 rounded-full ${
-                  socket?.connected ? 'bg-green-500' : 'bg-red-500'
-                }`}></span>
+                <span className={`h-3 w-3 rounded-full ${socket?.connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
                 <span className="text-sm text-gray-500">
                   {socket?.connected ? 'Connected' : 'Disconnected'}
                 </span>
@@ -185,13 +155,10 @@
             </div>
           </header>
 
-          {/* Main Content */}
           <main className="max-w-7xl mx-auto px-4 py-6">
-            {/* Alerts Section */}
             <section className="mb-8">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Alerts</h2>
-              
-              {/* High Priority Alerts */}
+
               {highPriorityAlerts.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-md font-medium text-red-700 mb-2">High Priority</h3>
@@ -203,7 +170,6 @@
                 </div>
               )}
 
-              {/* Medium Priority Alerts */}
               {mediumPriorityAlerts.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-md font-medium text-yellow-700 mb-2">Medium Priority</h3>
@@ -215,7 +181,6 @@
                 </div>
               )}
 
-              {/* Low Priority Alerts */}
               {lowPriorityAlerts.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-md font-medium text-blue-700 mb-2">Low Priority</h3>
@@ -238,7 +203,6 @@
       );
     };
 
-    // Alert Card Component
     const AlertCard = ({ alert, priority }) => {
       const priorityColors = {
         high: 'bg-red-50 border-red-200 text-red-800',
@@ -262,18 +226,14 @@
       );
     };
 
-    // Error Boundary (for production)
     class ErrorBoundary extends React.Component {
       state = { hasError: false, error: null };
-
       static getDerivedStateFromError(error) {
         return { hasError: true, error };
       }
-
       componentDidCatch(error, errorInfo) {
         console.error('Dashboard Error:', error, errorInfo);
       }
-
       render() {
         if (this.state.hasError) {
           return (
@@ -295,7 +255,6 @@
       }
     }
 
-    // Render the app with error boundary
     const App = () => (
       <ErrorBoundary>
         <Dashboard />
