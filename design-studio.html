@@ -45,7 +45,7 @@
         });
 
         newSocket.on('newAlert', (alert) => {
-          setAlerts(prev => [alert, ...prev]);
+          setAlerts(prev => Array.isArray(prev) ? [alert, ...prev] : [alert]);
         });
 
         setSocket(newSocket);
@@ -64,28 +64,25 @@
           if (!response.ok) throw new Error(`API Error: ${response.status}`);
           const data = await response.json();
           let fallbackArray = [];
+
           if (Array.isArray(data)) {
             fallbackArray = data;
-          } else if (Array.isArray(data?.alerts)) {
+          } else if (Array.isArray(data.alerts)) {
             fallbackArray = data.alerts;
-          } else if (Array.isArray(data?.data)) {
+          } else if (Array.isArray(data.data)) {
             fallbackArray = data.data;
-          } else if (Array.isArray(data?.payload)) {
+          } else if (Array.isArray(data.payload)) {
             fallbackArray = data.payload;
           }
+
           setAlerts(fallbackArray);
         } catch (err) {
           console.error('Failed to fetch alerts:', err);
           setError(err.message);
-          setAlerts([]);
+          setAlerts([]); // Ensure it's always an array
         } finally {
           setIsLoading(false);
         }
-      };
-
-      const getFilteredAlerts = (priority) => {
-        if (!Array.isArray(alerts)) return [];
-        return alerts.filter(alert => alert?.priority === priority);
       };
 
       const fetchActiveUsers = async () => {
@@ -96,6 +93,11 @@
         } catch (err) {
           console.error('Failed to fetch active users:', err);
         }
+      };
+
+      const getFilteredAlerts = (priority) => {
+        if (!Array.isArray(alerts)) return [];
+        return alerts.filter(alert => alert?.priority === priority);
       };
 
       useEffect(() => {
@@ -162,38 +164,14 @@
               <h2 className="text-lg font-medium text-gray-900 mb-4">Alerts</h2>
 
               {highPriorityAlerts.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-md font-medium text-red-700 mb-2">High Priority</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {highPriorityAlerts.map((alert, index) => (
-                      <AlertCard key={`high-${index}`} alert={alert} priority="high" />
-                    ))}
-                  </div>
-                </div>
+                <AlertSection title="High Priority" alerts={highPriorityAlerts} priority="high" />
               )}
-
               {mediumPriorityAlerts.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-md font-medium text-yellow-700 mb-2">Medium Priority</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {mediumPriorityAlerts.map((alert, index) => (
-                      <AlertCard key={`medium-${index}`} alert={alert} priority="medium" />
-                    ))}
-                  </div>
-                </div>
+                <AlertSection title="Medium Priority" alerts={mediumPriorityAlerts} priority="medium" />
               )}
-
               {lowPriorityAlerts.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-md font-medium text-blue-700 mb-2">Low Priority</h3>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {lowPriorityAlerts.map((alert, index) => (
-                      <AlertCard key={`low-${index}`} alert={alert} priority="low" />
-                    ))}
-                  </div>
-                </div>
+                <AlertSection title="Low Priority" alerts={lowPriorityAlerts} priority="low" />
               )}
-
               {alerts.length === 0 && (
                 <div className="bg-white p-6 rounded-lg shadow text-center">
                   <p className="text-gray-500">No alerts found</p>
@@ -204,6 +182,19 @@
         </div>
       );
     };
+
+    const AlertSection = ({ title, alerts, priority }) => (
+      <div className="mb-6">
+        <h3 className={`text-md font-medium mb-2 ${priority === 'high' ? 'text-red-700' : priority === 'medium' ? 'text-yellow-700' : 'text-blue-700'}`}>
+          {title}
+        </h3>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {alerts.map((alert, i) => (
+            <AlertCard key={`${priority}-${i}`} alert={alert} priority={priority} />
+          ))}
+        </div>
+      </div>
+    );
 
     const AlertCard = ({ alert, priority }) => {
       const priorityColors = {
@@ -233,8 +224,8 @@
       static getDerivedStateFromError(error) {
         return { hasError: true, error };
       }
-      componentDidCatch(error, errorInfo) {
-        console.error('Dashboard Error:', error, errorInfo);
+      componentDidCatch(error, info) {
+        console.error('Dashboard Error:', error, info);
       }
       render() {
         if (this.state.hasError) {
