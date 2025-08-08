@@ -1,25 +1,16 @@
 {
   "name": "rti-trading-backend-with-design-studio",
   "version": "1.0.0",
-  "description": "RTI Trading Backend with Design Studio Dashboard",
-  "main": "server.js",
   "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.6.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "path": "^0.12.7",
     "socket.io": "^4.8.1"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": [],
-  "author": "RTI",
-  "license": "MIT"
+  }
 }
