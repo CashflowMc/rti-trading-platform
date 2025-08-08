@@ -43,8 +43,8 @@
       const [alerts, setAlerts] = useState([]);
       const [editMode, setEditMode] = useState(false);
       const [avatarPreview, setAvatarPreview] = useState('');
-      const [showSubscription, setShowSubscription] = useState(false);
       const fileInputRef = useRef(null);
+
       const socket = useRef(null);
 
       useEffect(() => {
@@ -57,8 +57,8 @@
 
       const fetchAlerts = async () => {
         try {
-          const res = await fetch(\`\${API_BASE}/alerts\`, {
-            headers: { Authorization: \`Bearer \${token}\` },
+          const res = await fetch(`${API_BASE}/alerts`, {
+            headers: { Authorization: `Bearer ${token}` },
           });
           const data = await res.json();
           setAlerts(data);
@@ -70,7 +70,7 @@
       const handleLogin = async () => {
         setError('');
         try {
-          const res = await fetch(\`\${API_BASE}/auth/login\`, {
+          const res = await fetch(`${API_BASE}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password }),
@@ -94,11 +94,11 @@
 
       const handleProfileUpdate = async () => {
         try {
-          const res = await fetch(\`\${API_BASE}/users/\${user.id}\`, {
+          const res = await fetch(`${API_BASE}/users/${user.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
-              Authorization: \`Bearer \${token}\`
+              Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({ username: user.username, isAdmin: user.isAdmin })
           });
@@ -117,13 +117,15 @@
         formData.append('avatar', file);
 
         try {
-          const res = await fetch(\`\${API_BASE}/users/\${user.id}/avatar\`, {
+          const res = await fetch(`${API_BASE}/users/${user.id}/avatar`, {
             method: 'POST',
-            headers: { Authorization: \`Bearer \${token}\` },
+            headers: { Authorization: `Bearer ${token}` },
             body: formData
           });
           const data = await res.json();
-          if (data.avatarUrl) setAvatarPreview(data.avatarUrl);
+          if (data.avatarUrl) {
+            setAvatarPreview(data.avatarUrl);
+          }
         } catch (err) {
           console.error('Avatar upload failed', err);
         }
@@ -136,9 +138,26 @@
 
           {!user ? (
             <div className="max-w-sm bg-gray-800 p-4 rounded shadow">
-              <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} className="w-full mb-2 p-2 rounded text-black" />
-              <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="w-full mb-2 p-2 rounded text-black" />
-              <button onClick={handleLogin} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Login</button>
+              <input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full mb-2 p-2 rounded text-black"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full mb-2 p-2 rounded text-black"
+              />
+              <button
+                onClick={handleLogin}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Login
+              </button>
               {error && <p className="text-red-500 mt-2">{error}</p>}
             </div>
           ) : (
@@ -150,15 +169,30 @@
                     className="w-16 h-16 rounded-full border-2 border-green-400 cursor-pointer"
                     alt="Avatar"
                   />
-                  <input id="avatar-upload" type="file" ref={fileInputRef} className="hidden" onChange={handleAvatarUpload} />
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
                 </label>
+
                 <div>
                   {editMode ? (
                     <>
-                      <input className="bg-gray-700 p-1 rounded mb-1" value={user.username} onChange={(e) => setUser({ ...user, username: e.target.value })} />
+                      <input
+                        className="bg-gray-700 p-1 rounded mb-1"
+                        value={user.username}
+                        onChange={(e) => setUser({ ...user, username: e.target.value })}
+                      />
                       <div className="text-sm">
                         <label>
-                          <input type="checkbox" checked={user.isAdmin} onChange={() => setUser({ ...user, isAdmin: !user.isAdmin })} /> Admin
+                          <input
+                            type="checkbox"
+                            checked={user.isAdmin}
+                            onChange={() => setUser({ ...user, isAdmin: !user.isAdmin })}
+                          /> Admin
                         </label>
                       </div>
                     </>
@@ -169,22 +203,24 @@
                     </>
                   )}
                 </div>
+
                 <div className="ml-auto flex gap-2">
-                  <button onClick={editMode ? handleProfileUpdate : () => setEditMode(true)} className="bg-yellow-600 hover:bg-yellow-700 text-white py-1 px-3 rounded">{editMode ? 'Save' : 'Edit'}</button>
-                  <button onClick={() => setShowSubscription(!showSubscription)} className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded">Subscriptions</button>
-                  <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded">Logout</button>
+                  <button
+                    onClick={editMode ? handleProfileUpdate : () => setEditMode(true)}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white py-1 px-3 rounded"
+                  >
+                    {editMode ? 'Save' : 'Edit'}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"
+                  >
+                    Logout
+                  </button>
                 </div>
               </div>
 
-              {showSubscription && (
-                <div className="mb-6 bg-gray-800 p-4 rounded shadow">
-                  <h3 className="text-xl font-bold mb-2">📄 Subscription Page</h3>
-                  <p>Manage your trading signals subscription here.</p>
-                  <a href="https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00" target="_blank" className="text-blue-400 underline">Buy Now</a>
-                </div>
-              )}
-
-              <div>
+              <div className="mt-6">
                 <h3 className="text-lg font-bold mb-2">📡 Live Alerts</h3>
                 <ul className="space-y-2 max-h-[300px] overflow-y-auto">
                   {alerts.map((alert, i) => (
@@ -195,6 +231,13 @@
                     </li>
                   ))}
                 </ul>
+              </div>
+
+              <div className="mt-10">
+                <h3 className="text-lg font-bold mb-2">📝 Subscription Page (Coming Soon)</h3>
+                <div className="bg-gray-800 p-4 rounded">
+                  <p>This will show your membership status, payment options, and benefits.</p>
+                </div>
               </div>
             </div>
           )}
