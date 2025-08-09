@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Editor - RTi Cashflowops</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .avatar-upload {
+            position: relative;
+            max-width: 200px;
+            margin: 0 auto;
+        }
+        .avatar-preview {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            border-radius: 50%;
+            border: 6px solid #f1f1f1;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: pointer;
+        }
+        .avatar-preview:hover .avatar-overlay {
+            opacity: 1;
+        }
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // API Configuration
+        const API_BASE = 'https://rti-trading-backend-production.up.railway.app';
+
+        // Utility function for API calls
+        const apiCall = async (endpoint, options = {}) => {
+            const token = localStorage.getItem('authToken');
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                },
+            };
+
+            // Handle FormData uploads (don't set Content-Type for FormData)
+            if (options.body instanceof FormData) {
+                delete defaultOptions.headers['Content-Type'];
+            }
+
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...defaultOptions,
+                ...options,
+                headers: {
+                    ...defaultOptions.headers,
+                    ...options.headers,
+                },
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(error || `HTTP ${response.status}`);
+            }
+
+            return response.json();
+        };
+
+        function ProfileEditor() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [saving, setSaving] = useState(false);
+            const [uploading, setUploading] = useState(false);
+            const [message, setMessage] = useState('');
+            const [error, setError] = useState('');
+            
+            const [formData, setFormData] = useState({
+                username: '',
+                email: '',
+                firstName: '',
+                lastName: '',
+                bio: '',
+                phone: '',
+                location: '',
+                website: '',
+                profilePicture: null
+            });
+
+            const [previewImage, setPreviewImage] = useState('');
+
+            useEffect(() => {
+                loadUserProfile();
+            }, []);
+
+            const loadUserProfile = async () => {
+                try {
+                    setLoading(true);
+                    const response = await apiCall('/api/auth/profile');
+                    setUser(response.user);
+                    setFormData({
+                        username: response.user.username || '',
+                        email: response.user.email || '',
+                        firstName: response.user.firstName || '',
+                        lastName: response.user.lastName || '',
+                        bio: response.user.bio || '',
+                        phone: response.user.phone || '',
+                        location: response.user.location || '',
+                        website: response.user.website || '',
+                        profilePicture: null
+                    });
+                    setPreviewImage(response.user.profilePicture || '');
+                } catch (err) {
+                    setError('Failed to load profile: ' + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value
+                }));
+            };
+
+            const handleImageChange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validate file type
+                    if (!file.type.startsWith('image/')) {
+                        setError('Please select an image file');
+                        return;
+                    }
+
+                    // Validate file size (5MB max)
+                    if (file.size > 5 * 1024 * 1024) {
+                        setError('Image size must be less than 5MB');
+                        return;
+                    }
+
+                    setFormData(prev => ({
+                        ...prev,
+                        profilePicture: file
+                    }));
+
+                    // Create preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        setPreviewImage(e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                    setError('');
+                }
+            };
+
+            const uploadProfilePicture = async () => {
+                if (!formData.profilePicture) return null;
+
+                try {
+                    setUploading(true);
+                    const uploadFormData = new FormData();
+                    uploadFormData.append('profilePicture', formData.profilePicture);
+
+                    const response = await apiCall('/api/profile/upload-picture', {
+                        method: 'POST',
+                        body: uploadFormData
+                    });
+
+                    return response.profilePicture;
+                } catch (err) {
+                    throw new Error('Failed to upload image: ' + err.message);
+                } finally {
+                    setUploading(false);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setSaving(true);
+                setError('');
+                setMessage('');
+
+                try {
+                    let profilePictureUrl = null;
+
+                    // Upload profile picture if changed
+                    if (formData.profilePicture) {
+                        profilePictureUrl = await uploadProfilePicture();
+                    }
+
+                    // Update profile data
+                    const updateData = {
+                        username: formData.username,
+                        email: formData.email,
+                        firstName: formData.firstName,
+                        lastName: formData.lastName,
+                        bio: formData.bio,
+                        phone: formData.phone,
+                        location: formData.location,
+                        website: formData.website,
+                        ...(profilePictureUrl && { profilePicture: profilePictureUrl })
+                    };
+
+                    const response = await apiCall('/api/profile/update', {
+                        method: 'PUT',
+                        body: JSON.stringify(updateData)
+                    });
+
+                    setUser(response.user);
+                    setMessage('Profile updated successfully!');
+                    
+                    // Clear the file input
+                    setFormData(prev => ({ ...prev, profilePicture: null }));
+
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            const getAvatarImage = () => {
+                if (previewImage) {
+                    return previewImage;
+                }
+                return `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.firstName || formData.username || 'User')}&size=200&background=3b82f6&color=fff&format=png`;
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                            <p className="mt-4 text-gray-600">Loading profile...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-gray-50 py-8">
+                    <div className="max-w-4xl mx-auto px-4">
+                        {/* Header */}
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+                                    <p className="text-gray-600 mt-1">Manage your account settings and preferences</p>
+                                </div>
+                                <button
+                                    onClick={() => window.history.back()}
+                                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                                >
+                                    ← Back to Dashboard
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Messages */}
+                        {message && (
+                            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6">
+                                {message}
+                            </div>
+                        )}
+
+                        {error && (
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Profile Picture Section */}
+                            <div className="bg-white rounded-lg shadow-sm p-6">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-4">Profile Picture</h2>
+                                <div className="avatar-upload">
+                                    <div className="avatar-preview">
+                                        <img src={getAvatarImage()} alt="Profile" />
+                                        <div className="avatar-overlay">
+                                            <span className="text-sm font-medium">
+                                                {uploading ? 'Uploading...' : 'Change Photo'}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            className="file-input"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            disabled={uploading}
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-center text-sm text-gray-500 mt-3">
+                                    Click to upload a new profile picture (Max 5MB)
+                                </p>
+                            </div>
+
+                            {/* Basic Information */}
+                            <div className="bg-white rounded-lg shadow-sm p-6">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Username*
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            value={formData.username}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email*
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            First Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="firstName"
+                                            value={formData.firstName}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Last Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="lastName"
+                                            value={formData.lastName}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Additional Information */}
+                            <div className="bg-white rounded-lg shadow-sm p-6">
+                                <h2 className="text-xl font-semibold text-gray-900 mb-4">Additional Information</h2>
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Bio
+                                        </label>
+                                        <textarea
+                                            name="bio"
+                                            value={formData.bio}
+                                            onChange={handleInputChange}
+                                            rows={4}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="Tell us about yourself..."
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Phone
+                                            </label>
+                                            <input
+                                                type="tel"
+                                                name="phone"
+                                                value={formData.phone}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="+1 (555) 123-4567"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Location
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="location"
+                                                value={formData.location}
+                                                onChange={handleInputChange}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                placeholder="City, Country"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Website
+                                        </label>
+                                        <input
+                                            type="url"
+                                            name="website"
+                                            value={formData.website}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="https://yourwebsite.com"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="bg-white rounded-lg shadow-sm p-6">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm text-gray-500">
+                                        * Required fields
+                                    </p>
+                                    <button
+                                        type="submit"
+                                        disabled={saving || uploading}
+                                        className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        {saving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<ProfileEditor />, document.getElementById('root'));
+    </script>
+</body>
+</html>
