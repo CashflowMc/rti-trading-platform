@@ -390,13 +390,6 @@
                 const handleLogin = async () => {
                     debugLog('=== LOGIN ATTEMPT ===');
                     
-                    // NEW: Admin login redirect
-                    if (isAdminLogin) {
-                        debugLog('🔐 Admin login selected, redirecting to secure login page');
-                        window.location.href = '/login.html';
-                        return;
-                    }
-                    
                     if (!loginData.username || !loginData.password) {
                         setError('Please enter username and password');
                         return;
