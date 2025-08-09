@@ -778,6 +778,16 @@
 
                 const handleSkipForNow = () => {
                     debugLog('User chose to skip subscription selection');
+                    
+                    // Ensure user has a basic free tier setup
+                    if (user && (!user.tier || user.tier === undefined)) {
+                        setUser({
+                            ...user,
+                            tier: 'FREE',
+                            subscriptionStatus: 'free'
+                        });
+                    }
+                    
                     setShowSubscriptionPicker(false);
                 };
 
@@ -1027,14 +1037,6 @@
             };
 
             const Dashboard = () => {
-                // Safety check - redirect to subscription if user needs it
-                useEffect(() => {
-                    if (user && requiresSubscriptionSelection(user)) {
-                        debugLog('🔒 Dashboard safety check: User needs subscription');
-                        setShowSubscriptionPicker(true);
-                    }
-                }, [user]);
-
                 // Don't render dashboard if subscription picker should be shown
                 if (showSubscriptionPicker) {
                     return null;
@@ -1426,8 +1428,11 @@
                 if (token) {
                     debugLog('Found existing token, validating...');
                     apiCall('/auth/profile')
-                        .then(userData => {
-                            debugLog('✅ Token valid, user loaded:', userData.username);
+                        .then(response => {
+                            // Handle both direct user object and wrapped response
+                            const userData = response.user || response;
+                            debugLog('✅ Token valid, user loaded:', userData.username || 'Unknown User');
+                            debugLog('User data:', userData);
                             setUser(userData);
                             
                             if (requiresSubscriptionSelection(userData)) {
