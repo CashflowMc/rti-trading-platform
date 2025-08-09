@@ -215,9 +215,9 @@
                 }
             }, [chatExpanded]);
 
-            // UPDATED API Functions
+            // API Functions
             const apiCall = async (endpoint, options = {}) => {
-                const token = localStorage.getItem('authToken'); // CHANGED: was 'token'
+                const token = localStorage.getItem('authToken');
                 const headers = {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -253,10 +253,6 @@
                 if (!user) return false;
                 if (user.isAdmin) return false;
                 
-                // Show subscription prompt for users who:
-                // 1. Are on FREE tier (new users or expired subscriptions)
-                // 2. Have inactive/expired subscription status
-                // 3. Don't have an active subscription
                 const needsSubscription = 
                     user.tier === 'FREE' || 
                     !user.subscriptionStatus || 
@@ -391,9 +387,8 @@
                 const [loginData, setLoginData] = useState({ username: '', password: '' });
                 const [isRegistering, setIsRegistering] = useState(false);
                 const [registerData, setRegisterData] = useState({ username: '', email: '', password: '' });
-                const [isAdminLogin, setIsAdminLogin] = useState(false); // NEW: Admin login state
+                const [isAdminLogin, setIsAdminLogin] = useState(false);
 
-                // UPDATED handleLogin function
                 const handleLogin = async () => {
                     debugLog('=== LOGIN ATTEMPT ===');
                     
@@ -418,7 +413,7 @@
 
                         debugLog('✅ Login successful', { user: response.user });
 
-                        localStorage.setItem('authToken', response.token); // CHANGED: was 'token'
+                        localStorage.setItem('authToken', response.token);
                         setUser(response.user);
 
                         if (requiresSubscriptionSelection(response.user)) {
@@ -437,7 +432,6 @@
                     }
                 };
 
-                // UPDATED handleRegister function
                 const handleRegister = async () => {
                     debugLog('=== REGISTRATION ATTEMPT ===');
                     
@@ -462,10 +456,9 @@
 
                         debugLog('✅ Registration successful', { user: response.user });
 
-                        localStorage.setItem('authToken', response.token); // CHANGED: was 'token'
+                        localStorage.setItem('authToken', response.token);
                         setUser(response.user);
                         
-                        // Always show subscription picker for new registrations
                         debugLog('🔒 New user registration - showing subscription picker');
                         setShowSubscriptionPicker(true);
                         setShowLanding(false);
@@ -487,7 +480,7 @@
                                 const randomDuration = 3 + ((i * 3) % 20) / 10;
                                 return (
                                     <div 
-                                        key={i} 
+                                        key={`money-${i}`}
                                         className="falling-money"
                                         style={{
                                             left: `${randomLeft}%`,
@@ -623,7 +616,6 @@
                                     </button>
                                 </div>
 
-                                {/* NEW: Admin Toggle Section */}
                                 <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
                                     <div className="flex items-center justify-between">
                                         <span className="text-red-300 text-sm font-medium">🔐 Admin Access</span>
@@ -693,7 +685,6 @@
                                         />
                                     </div>
 
-                                    {/* UPDATED login button text */}
                                     <button
                                         onClick={isRegistering ? handleRegister : handleLogin}
                                         disabled={loading}
@@ -710,7 +701,6 @@
                 );
             };
 
-            // Subscription Selection Page (keeping existing implementation)
             const SubscriptionPicker = () => {
                 const [selectedPlan, setSelectedPlan] = useState('');
                 const [isProcessing, setIsProcessing] = useState(false);
@@ -775,7 +765,6 @@
                 const handleSkipForNow = () => {
                     debugLog('User chose to skip subscription selection');
                     
-                    // Ensure user has a basic free tier setup
                     if (user && (!user.tier || user.tier === undefined)) {
                         setUser({
                             ...user,
@@ -796,7 +785,7 @@
                                 const randomDuration = 4 + ((i * 5) % 15) / 10;
                                 return (
                                     <div 
-                                        key={i} 
+                                        key={`subscription-money-${i}`}
                                         className="falling-money"
                                         style={{
                                             left: `${randomLeft}%`,
@@ -858,7 +847,7 @@
 
                                             <ul className="space-y-3 mb-8">
                                                 {plan.features.map((feature, idx) => (
-                                                    <li key={idx} className="flex items-center text-gray-300">
+                                                    <li key={`${plan.id}-feature-${idx}`} className="flex items-center text-gray-300">
                                                         <span className="text-green-400 mr-3">✅</span>
                                                         {feature}
                                                     </li>
@@ -900,13 +889,12 @@
             // Chat Panel Component
             const ChatPanel = () => {
                 const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
-                const maxMessages = isPaidUser ? 100 : 10; // Free users see fewer messages
+                const maxMessages = isPaidUser ? 100 : 10;
 
                 return (
                     <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
                         chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
                     }`}>
-                        {/* Chat Header */}
                         <div 
                             className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
                             onClick={() => setChatExpanded(!chatExpanded)}
@@ -928,10 +916,8 @@
                             </div>
                         </div>
 
-                        {/* Chat Content */}
                         {chatExpanded && (
                             <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
-                                {/* Messages Area */}
                                 <div 
                                     ref={chatMessagesRef}
                                     className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
@@ -943,41 +929,43 @@
                                             <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
                                         </div>
                                     ) : (
-                                        chatMessages.slice(-maxMessages).map((message) => (
-                                            <div key={message.id} className="chat-message-enter">
-                                                {message.type === 'system' ? (
-                                                    <div className="text-center">
-                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                            {message.message}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-start gap-2">
-                                                        <img 
-                                                            src={message.user.avatar} 
-                                                            alt="" 
-                                                            className="w-8 h-8 rounded-full flex-shrink-0"
-                                                        />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="font-medium text-sm text-gray-900 truncate">
-                                                                    {message.user.username}
-                                                                </span>
-                                                                <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
-                                                                    {message.user.tier}
-                                                                </span>
-                                                                <span className="text-xs text-gray-400">
-                                                                    {formatChatTime(message.timestamp)}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm text-gray-700 break-words">
+                                        <div className="space-y-3">
+                                            {chatMessages.slice(-maxMessages).map((message) => (
+                                                <div key={message.id} className="chat-message-enter">
+                                                    {message.type === 'system' ? (
+                                                        <div className="text-center">
+                                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                                                                 {message.message}
-                                                            </p>
+                                                            </span>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
+                                                    ) : (
+                                                        <div className="flex items-start gap-2">
+                                                            <img 
+                                                                src={message.user.avatar} 
+                                                                alt="" 
+                                                                className="w-8 h-8 rounded-full flex-shrink-0"
+                                                            />
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-medium text-sm text-gray-900 truncate">
+                                                                        {message.user.username}
+                                                                    </span>
+                                                                    <span className={`text-xs px-1.5 py-0.5 rounded ${getTierColor(message.user.tier)}`}>
+                                                                        {message.user.tier}
+                                                                    </span>
+                                                                    <span className="text-xs text-gray-400">
+                                                                        {formatChatTime(message.timestamp)}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-700 break-words">
+                                                                    {message.message}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                     
                                     {!isPaidUser && chatMessages.length > maxMessages && (
@@ -995,7 +983,6 @@
                                     )}
                                 </div>
 
-                                {/* Chat Input */}
                                 <div className="border-t p-3">
                                     <div className="flex gap-2">
                                         <input
@@ -1033,7 +1020,6 @@
             };
 
             const Dashboard = () => {
-                // Don't render dashboard if subscription picker should be shown
                 if (showSubscriptionPicker) {
                     return null;
                 }
@@ -1084,10 +1070,9 @@
                                                     {user.tier === 'FREE' ? 'FREE TIER' : user.tier}
                                                 </p>
                                             </div>
-                                            {/* UPDATED logout function */}
                                             <button
                                                 onClick={() => {
-                                                    localStorage.removeItem('authToken'); // CHANGED: was 'token'
+                                                    localStorage.removeItem('authToken');
                                                     setUser(null);
                                                     setShowLanding(true);
                                                     if (socket) {
@@ -1118,7 +1103,6 @@
                                 </div>
                             )}
 
-                            {/* Free User Upgrade Banner */}
                             {!isPaidUser && (
                                 <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
                                     <div className="flex items-center justify-between">
@@ -1290,7 +1274,6 @@
                                                     </div>
                                                 ))}
                                                 
-                                                {/* Paywall for free users - FIXED: Added key and proper container */}
                                                 {!isPaidUser && filteredAlerts.length > 3 && (
                                                     <div key="paywall-section" className="relative">
                                                         <div className="filter blur-sm pointer-events-none">
@@ -1412,20 +1395,17 @@
                             </div>
                         </div>
 
-                        {/* Chat Panel */}
                         <ChatPanel />
                     </div>
                 );
             };
 
-            // UPDATED useEffect for token checking
             useEffect(() => {
-                const token = localStorage.getItem('authToken'); // CHANGED: was 'token'
+                const token = localStorage.getItem('authToken');
                 if (token) {
                     debugLog('Found existing token, validating...');
                     apiCall('/auth/profile')
                         .then(response => {
-                            // Handle both direct user object and wrapped response
                             const userData = response.user || response;
                             debugLog('✅ Token valid, user loaded:', userData.username || 'Unknown User');
                             debugLog('User data:', userData);
@@ -1442,7 +1422,7 @@
                         })
                         .catch((error) => {
                             debugLog('❌ Token invalid, removing:', error.message);
-                            localStorage.removeItem('authToken'); // CHANGED: was 'token'
+                            localStorage.removeItem('authToken');
                         });
                 } else {
                     debugLog('No existing token found');
@@ -1451,7 +1431,6 @@
 
             debugLog('🚀 RTi Cashflowops Dashboard Loaded');
 
-            // Render logic
             if (showLanding) {
                 return React.createElement(LandingPage);
             }
@@ -1463,7 +1442,6 @@
             return React.createElement(Dashboard);
         };
 
-        // Render the application
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(TradingGroupDashboard));
     </script>
