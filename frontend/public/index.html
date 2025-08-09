@@ -1219,9 +1219,9 @@
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
                                         <div className="flex gap-2">
-                                            {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map(type => (
+                                            {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
                                                 <button
-                                                    key={type}
+                                                    key={`filter-${type}-${index}`}
                                                     onClick={() => setFilterType(type)}
                                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
                                                         filterType === type 
