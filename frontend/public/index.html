@@ -393,8 +393,6 @@
                 const [registerData, setRegisterData] = useState({ username: '', email: '', password: '' });
                 const [isAdminLogin, setIsAdminLogin] = useState(false); // NEW: Admin login state
 
-
-
                 // UPDATED handleLogin function
                 const handleLogin = async () => {
                     debugLog('=== LOGIN ATTEMPT ===');
@@ -705,8 +703,6 @@
                                          isAdminLogin ? '🔐 ADMIN SECURE LOGIN' :
                                          `🚀 ${isRegistering ? 'Join' : 'Launch to'} Dashboard`}
                                     </button>
-
-
                                 </div>
                             </div>
                         </div>
@@ -1243,7 +1239,7 @@
                                                 No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
                                             </div>
                                         ) : (
-                                            <>
+                                            <div className="space-y-4">
                                                 {limitedAlerts.map(alert => (
                                                     <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
                                                         alert.priority === 'HIGH' ? 'border-red-500' :
@@ -1294,9 +1290,9 @@
                                                     </div>
                                                 ))}
                                                 
-                                                {/* Paywall for free users */}
+                                                {/* Paywall for free users - FIXED: Added key and proper container */}
                                                 {!isPaidUser && filteredAlerts.length > 3 && (
-                                                    <div className="relative">
+                                                    <div key="paywall-section" className="relative">
                                                         <div className="filter blur-sm pointer-events-none">
                                                             {filteredAlerts.slice(3, 6).map(alert => (
                                                                 <div key={`preview-${alert._id}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
@@ -1328,7 +1324,7 @@
                                                         </div>
                                                     </div>
                                                 )}
-                                            </>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
