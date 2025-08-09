@@ -253,18 +253,27 @@
                 if (!user) return false;
                 if (user.isAdmin) return false;
                 
-                const hasNeverSubscribed = !user.subscriptionId && 
-                                          !user.subscriptionStatus && 
-                                          user.tier === 'FREE';
+                // Show subscription prompt for users who:
+                // 1. Are on FREE tier (new users or expired subscriptions)
+                // 2. Have inactive/expired subscription status
+                // 3. Don't have an active subscription
+                const needsSubscription = 
+                    user.tier === 'FREE' || 
+                    !user.subscriptionStatus || 
+                    user.subscriptionStatus === 'inactive' ||
+                    user.subscriptionStatus === 'expired' ||
+                    user.subscriptionStatus === 'cancelled' ||
+                    (!user.subscriptionId && user.tier !== 'WEEKLY' && user.tier !== 'MONTHLY');
                 
                 debugLog('Subscription check:', {
+                    username: user.username,
                     tier: user.tier,
+                    subscriptionStatus: user.subscriptionStatus,
                     hasSubscriptionId: !!user.subscriptionId,
-                    hasSubscriptionStatus: !!user.subscriptionStatus,
-                    requiresSelection: hasNeverSubscribed
+                    needsSubscription: needsSubscription
                 });
                 
-                return hasNeverSubscribed;
+                return needsSubscription;
             };
 
             // Chat functions
@@ -458,6 +467,8 @@
                         localStorage.setItem('authToken', response.token); // CHANGED: was 'token'
                         setUser(response.user);
                         
+                        // Always show subscription picker for new registrations
+                        debugLog('🔒 New user registration - showing subscription picker');
                         setShowSubscriptionPicker(true);
                         setShowLanding(false);
                     } catch (err) {
@@ -1016,6 +1027,19 @@
             };
 
             const Dashboard = () => {
+                // Safety check - redirect to subscription if user needs it
+                useEffect(() => {
+                    if (user && requiresSubscriptionSelection(user)) {
+                        debugLog('🔒 Dashboard safety check: User needs subscription');
+                        setShowSubscriptionPicker(true);
+                    }
+                }, [user]);
+
+                // Don't render dashboard if subscription picker should be shown
+                if (showSubscriptionPicker) {
+                    return null;
+                }
+
                 const filteredAlerts = alerts.filter(alert => 
                     filterType === 'ALL' || alert.type === filterType
                 );
@@ -1411,6 +1435,7 @@
                                 setShowSubscriptionPicker(true);
                                 setShowLanding(false);
                             } else {
+                                debugLog('✅ User has valid subscription, going to dashboard');
                                 setShowLanding(false);
                             }
                         })
@@ -1418,6 +1443,8 @@
                             debugLog('❌ Token invalid, removing:', error.message);
                             localStorage.removeItem('authToken'); // CHANGED: was 'token'
                         });
+                } else {
+                    debugLog('No existing token found');
                 }
             }, []);
 
