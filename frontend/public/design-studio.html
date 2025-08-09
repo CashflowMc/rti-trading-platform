@@ -1,262 +1,655 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RTi Cashflowops Dashboard</title>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTi Admin Design Studio</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .design-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            height: 100vh;
+        }
+        
+        .preview-frame {
+            border: none;
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+        
+        .property-panel {
+            background: #1a1a1a;
+            color: white;
+            overflow-y: auto;
+        }
+        
+        .component-tree {
+            background: #2a2a2a;
+            color: white;
+            overflow-y: auto;
+        }
+        
+        .edit-overlay {
+            position: absolute;
+            background: rgba(59, 130, 246, 0.2);
+            border: 2px dashed #3b82f6;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .live-indicator {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .toolbar-button {
+            transition: all 0.2s;
+        }
+        
+        .toolbar-button:hover {
+            transform: scale(1.05);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .color-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+        
+        .font-preview {
+            border: 1px solid #374151;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .font-preview:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+    </style>
 </head>
 <body>
-  <div id="root"></div>
+    <div id="root"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-    const Dashboard = () => {
-      const [alerts, setAlerts] = useState([]);
-      const [isLoading, setIsLoading] = useState(false);
-      const [error, setError] = useState(null);
-      const [socket, setSocket] = useState(null);
-      const [activeUsers, setActiveUsers] = useState(0);
+        // API Configuration
+        const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
+        const MAIN_SITE_URL = 'https://your-main-site.com'; // Update with your actual main site URL
 
-      const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
-      const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
+        // Socket.io connection for real-time updates
+        let socket = null;
 
-      useEffect(() => {
-        const newSocket = io(SOCKET_URL, {
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          transports: ['websocket'],
-          path: '/socket.io',
-          extraHeaders: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        });
+        const debugLog = (message, data = null) => {
+            console.log(`🎨 [RTi DESIGN] ${message}`);
+            if (data) console.log('📊 Data:', data);
+        };
 
-        newSocket.on('connect', () => console.log('Socket connected'));
-        newSocket.on('connect_error', (err) => {
-          console.error('Socket connection error:', err);
-          newSocket.io.opts.transports = ['polling', 'websocket'];
-        });
+        const RTiAdminDesignStudio = () => {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            
+            // Design State
+            const [selectedComponent, setSelectedComponent] = useState(null);
+            const [siteData, setSiteData] = useState({
+                title: 'RTi CASHFLOWOPS',
+                subtitle: 'TO THE MOON 🚀',
+                colors: {
+                    primary: '#22c55e',
+                    secondary: '#f59e0b',
+                    accent: '#f97316',
+                    background: '#000000'
+                },
+                fonts: {
+                    heading: 'Impact, Arial Black, sans-serif',
+                    body: 'system-ui, sans-serif'
+                },
+                content: {
+                    welcomeMessage: '🚀 MOON LANDING SUCCESSFUL! 🌕',
+                    description: 'Elite trading signals and market analysis'
+                }
+            });
+            const [isConnected, setIsConnected] = useState(false);
+            const [previewMode, setPreviewMode] = useState('desktop');
+            const [showCode, setShowCode] = useState(false);
 
-        newSocket.on('newAlert', (alert) => {
-          setAlerts(prev => Array.isArray(prev) ? [alert, ...prev] : [alert]);
-        });
+            // Refs
+            const previewRef = useRef(null);
 
-        setSocket(newSocket);
-        return () => newSocket.disconnect();
-      }, []);
+            // Authentication Functions
+            const apiCall = async (endpoint, options = {}) => {
+                const token = localStorage.getItem('adminAuthToken');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                };
 
-      const fetchAlerts = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const response = await fetch(`${API_BASE_URL}/alerts?type=ALL`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                try {
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                        headers,
+                        ...options
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'API Error');
+                    }
+
+                    return response.json();
+                } catch (error) {
+                    debugLog(`API Error: ${endpoint}`, error.message);
+                    throw error;
+                }
+            };
+
+            // Socket connection for live updates
+            useEffect(() => {
+                if (isAuthenticated && !socket) {
+                    socket = io(API_BASE_URL.replace('/api', ''));
+                    
+                    socket.on('connect', () => {
+                        debugLog('Connected to design server');
+                        setIsConnected(true);
+                        socket.emit('joinDesignRoom', user?.id);
+                    });
+
+                    socket.on('disconnect', () => {
+                        setIsConnected(false);
+                    });
+
+                    socket.on('designUpdate', (data) => {
+                        debugLog('Received design update:', data);
+                        setSiteData(prev => ({ ...prev, ...data }));
+                    });
+                }
+
+                return () => {
+                    if (socket) {
+                        socket.disconnect();
+                        socket = null;
+                    }
+                };
+            }, [isAuthenticated, user]);
+
+            // Push live updates to main site
+            const pushLiveUpdate = (updates) => {
+                if (socket && isConnected) {
+                    debugLog('Pushing live update:', updates);
+                    socket.emit('pushDesignUpdate', {
+                        target: 'main_site',
+                        updates: updates,
+                        timestamp: Date.now()
+                    });
+                }
+            };
+
+            // Update site data and push live
+            const updateSiteData = (newData) => {
+                setSiteData(prev => {
+                    const updated = { ...prev, ...newData };
+                    pushLiveUpdate(updated);
+                    return updated;
+                });
+            };
+
+            // Login Component
+            const LoginForm = () => {
+                const [credentials, setCredentials] = useState({ username: '', password: '' });
+
+                const handleLogin = async () => {
+                    if (!credentials.username || !credentials.password) {
+                        setError('Please enter admin credentials');
+                        return;
+                    }
+
+                    setLoading(true);
+                    setError('');
+
+                    try {
+                        const response = await apiCall('/auth/admin-login', {
+                            method: 'POST',
+                            body: JSON.stringify(credentials)
+                        });
+
+                        if (!response.user.isAdmin) {
+                            throw new Error('Admin access required');
+                        }
+
+                        localStorage.setItem('adminAuthToken', response.token);
+                        setUser(response.user);
+                        setIsAuthenticated(true);
+                    } catch (err) {
+                        setError(err.message || 'Admin login failed');
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
+                        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md">
+                            <div className="text-center mb-8">
+                                <div className="text-6xl mb-4">🎨</div>
+                                <h1 className="text-3xl font-black text-white mb-2">RTi Design Studio</h1>
+                                <p className="text-gray-300">Admin Dashboard</p>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-white mb-2">Admin Username</label>
+                                    <input
+                                        type="text"
+                                        value={credentials.username}
+                                        onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                                        placeholder="Enter admin username"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-white mb-2">Password</label>
+                                    <input
+                                        type="password"
+                                        value={credentials.password}
+                                        onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                                        className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                                        placeholder="Enter password"
+                                        onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleLogin}
+                                    disabled={loading}
+                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50"
+                                >
+                                    {loading ? '🔒 Authenticating...' : '🎨 Access Design Studio'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Component Tree Panel
+            const ComponentTree = () => {
+                const components = [
+                    { id: 'header', name: '🏠 Header', type: 'layout' },
+                    { id: 'title', name: '📝 Main Title', type: 'text' },
+                    { id: 'subtitle', name: '📝 Subtitle', type: 'text' },
+                    { id: 'moon', name: '🌕 Moon Animation', type: 'animation' },
+                    { id: 'money-rain', name: '💰 Money Rain', type: 'animation' },
+                    { id: 'login-form', name: '📋 Login Form', type: 'form' },
+                    { id: 'background', name: '🎨 Background', type: 'style' },
+                    { id: 'colors', name: '🎨 Color Scheme', type: 'style' }
+                ];
+
+                return (
+                    <div className="component-tree p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-lg">🧩 Components</h3>
+                            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 live-indicator' : 'bg-red-500'}`}></div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            {components.map(component => (
+                                <div
+                                    key={component.id}
+                                    onClick={() => setSelectedComponent(component)}
+                                    className={`p-3 rounded-lg cursor-pointer transition-all ${
+                                        selectedComponent?.id === component.id 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-gray-700 hover:bg-gray-600'
+                                    }`}
+                                >
+                                    <div className="font-medium">{component.name}</div>
+                                    <div className="text-xs opacity-75">{component.type}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 p-3 bg-gray-800 rounded-lg">
+                            <h4 className="font-bold mb-2">🔗 Live Connection</h4>
+                            <div className="text-sm space-y-1">
+                                <div className={`flex items-center gap-2 ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                    {isConnected ? 'Connected' : 'Disconnected'}
+                                </div>
+                                <div className="text-gray-400 text-xs">
+                                    Changes sync in real-time
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Property Panel
+            const PropertyPanel = () => {
+                const colors = [
+                    '#22c55e', '#ef4444', '#3b82f6', '#f59e0b', 
+                    '#8b5cf6', '#f97316', '#06b6d4', '#84cc16'
+                ];
+
+                return (
+                    <div className="property-panel p-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-lg">⚙️ Properties</h3>
+                            <button
+                                onClick={() => setShowCode(!showCode)}
+                                className="px-3 py-1 bg-gray-700 rounded text-sm hover:bg-gray-600"
+                            >
+                                {showCode ? '🎨' : '</>'} 
+                            </button>
+                        </div>
+
+                        {selectedComponent ? (
+                            <div className="space-y-6">
+                                {/* Text Content */}
+                                {(selectedComponent.type === 'text' || selectedComponent.id === 'title') && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">📝 Content</label>
+                                        <textarea
+                                            value={selectedComponent.id === 'title' ? siteData.title : siteData.subtitle}
+                                            onChange={(e) => updateSiteData({
+                                                [selectedComponent.id === 'title' ? 'title' : 'subtitle']: e.target.value
+                                            })}
+                                            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
+                                            rows="3"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Colors */}
+                                {(selectedComponent.type === 'style' || selectedComponent.id === 'colors') && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">🎨 Colors</label>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-xs text-gray-400">Primary</label>
+                                                <div className="color-picker-grid mt-1">
+                                                    {colors.map(color => (
+                                                        <div
+                                                            key={color}
+                                                            onClick={() => updateSiteData({
+                                                                colors: { ...siteData.colors, primary: color }
+                                                            })}
+                                                            className={`w-8 h-8 rounded cursor-pointer border-2 ${
+                                                                siteData.colors.primary === color ? 'border-white' : 'border-gray-600'
+                                                            }`}
+                                                            style={{ backgroundColor: color }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="text-xs text-gray-400">Secondary</label>
+                                                <div className="color-picker-grid mt-1">
+                                                    {colors.map(color => (
+                                                        <div
+                                                            key={color}
+                                                            onClick={() => updateSiteData({
+                                                                colors: { ...siteData.colors, secondary: color }
+                                                            })}
+                                                            className={`w-8 h-8 rounded cursor-pointer border-2 ${
+                                                                siteData.colors.secondary === color ? 'border-white' : 'border-gray-600'
+                                                            }`}
+                                                            style={{ backgroundColor: color }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Fonts */}
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">🔤 Typography</label>
+                                    <div className="space-y-2">
+                                        {[
+                                            { name: 'Impact', value: 'Impact, Arial Black, sans-serif' },
+                                            { name: 'Roboto', value: 'Roboto, sans-serif' },
+                                            { name: 'Montserrat', value: 'Montserrat, sans-serif' },
+                                            { name: 'Playfair', value: 'Playfair Display, serif' }
+                                        ].map(font => (
+                                            <div
+                                                key={font.value}
+                                                onClick={() => updateSiteData({
+                                                    fonts: { ...siteData.fonts, heading: font.value }
+                                                })}
+                                                className={`font-preview ${
+                                                    siteData.fonts.heading === font.value ? 'border-blue-500 bg-blue-500/20' : ''
+                                                }`}
+                                                style={{ fontFamily: font.value }}
+                                            >
+                                                {font.name} - RTi Cashflowops
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Animation Controls */}
+                                {selectedComponent.type === 'animation' && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-2">🎬 Animation</label>
+                                        <div className="space-y-2">
+                                            <button className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                                                ⏯️ Toggle Animation
+                                            </button>
+                                            <button className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                                                🔄 Reset Animation
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Live Update Button */}
+                                <button
+                                    onClick={() => pushLiveUpdate(siteData)}
+                                    className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 rounded font-medium"
+                                >
+                                    🚀 Push Live Update
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-gray-400">
+                                <div className="text-4xl mb-2">🎯</div>
+                                <p>Select a component to edit its properties</p>
+                            </div>
+                        )}
+
+                        {/* Code View */}
+                        {showCode && (
+                            <div className="mt-6 p-3 bg-black rounded-lg">
+                                <h4 className="font-bold mb-2">📝 Generated CSS</h4>
+                                <pre className="text-xs text-green-400 overflow-auto">
+{`:root {
+  --primary: ${siteData.colors.primary};
+  --secondary: ${siteData.colors.secondary};
+  --heading-font: ${siteData.fonts.heading};
+}
+
+.main-title {
+  color: var(--primary);
+  font-family: var(--heading-font);
+}`}
+                                </pre>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            // Main Preview Area
+            const PreviewArea = () => {
+                return (
+                    <div className="bg-gray-100 p-4 relative">
+                        {/* Toolbar */}
+                        <div className="bg-white rounded-lg shadow-sm p-3 mb-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="font-bold text-gray-800">🎨 RTi Design Studio</div>
+                                <div className={`px-2 py-1 rounded text-xs ${
+                                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                    {isConnected ? '🟢 Live' : '🔴 Offline'}
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setPreviewMode('mobile')}
+                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
+                                        previewMode === 'mobile' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                                    }`}
+                                >
+                                    📱
+                                </button>
+                                <button
+                                    onClick={() => setPreviewMode('tablet')}
+                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
+                                        previewMode === 'tablet' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                                    }`}
+                                >
+                                    📊
+                                </button>
+                                <button
+                                    onClick={() => setPreviewMode('desktop')}
+                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
+                                        previewMode === 'desktop' ? 'bg-blue-500 text-white' : 'bg-gray-200'
+                                    }`}
+                                >
+                                    🖥️
+                                </button>
+                                
+                                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                                
+                                <button
+                                    onClick={() => window.open(MAIN_SITE_URL, '_blank')}
+                                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                                >
+                                    🌐 View Live Site
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className={`bg-white rounded-lg shadow-lg overflow-hidden mx-auto transition-all ${
+                            previewMode === 'mobile' ? 'max-w-sm' :
+                            previewMode === 'tablet' ? 'max-w-2xl' : 'w-full'
+                        }`}>
+                            <div 
+                                className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden"
+                                style={{
+                                    background: `linear-gradient(135deg, ${siteData.colors.background} 0%, #1f2937 50%, ${siteData.colors.background} 100%)`
+                                }}
+                            >
+                                {/* Preview Content */}
+                                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
+                                    <div className="text-center">
+                                        <div className="text-8xl mb-6">🌕</div>
+                                        <h1 
+                                            className="text-6xl font-black text-white mb-4 tracking-wider"
+                                            style={{
+                                                fontFamily: siteData.fonts.heading,
+                                                color: siteData.colors.primary
+                                            }}
+                                        >
+                                            {siteData.title}
+                                        </h1>
+                                        <h2 
+                                            className="text-4xl font-black mb-8"
+                                            style={{
+                                                background: `linear-gradient(to right, ${siteData.colors.primary}, ${siteData.colors.secondary}, ${siteData.colors.accent})`,
+                                                WebkitBackgroundClip: 'text',
+                                                WebkitTextFillColor: 'transparent',
+                                                fontFamily: siteData.fonts.heading
+                                            }}
+                                        >
+                                            {siteData.subtitle}
+                                        </h2>
+                                        <p 
+                                            className="text-2xl font-black mb-8"
+                                            style={{ color: siteData.colors.secondary }}
+                                        >
+                                            {siteData.content.welcomeMessage}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Live Update Indicator */}
+                                {isConnected && (
+                                    <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm animate-pulse">
+                                        🔴 LIVE
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // Check authentication on load
+            useEffect(() => {
+                const token = localStorage.getItem('adminAuthToken');
+                if (token) {
+                    apiCall('/auth/admin-profile')
+                        .then(response => {
+                            const userData = response.user || response;
+                            if (userData.isAdmin) {
+                                setUser(userData);
+                                setIsAuthenticated(true);
+                            } else {
+                                localStorage.removeItem('adminAuthToken');
+                            }
+                        })
+                        .catch(() => {
+                            localStorage.removeItem('adminAuthToken');
+                        });
+                }
+            }, []);
+
+            debugLog('🎨 RTi Admin Design Studio Loaded');
+
+            if (!isAuthenticated) {
+                return React.createElement(LoginForm);
             }
-          });
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
-          const data = await response.json();
 
-          let fallbackArray = [];
-
-          if (Array.isArray(data)) {
-            fallbackArray = data;
-          } else if (Array.isArray(data.alerts)) {
-            fallbackArray = data.alerts;
-          } else if (Array.isArray(data.data)) {
-            fallbackArray = data.data;
-          } else if (Array.isArray(data.payload)) {
-            fallbackArray = data.payload;
-          }
-
-          setAlerts(fallbackArray);
-        } catch (err) {
-          console.error('Failed to fetch alerts:', err);
-          setError(err.message);
-          setAlerts([]);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      const fetchActiveUsers = async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/users/active`);
-          const data = await response.json();
-          setActiveUsers(data.count || 0);
-        } catch (err) {
-          console.error('Failed to fetch active users:', err);
-        }
-      };
-
-      const getFilteredAlerts = (priority) => {
-        if (!Array.isArray(alerts)) return [];
-        return alerts.filter(alert => alert?.priority === priority);
-      };
-
-      useEffect(() => {
-        fetchAlerts();
-        fetchActiveUsers();
-        const interval = setInterval(fetchAlerts, 300000);
-        return () => clearInterval(interval);
-      }, []);
-
-      if (isLoading) {
-        return (
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center">
-              <i className="fas fa-spinner fa-spin text-4xl text-blue-500 mb-4"></i>
-              <p className="text-xl">Loading dashboard data...</p>
-            </div>
-          </div>
-        );
-      }
-
-      if (error) {
-        return (
-          <div className="flex items-center justify-center h-screen">
-            <div className="text-center p-6 bg-red-50 rounded-lg max-w-md">
-              <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-              <h3 className="text-xl font-bold mb-2">Dashboard Error</h3>
-              <p className="text-red-600 mb-4">{error}</p>
-              <button 
-                onClick={fetchAlerts}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-              >
-                Retry
-              </button>
-            </div>
-          </div>
-        );
-      }
-
-      const highPriorityAlerts = getFilteredAlerts('high');
-      const mediumPriorityAlerts = getFilteredAlerts('medium');
-      const lowPriorityAlerts = getFilteredAlerts('low');
-
-      return (
-        <div className="min-h-screen bg-gray-100">
-          <header className="bg-white shadow-sm">
-            <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-              <div className="flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">RTi Cashflowops Dashboard</h1>
-                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                  Active Users: {activeUsers}
-                </span>
-              </div>
-              <div className="flex items-center space-x-4">
-                <span className={`h-3 w-3 rounded-full ${socket?.connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                <span className="text-sm text-gray-500">
-                  {socket?.connected ? 'Connected' : 'Disconnected'}
-                </span>
-              </div>
-            </div>
-          </header>
-
-          <main className="max-w-7xl mx-auto px-4 py-6">
-            <section className="mb-8">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Alerts</h2>
-
-              {highPriorityAlerts.length > 0 && (
-                <AlertSection title="High Priority" alerts={highPriorityAlerts} priority="high" />
-              )}
-              {mediumPriorityAlerts.length > 0 && (
-                <AlertSection title="Medium Priority" alerts={mediumPriorityAlerts} priority="medium" />
-              )}
-              {lowPriorityAlerts.length > 0 && (
-                <AlertSection title="Low Priority" alerts={lowPriorityAlerts} priority="low" />
-              )}
-              {alerts.length === 0 && (
-                <div className="bg-white p-6 rounded-lg shadow text-center">
-                  <p className="text-gray-500">No alerts found</p>
+            return (
+                <div className="design-grid">
+                    <ComponentTree />
+                    <PreviewArea />
+                    <PropertyPanel />
                 </div>
-              )}
-            </section>
-          </main>
-        </div>
-      );
-    };
+            );
+        };
 
-    const AlertSection = ({ title, alerts, priority }) => (
-      <div className="mb-6">
-        <h3 className={`text-md font-medium mb-2 ${priority === 'high' ? 'text-red-700' : priority === 'medium' ? 'text-yellow-700' : 'text-blue-700'}`}>
-          {title}
-        </h3>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {alerts.map((alert, i) => (
-            <AlertCard key={`${priority}-${i}`} alert={alert} priority={priority} />
-          ))}
-        </div>
-      </div>
-    );
-
-    const AlertCard = ({ alert, priority }) => {
-      const priorityColors = {
-        high: 'bg-red-50 border-red-200 text-red-800',
-        medium: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        low: 'bg-blue-50 border-blue-200 text-blue-800'
-      };
-
-      return (
-        <div className={`border-l-4 rounded-r-lg p-4 ${priorityColors[priority]}`}>
-          <div className="flex justify-between items-start">
-            <h4 className="font-medium">{alert.title || 'Untitled Alert'}</h4>
-            <span className="text-xs uppercase font-bold">{priority}</span>
-          </div>
-          <p className="mt-2 text-sm">{alert.message || 'No message provided'}</p>
-          {alert.timestamp && (
-            <p className="mt-3 text-xs opacity-75">
-              {new Date(alert.timestamp).toLocaleString()}
-            </p>
-          )}
-        </div>
-      );
-    };
-
-    class ErrorBoundary extends React.Component {
-      state = { hasError: false, error: null };
-      static getDerivedStateFromError(error) {
-        return { hasError: true, error };
-      }
-      componentDidCatch(error, info) {
-        console.error('Dashboard Error:', error, info);
-      }
-      render() {
-        if (this.state.hasError) {
-          return (
-            <div className="flex items-center justify-center h-screen bg-gray-50">
-              <div className="text-center p-6 max-w-md">
-                <h2 className="text-xl font-bold text-red-600 mb-2">Dashboard Error</h2>
-                <p className="text-gray-700 mb-4">{this.state.error.message}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Reload Dashboard
-                </button>
-              </div>
-            </div>
-          );
-        }
-        return this.props.children;
-      }
-    }
-
-    const App = () => (
-      <ErrorBoundary>
-        <Dashboard />
-      </ErrorBoundary>
-    );
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
+        // Render the application
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(RTiAdminDesignStudio));
+    </script>
 </body>
 </html>
