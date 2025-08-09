@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTi Admin Design Studio</title>
+    <title>RTi Admin Design Studio - Live Editor</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,15 +12,17 @@
     <style>
         .design-grid {
             display: grid;
-            grid-template-columns: 300px 1fr 350px;
+            grid-template-columns: 280px 1fr 320px;
             height: 100vh;
+            overflow: hidden;
         }
         
-        .preview-frame {
+        .live-iframe {
             border: none;
             width: 100%;
             height: 100%;
             background: white;
+            transition: all 0.3s ease;
         }
         
         .property-panel {
@@ -35,49 +37,81 @@
             overflow-y: auto;
         }
         
-        .edit-overlay {
-            position: absolute;
-            background: rgba(59, 130, 246, 0.2);
-            border: 2px dashed #3b82f6;
-            pointer-events: none;
-            z-index: 1000;
-        }
-        
         .live-indicator {
-            animation: pulse 2s infinite;
+            animation: livebeat 1.5s infinite;
         }
         
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        @keyframes livebeat {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
         }
         
-        .toolbar-button {
+        .page-tab {
             transition: all 0.2s;
+            border-bottom: 3px solid transparent;
         }
         
-        .toolbar-button:hover {
-            transform: scale(1.05);
+        .page-tab:hover {
             background: rgba(59, 130, 246, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .page-tab.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-bottom-color: #3b82f6;
         }
         
         .color-picker-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
         
-        .font-preview {
-            border: 1px solid #374151;
-            padding: 8px;
-            border-radius: 4px;
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
             cursor: pointer;
+            border: 2px solid transparent;
             transition: all 0.2s;
         }
         
-        .font-preview:hover {
-            border-color: #3b82f6;
+        .color-swatch:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .color-swatch.selected {
+            border-color: #fff;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        }
+        
+        .live-changes-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .component-item {
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .component-item:hover {
+            border-left-color: #3b82f6;
             background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .component-item.selected {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
         }
     </style>
 </head>
@@ -87,54 +121,109 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // UPDATED API Configuration - Using your working backend
+        // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
-        const MAIN_SITE_URL = window.location.origin; // Uses current domain
+        const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
+        const MAIN_SITE_URL = window.location.origin;
 
         // Socket.io connection for real-time updates
         let socket = null;
 
         const debugLog = (message, data = null) => {
-            console.log(`🎨 [RTi DESIGN] ${message}`);
+            console.log(`🎨 [RTi LIVE DESIGN] ${message}`);
             if (data) console.log('📊 Data:', data);
         };
 
-        const RTiAdminDesignStudio = () => {
+        const RTiLiveDesignStudio = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
             
-            // Design State
+            // Live Design State
             const [selectedComponent, setSelectedComponent] = useState(null);
-            const [siteData, setSiteData] = useState({
-                title: 'RTi CASHFLOWOPS',
-                subtitle: 'TO THE MOON 🚀',
-                colors: {
-                    primary: '#22c55e',
-                    secondary: '#f59e0b',
-                    accent: '#f97316',
-                    background: '#000000'
-                },
-                fonts: {
-                    heading: 'Impact, Arial Black, sans-serif',
-                    body: 'system-ui, sans-serif'
-                },
-                content: {
-                    welcomeMessage: '🚀 MOON LANDING SUCCESSFUL! 🌕',
-                    description: 'Elite trading signals and market analysis'
-                }
-            });
+            const [currentPage, setCurrentPage] = useState('landing');
             const [isConnected, setIsConnected] = useState(false);
             const [previewMode, setPreviewMode] = useState('desktop');
             const [showCode, setShowCode] = useState(false);
+            const [liveChanges, setLiveChanges] = useState(0);
+            
+            // Site Data for Real-Time Editing
+            const [siteData, setSiteData] = useState({
+                landing: {
+                    title: 'RTi',
+                    subtitle: 'CASHFLOWOPS',
+                    welcomeMessage: '🚀 MOON LANDING SUCCESSFUL! 🌕',
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#f59e0b',
+                        accent: '#f97316',
+                        background: 'linear-gradient(135deg, #000000 0%, #1f2937 50%, #000000 100%)'
+                    },
+                    fonts: {
+                        heading: 'Impact, Arial Black, sans-serif',
+                        body: 'system-ui, sans-serif'
+                    }
+                },
+                dashboard: {
+                    headerTitle: 'RTi Cashflowops',
+                    colors: {
+                        primary: '#22c55e',
+                        accent: '#3b82f6'
+                    }
+                },
+                subscription: {
+                    title: 'CHOOSE YOUR MISSION',
+                    colors: {
+                        primary: '#22c55e',
+                        secondary: '#f59e0b'
+                    }
+                }
+            });
 
-            // Refs
-            const previewRef = useRef(null);
+            const iframeRef = useRef(null);
 
-            // Authentication Functions - Updated to use your working token system
+            // Available Pages
+            const pages = [
+                { id: 'landing', name: '🏠 Landing Page', url: '/', icon: '🏠' },
+                { id: 'dashboard', name: '📊 Dashboard', url: '/?page=dashboard', icon: '📊' },
+                { id: 'subscription', name: '💎 Subscription', url: '/?page=subscription', icon: '💎' },
+                { id: 'live', name: '🔴 Live Site', url: MAIN_SITE_URL, icon: '🌐' }
+            ];
+
+            // Components for each page
+            const getPageComponents = (pageId) => {
+                const commonComponents = [
+                    { id: 'colors', name: '🎨 Color Scheme', type: 'style', page: 'all' },
+                    { id: 'fonts', name: '🔤 Typography', type: 'style', page: 'all' }
+                ];
+
+                const pageSpecific = {
+                    landing: [
+                        { id: 'title', name: '📝 Main Title', type: 'text', page: 'landing' },
+                        { id: 'subtitle', name: '📝 Subtitle', type: 'text', page: 'landing' },
+                        { id: 'welcomeMessage', name: '💬 Welcome Message', type: 'text', page: 'landing' },
+                        { id: 'moon', name: '🌕 Moon Animation', type: 'animation', page: 'landing' },
+                        { id: 'money-rain', name: '💰 Money Rain', type: 'animation', page: 'landing' },
+                        { id: 'background', name: '🎨 Background', type: 'style', page: 'landing' }
+                    ],
+                    dashboard: [
+                        { id: 'headerTitle', name: '📋 Header Title', type: 'text', page: 'dashboard' },
+                        { id: 'alerts', name: '⚠️ Alert System', type: 'component', page: 'dashboard' },
+                        { id: 'chat', name: '💬 Chat Panel', type: 'component', page: 'dashboard' }
+                    ],
+                    subscription: [
+                        { id: 'title', name: '📝 Page Title', type: 'text', page: 'subscription' },
+                        { id: 'plans', name: '💎 Pricing Plans', type: 'component', page: 'subscription' }
+                    ]
+                };
+
+                return [...commonComponents, ...(pageSpecific[pageId] || [])];
+            };
+
+            // Authentication Functions
             const apiCall = async (endpoint, options = {}) => {
-                const token = localStorage.getItem('authToken'); // Using same token as main site
+                const token = localStorage.getItem('authToken');
                 const headers = {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` })
@@ -146,11 +235,6 @@
                     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                         headers,
                         ...options
-                    });
-
-                    debugLog(`API Response: ${endpoint}`, { 
-                        status: response.status, 
-                        ok: response.ok 
                     });
 
                     if (!response.ok) {
@@ -165,29 +249,36 @@
                 }
             };
 
-            // Socket connection for live updates
+            // Real-Time Socket Connection
             useEffect(() => {
                 if (isAuthenticated && !socket) {
-                    socket = io(API_BASE_URL.replace('/api', ''));
+                    debugLog('Connecting to live design socket...');
+                    socket = io(SOCKET_URL);
                     
                     socket.on('connect', () => {
-                        debugLog('Connected to design server');
+                        debugLog('🔴 LIVE CONNECTION ESTABLISHED');
                         setIsConnected(true);
-                        socket.emit('joinDesignRoom', user?.id);
+                        socket.emit('joinDesignRoom', { 
+                            userId: user?.id, 
+                            role: 'designer',
+                            page: currentPage 
+                        });
                     });
 
                     socket.on('disconnect', () => {
-                        debugLog('Disconnected from design server');
+                        debugLog('❌ Live connection lost');
                         setIsConnected(false);
                     });
 
                     socket.on('designUpdate', (data) => {
-                        debugLog('Received design update:', data);
-                        setSiteData(prev => ({ ...prev, ...data }));
+                        debugLog('📡 Received live design update:', data);
+                        // Apply updates to iframe in real-time
+                        applyLiveUpdate(data);
                     });
 
-                    socket.on('error', (error) => {
-                        debugLog('Socket error:', error);
+                    socket.on('pageChange', (data) => {
+                        debugLog('📄 Page change detected:', data);
+                        refreshIframe();
                     });
                 }
 
@@ -199,27 +290,86 @@
                 };
             }, [isAuthenticated, user]);
 
-            // Push live updates to main site
-            const pushLiveUpdate = (updates) => {
-                if (socket && isConnected) {
-                    debugLog('Pushing live update:', updates);
-                    socket.emit('designUpdate', {
-                        target: 'main_site',
-                        updates: updates,
-                        timestamp: Date.now()
-                    });
-                } else {
-                    debugLog('Cannot push update - not connected');
+            // Apply Live Updates to Iframe
+            const applyLiveUpdate = (updateData) => {
+                if (!iframeRef.current) return;
+
+                try {
+                    const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+                    
+                    // Update colors in real-time
+                    if (updateData.colors) {
+                        const root = iframeDoc.documentElement;
+                        Object.entries(updateData.colors).forEach(([key, value]) => {
+                            root.style.setProperty(`--${key}-color`, value);
+                        });
+                    }
+
+                    // Update text content
+                    if (updateData.text) {
+                        Object.entries(updateData.text).forEach(([selector, content]) => {
+                            const elements = iframeDoc.querySelectorAll(`[data-design="${selector}"]`);
+                            elements.forEach(el => {
+                                el.textContent = content;
+                            });
+                        });
+                    }
+
+                    // Update fonts
+                    if (updateData.fonts) {
+                        const root = iframeDoc.documentElement;
+                        Object.entries(updateData.fonts).forEach(([key, value]) => {
+                            root.style.setProperty(`--${key}-font`, value);
+                        });
+                    }
+
+                    setLiveChanges(prev => prev + 1);
+                } catch (error) {
+                    debugLog('Error applying live update:', error);
                 }
             };
 
-            // Update site data and push live
-            const updateSiteData = (newData) => {
-                setSiteData(prev => {
-                    const updated = { ...prev, ...newData };
-                    pushLiveUpdate(updated);
-                    return updated;
-                });
+            // Push Live Updates
+            const pushLiveUpdate = (updateType, updateData) => {
+                if (!socket || !isConnected) {
+                    debugLog('⚠️ Cannot push update - not connected');
+                    return;
+                }
+
+                const payload = {
+                    type: updateType,
+                    page: currentPage,
+                    data: updateData,
+                    timestamp: Date.now(),
+                    user: user?.username
+                };
+
+                debugLog('🚀 Pushing live update:', payload);
+                socket.emit('liveDesignUpdate', payload);
+
+                // Apply immediately to preview
+                applyLiveUpdate(updateData);
+            };
+
+            // Refresh Iframe
+            const refreshIframe = () => {
+                if (iframeRef.current) {
+                    iframeRef.current.src = iframeRef.current.src;
+                }
+            };
+
+            // Update Site Data and Push Live
+            const updateSiteData = (pageId, updates) => {
+                setSiteData(prev => ({
+                    ...prev,
+                    [pageId]: {
+                        ...prev[pageId],
+                        ...updates
+                    }
+                }));
+
+                // Push live update immediately
+                pushLiveUpdate('siteData', { [pageId]: updates });
             };
 
             // Login Component
@@ -236,14 +386,10 @@
                     setError('');
 
                     try {
-                        debugLog('Attempting admin login:', { username: credentials.username });
-
                         const response = await apiCall('/auth/login', {
                             method: 'POST',
                             body: JSON.stringify(credentials)
                         });
-
-                        debugLog('Login response:', response);
 
                         if (!response.user || !response.user.isAdmin) {
                             throw new Error('Admin access required');
@@ -252,9 +398,8 @@
                         localStorage.setItem('authToken', response.token);
                         setUser(response.user);
                         setIsAuthenticated(true);
-                        debugLog('Admin login successful');
+                        debugLog('🎨 Admin authenticated for live design');
                     } catch (err) {
-                        debugLog('Admin login failed:', err.message);
                         setError(err.message || 'Admin login failed');
                     } finally {
                         setLoading(false);
@@ -265,12 +410,9 @@
                     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
                         <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 w-full max-w-md">
                             <div className="text-center mb-8">
-                                <div className="text-6xl mb-4">🎨</div>
-                                <h1 className="text-3xl font-black text-white mb-2">RTi Design Studio</h1>
-                                <p className="text-gray-300">Admin Dashboard</p>
-                                <div className="mt-2 text-sm text-gray-400">
-                                    Connected to: {API_BASE_URL}
-                                </div>
+                                <div className="text-6xl mb-4">🔴</div>
+                                <h1 className="text-3xl font-black text-white mb-2">RTi Live Design</h1>
+                                <p className="text-gray-300">Real-Time Website Editor</p>
                             </div>
 
                             {error && (
@@ -280,40 +422,30 @@
                             )}
 
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-white mb-2">Admin Username</label>
-                                    <input
-                                        type="text"
-                                        value={credentials.username}
-                                        onChange={(e) => setCredentials({...credentials, username: e.target.value})}
-                                        className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
-                                        placeholder="Enter admin username"
-                                    />
-                                </div>
+                                <input
+                                    type="text"
+                                    placeholder="Admin Username"
+                                    value={credentials.username}
+                                    onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                                />
 
-                                <div>
-                                    <label className="block text-sm font-medium text-white mb-2">Password</label>
-                                    <input
-                                        type="password"
-                                        value={credentials.password}
-                                        onChange={(e) => setCredentials({...credentials, password: e.target.value})}
-                                        className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
-                                        placeholder="Enter password"
-                                        onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                                    />
-                                </div>
+                                <input
+                                    type="password"
+                                    placeholder="Password"
+                                    value={credentials.password}
+                                    onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                                    className="w-full px-4 py-3 bg-white/10 border border-white/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+                                />
 
                                 <button
                                     onClick={handleLogin}
                                     disabled={loading}
-                                    className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-blue-600 hover:to-purple-700 transition-all disabled:opacity-50"
+                                    className="w-full bg-gradient-to-r from-red-500 to-purple-600 text-white py-3 rounded-lg font-bold hover:from-red-600 hover:to-purple-700 transition-all disabled:opacity-50"
                                 >
-                                    {loading ? '🔒 Authenticating...' : '🎨 Access Design Studio'}
+                                    {loading ? '🔒 Connecting...' : '🔴 Enter Live Studio'}
                                 </button>
-
-                                <div className="text-center text-sm text-gray-400 mt-4">
-                                    <p>Use your main site admin credentials</p>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -322,22 +454,13 @@
 
             // Component Tree Panel
             const ComponentTree = () => {
-                const components = [
-                    { id: 'header', name: '🏠 Header', type: 'layout' },
-                    { id: 'title', name: '📝 Main Title', type: 'text' },
-                    { id: 'subtitle', name: '📝 Subtitle', type: 'text' },
-                    { id: 'moon', name: '🌕 Moon Animation', type: 'animation' },
-                    { id: 'money-rain', name: '💰 Money Rain', type: 'animation' },
-                    { id: 'login-form', name: '📋 Login Form', type: 'form' },
-                    { id: 'background', name: '🎨 Background', type: 'style' },
-                    { id: 'colors', name: '🎨 Color Scheme', type: 'style' }
-                ];
+                const components = getPageComponents(currentPage);
 
                 return (
                     <div className="component-tree p-4">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-lg">🧩 Components</h3>
-                            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 live-indicator' : 'bg-red-500'}`}></div>
+                            <h3 className="font-bold text-lg">🧩 Live Components</h3>
+                            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-red-500 live-indicator' : 'bg-gray-500'}`}></div>
                         </div>
                         
                         <div className="space-y-2">
@@ -345,97 +468,125 @@
                                 <div
                                     key={component.id}
                                     onClick={() => setSelectedComponent(component)}
-                                    className={`p-3 rounded-lg cursor-pointer transition-all ${
-                                        selectedComponent?.id === component.id 
-                                            ? 'bg-blue-600 text-white' 
-                                            : 'bg-gray-700 hover:bg-gray-600'
+                                    className={`component-item p-3 rounded-lg cursor-pointer ${
+                                        selectedComponent?.id === component.id ? 'selected' : ''
                                     }`}
                                 >
                                     <div className="font-medium">{component.name}</div>
-                                    <div className="text-xs opacity-75">{component.type}</div>
+                                    <div className="text-xs opacity-75">{component.type} • {component.page}</div>
                                 </div>
                             ))}
                         </div>
 
                         <div className="mt-6 p-3 bg-gray-800 rounded-lg">
-                            <h4 className="font-bold mb-2">🔗 Live Connection</h4>
+                            <h4 className="font-bold mb-2 flex items-center gap-2">
+                                🔴 Live Status
+                                {isConnected && <span className="text-xs bg-red-600 px-2 py-1 rounded-full animate-pulse">LIVE</span>}
+                            </h4>
                             <div className="text-sm space-y-1">
-                                <div className={`flex items-center gap-2 ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-                                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                    {isConnected ? 'Connected' : 'Disconnected'}
+                                <div className={`flex items-center gap-2 ${isConnected ? 'text-red-400' : 'text-gray-400'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-red-500' : 'bg-gray-500'}`}></div>
+                                    {isConnected ? 'Broadcasting Live' : 'Connecting...'}
                                 </div>
-                                <div className="text-gray-400 text-xs">
-                                    Backend: {API_BASE_URL}
+                                <div className="text-xs text-gray-400">
+                                    Changes: {liveChanges}
                                 </div>
-                                <div className="text-gray-400 text-xs">
-                                    {isConnected ? 'Changes sync in real-time' : 'Attempting to connect...'}
+                                <div className="text-xs text-gray-400">
+                                    Page: {pages.find(p => p.id === currentPage)?.name}
                                 </div>
                             </div>
                         </div>
 
                         <div className="mt-4 p-3 bg-gray-800 rounded-lg">
-                            <h4 className="font-bold mb-2">👤 Admin User</h4>
+                            <h4 className="font-bold mb-2">👤 Designer</h4>
                             <div className="text-sm">
                                 <div className="text-green-400">{user?.username}</div>
-                                <div className="text-xs text-gray-400">{user?.email}</div>
+                                <div className="text-xs text-gray-400">Live Editing Mode</div>
                             </div>
                         </div>
                     </div>
                 );
             };
 
-            // Property Panel
+            // Property Panel with Live Controls
             const PropertyPanel = () => {
                 const colors = [
                     '#22c55e', '#ef4444', '#3b82f6', '#f59e0b', 
-                    '#8b5cf6', '#f97316', '#06b6d4', '#84cc16'
+                    '#8b5cf6', '#f97316', '#06b6d4', '#84cc16',
+                    '#000000', '#ffffff', '#6b7280', '#f3f4f6'
                 ];
+
+                const currentPageData = siteData[currentPage] || {};
 
                 return (
                     <div className="property-panel p-4">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-lg">⚙️ Properties</h3>
-                            <button
-                                onClick={() => setShowCode(!showCode)}
-                                className="px-3 py-1 bg-gray-700 rounded text-sm hover:bg-gray-600"
-                            >
-                                {showCode ? '🎨' : '</>'} 
-                            </button>
+                            <h3 className="font-bold text-lg">⚡ Live Editor</h3>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setShowCode(!showCode)}
+                                    className="px-2 py-1 bg-gray-700 rounded text-xs hover:bg-gray-600"
+                                >
+                                    {showCode ? '🎨' : '</>'}
+                                </button>
+                                <button
+                                    onClick={refreshIframe}
+                                    className="px-2 py-1 bg-blue-600 rounded text-xs hover:bg-blue-700"
+                                >
+                                    🔄
+                                </button>
+                            </div>
                         </div>
 
                         {selectedComponent ? (
                             <div className="space-y-6">
                                 {/* Text Content */}
-                                {(selectedComponent.type === 'text' || selectedComponent.id === 'title') && (
+                                {selectedComponent.type === 'text' && (
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">📝 Content</label>
+                                        <label className="block text-sm font-medium mb-2">📝 Live Text</label>
                                         <textarea
-                                            value={selectedComponent.id === 'title' ? siteData.title : siteData.subtitle}
-                                            onChange={(e) => updateSiteData({
-                                                [selectedComponent.id === 'title' ? 'title' : 'subtitle']: e.target.value
-                                            })}
+                                            value={currentPageData[selectedComponent.id] || ''}
+                                            onChange={(e) => {
+                                                updateSiteData(currentPage, {
+                                                    [selectedComponent.id]: e.target.value
+                                                });
+                                                
+                                                // Push immediate text update
+                                                pushLiveUpdate('text', {
+                                                    [selectedComponent.id]: e.target.value
+                                                });
+                                            }}
                                             className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
                                             rows="3"
+                                            placeholder="Enter text..."
                                         />
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            Changes apply instantly to live site
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Colors */}
+                                {/* Live Color Picker */}
                                 {(selectedComponent.type === 'style' || selectedComponent.id === 'colors') && (
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">🎨 Colors</label>
-                                        <div className="space-y-3">
+                                        <label className="block text-sm font-medium mb-3">🎨 Live Colors</label>
+                                        <div className="space-y-4">
                                             <div>
-                                                <label className="text-xs text-gray-400">Primary</label>
-                                                <div className="color-picker-grid mt-1">
+                                                <label className="text-xs text-gray-400 mb-2 block">Primary Color</label>
+                                                <div className="color-picker-grid">
                                                     {colors.map(color => (
                                                         <div
                                                             key={color}
-                                                            onClick={() => updateSiteData({
-                                                                colors: { ...siteData.colors, primary: color }
-                                                            })}
-                                                            className={`w-8 h-8 rounded cursor-pointer border-2 ${
-                                                                siteData.colors.primary === color ? 'border-white' : 'border-gray-600'
+                                                            onClick={() => {
+                                                                const newColors = { 
+                                                                    ...currentPageData.colors, 
+                                                                    primary: color 
+                                                                };
+                                                                updateSiteData(currentPage, { colors: newColors });
+                                                                pushLiveUpdate('colors', { primary: color });
+                                                            }}
+                                                            className={`color-swatch ${
+                                                                currentPageData.colors?.primary === color ? 'selected' : ''
                                                             }`}
                                                             style={{ backgroundColor: color }}
                                                         />
@@ -444,16 +595,21 @@
                                             </div>
                                             
                                             <div>
-                                                <label className="text-xs text-gray-400">Secondary</label>
-                                                <div className="color-picker-grid mt-1">
+                                                <label className="text-xs text-gray-400 mb-2 block">Secondary Color</label>
+                                                <div className="color-picker-grid">
                                                     {colors.map(color => (
                                                         <div
                                                             key={color}
-                                                            onClick={() => updateSiteData({
-                                                                colors: { ...siteData.colors, secondary: color }
-                                                            })}
-                                                            className={`w-8 h-8 rounded cursor-pointer border-2 ${
-                                                                siteData.colors.secondary === color ? 'border-white' : 'border-gray-600'
+                                                            onClick={() => {
+                                                                const newColors = { 
+                                                                    ...currentPageData.colors, 
+                                                                    secondary: color 
+                                                                };
+                                                                updateSiteData(currentPage, { colors: newColors });
+                                                                pushLiveUpdate('colors', { secondary: color });
+                                                            }}
+                                                            className={`color-swatch ${
+                                                                currentPageData.colors?.secondary === color ? 'selected' : ''
                                                             }`}
                                                             style={{ backgroundColor: color }}
                                                         />
@@ -464,9 +620,9 @@
                                     </div>
                                 )}
 
-                                {/* Fonts */}
+                                {/* Live Font Selector */}
                                 <div>
-                                    <label className="block text-sm font-medium mb-2">🔤 Typography</label>
+                                    <label className="block text-sm font-medium mb-2">🔤 Live Fonts</label>
                                     <div className="space-y-2">
                                         {[
                                             { name: 'Impact', value: 'Impact, Arial Black, sans-serif' },
@@ -474,18 +630,25 @@
                                             { name: 'Montserrat', value: 'Montserrat, sans-serif' },
                                             { name: 'Playfair', value: 'Playfair Display, serif' }
                                         ].map(font => (
-                                            <div
+                                            <button
                                                 key={font.value}
-                                                onClick={() => updateSiteData({
-                                                    fonts: { ...siteData.fonts, heading: font.value }
-                                                })}
-                                                className={`font-preview ${
-                                                    siteData.fonts.heading === font.value ? 'border-blue-500 bg-blue-500/20' : ''
+                                                onClick={() => {
+                                                    const newFonts = { 
+                                                        ...currentPageData.fonts, 
+                                                        heading: font.value 
+                                                    };
+                                                    updateSiteData(currentPage, { fonts: newFonts });
+                                                    pushLiveUpdate('fonts', { heading: font.value });
+                                                }}
+                                                className={`w-full text-left p-3 rounded border transition-all ${
+                                                    currentPageData.fonts?.heading === font.value 
+                                                        ? 'border-blue-500 bg-blue-500/20' 
+                                                        : 'border-gray-600 hover:border-blue-400'
                                                 }`}
                                                 style={{ fontFamily: font.value }}
                                             >
                                                 {font.name} - RTi Cashflowops
-                                            </div>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -493,65 +656,71 @@
                                 {/* Animation Controls */}
                                 {selectedComponent.type === 'animation' && (
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">🎬 Animation</label>
+                                        <label className="block text-sm font-medium mb-2">🎬 Live Animation</label>
                                         <div className="space-y-2">
                                             <button 
-                                                onClick={() => pushLiveUpdate({ action: 'toggleAnimation', target: selectedComponent.id })}
-                                                className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+                                                onClick={() => pushLiveUpdate('animation', { 
+                                                    action: 'toggle', 
+                                                    target: selectedComponent.id 
+                                                })}
+                                                className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
                                             >
-                                                ⏯️ Toggle Animation
+                                                ⏯️ Toggle Live
                                             </button>
                                             <button 
-                                                onClick={() => pushLiveUpdate({ action: 'resetAnimation', target: selectedComponent.id })}
-                                                className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+                                                onClick={() => pushLiveUpdate('animation', { 
+                                                    action: 'reset', 
+                                                    target: selectedComponent.id 
+                                                })}
+                                                className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
                                             >
-                                                🔄 Reset Animation
+                                                🔄 Reset Live
                                             </button>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Live Update Button */}
+                                {/* Force Refresh Button */}
                                 <button
-                                    onClick={() => pushLiveUpdate(siteData)}
-                                    disabled={!isConnected}
-                                    className={`w-full px-4 py-2 rounded font-medium ${
-                                        isConnected 
-                                            ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                    }`}
+                                    onClick={() => {
+                                        pushLiveUpdate('forceRefresh', currentPageData);
+                                        refreshIframe();
+                                    }}
+                                    className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 rounded font-medium text-white"
                                 >
-                                    {isConnected ? '🚀 Push Live Update' : '⚠️ Not Connected'}
+                                    🔴 BROADCAST LIVE UPDATE
                                 </button>
                             </div>
                         ) : (
                             <div className="text-center py-8 text-gray-400">
                                 <div className="text-4xl mb-2">🎯</div>
-                                <p>Select a component to edit its properties</p>
+                                <p>Select a component to edit live</p>
+                                <div className="text-xs mt-2 text-gray-500">
+                                    Changes broadcast instantly
+                                </div>
                             </div>
                         )}
 
-                        {/* Code View */}
+                        {/* Live Code View */}
                         {showCode && (
                             <div className="mt-6 p-3 bg-black rounded-lg">
-                                <h4 className="font-bold mb-2">📝 Generated CSS</h4>
-                                <pre className="text-xs text-green-400 overflow-auto">
+                                <h4 className="font-bold mb-2">📡 Live CSS</h4>
+                                <pre className="text-xs text-green-400 overflow-auto max-h-48">
 {`:root {
-  --primary: ${siteData.colors.primary};
-  --secondary: ${siteData.colors.secondary};
-  --heading-font: ${siteData.fonts.heading};
+  --primary-color: ${currentPageData.colors?.primary || '#22c55e'};
+  --secondary-color: ${currentPageData.colors?.secondary || '#f59e0b'};
+  --heading-font: ${currentPageData.fonts?.heading || 'Impact, Arial Black, sans-serif'};
 }
 
-.main-title {
-  color: var(--primary);
+[data-design="title"] {
+  color: var(--primary-color);
   font-family: var(--heading-font);
 }
 
-.gradient-text {
+[data-design="subtitle"] {
   background: linear-gradient(to right, 
-    ${siteData.colors.primary}, 
-    ${siteData.colors.secondary}, 
-    ${siteData.colors.accent}
+    var(--primary-color), 
+    var(--secondary-color)
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -563,110 +732,88 @@
                 );
             };
 
-            // Main Preview Area
-            const PreviewArea = () => {
+            // Live Preview Area with Real Iframe
+            const LivePreviewArea = () => {
+                const getCurrentUrl = () => {
+                    const page = pages.find(p => p.id === currentPage);
+                    if (page?.id === 'live') return page.url;
+                    return `${MAIN_SITE_URL}${page?.url || '/'}`;
+                };
+
                 return (
-                    <div className="bg-gray-100 p-4 relative">
-                        {/* Toolbar */}
-                        <div className="bg-white rounded-lg shadow-sm p-3 mb-4 flex items-center justify-between">
+                    <div className="bg-gray-100 flex flex-col h-full">
+                        {/* Live Toolbar */}
+                        <div className="bg-white border-b border-gray-200 p-3 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="font-bold text-gray-800">🎨 RTi Design Studio</div>
-                                <div className={`px-2 py-1 rounded text-xs ${
-                                    isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                    {isConnected ? '🟢 Live' : '🔴 Offline'}
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-red-500 live-indicator' : 'bg-gray-400'}`}></div>
+                                    <span className="font-bold text-gray-800">
+                                        {isConnected ? '🔴 LIVE' : '⚫ OFFLINE'}
+                                    </span>
                                 </div>
+                                <span className="text-gray-600">Real-Time Editor</span>
                             </div>
 
                             <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setPreviewMode('mobile')}
-                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
-                                        previewMode === 'mobile' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-                                    }`}
+                                <select
+                                    value={previewMode}
+                                    onChange={(e) => setPreviewMode(e.target.value)}
+                                    className="px-3 py-1 border border-gray-300 rounded text-sm"
                                 >
-                                    📱
-                                </button>
-                                <button
-                                    onClick={() => setPreviewMode('tablet')}
-                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
-                                        previewMode === 'tablet' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-                                    }`}
-                                >
-                                    📊
-                                </button>
-                                <button
-                                    onClick={() => setPreviewMode('desktop')}
-                                    className={`px-3 py-1 rounded text-sm toolbar-button ${
-                                        previewMode === 'desktop' ? 'bg-blue-500 text-white' : 'bg-gray-200'
-                                    }`}
-                                >
-                                    🖥️
-                                </button>
-                                
-                                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                                    <option value="mobile">📱 Mobile</option>
+                                    <option value="tablet">📊 Tablet</option>
+                                    <option value="desktop">🖥️ Desktop</option>
+                                </select>
                                 
                                 <button
-                                    onClick={() => window.open(MAIN_SITE_URL, '_blank')}
+                                    onClick={refreshIframe}
                                     className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
                                 >
-                                    🌐 View Live Site
+                                    🔄 Refresh
                                 </button>
                             </div>
                         </div>
 
-                        {/* Preview */}
-                        <div className={`bg-white rounded-lg shadow-lg overflow-hidden mx-auto transition-all ${
-                            previewMode === 'mobile' ? 'max-w-sm' :
-                            previewMode === 'tablet' ? 'max-w-2xl' : 'w-full'
-                        }`}>
-                            <div 
-                                className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black relative overflow-hidden"
-                                style={{
-                                    background: `linear-gradient(135deg, ${siteData.colors.background} 0%, #1f2937 50%, ${siteData.colors.background} 100%)`
-                                }}
-                            >
-                                {/* Preview Content */}
-                                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4">
-                                    <div className="text-center">
-                                        <div className="text-8xl mb-6">🌕</div>
-                                        <h1 
-                                            className="text-6xl font-black text-white mb-4 tracking-wider"
-                                            style={{
-                                                fontFamily: siteData.fonts.heading,
-                                                color: siteData.colors.primary
-                                            }}
-                                        >
-                                            {siteData.title}
-                                        </h1>
-                                        <h2 
-                                            className="text-4xl font-black mb-8"
-                                            style={{
-                                                background: `linear-gradient(to right, ${siteData.colors.primary}, ${siteData.colors.secondary}, ${siteData.colors.accent})`,
-                                                WebkitBackgroundClip: 'text',
-                                                WebkitTextFillColor: 'transparent',
-                                                fontFamily: siteData.fonts.heading
-                                            }}
-                                        >
-                                            {siteData.subtitle}
-                                        </h2>
-                                        <p 
-                                            className="text-2xl font-black mb-8"
-                                            style={{ color: siteData.colors.secondary }}
-                                        >
-                                            {siteData.content.welcomeMessage}
-                                        </p>
-                                    </div>
-                                </div>
+                        {/* Page Navigation Tabs */}
+                        <div className="bg-white border-b border-gray-200 flex overflow-x-auto">
+                            {pages.map(page => (
+                                <button
+                                    key={page.id}
+                                    onClick={() => setCurrentPage(page.id)}
+                                    className={`page-tab px-4 py-3 text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
+                                        currentPage === page.id ? 'active' : ''
+                                    }`}
+                                >
+                                    <span>{page.icon}</span>
+                                    {page.name}
+                                </button>
+                            ))}
+                        </div>
 
-                                {/* Live Update Indicator */}
-                                {isConnected && (
-                                    <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm animate-pulse">
-                                        🔴 LIVE
-                                    </div>
-                                )}
+                        {/* Live Iframe */}
+                        <div className="flex-1 p-4">
+                            <div className={`bg-white rounded-lg shadow-lg overflow-hidden mx-auto h-full transition-all ${
+                                previewMode === 'mobile' ? 'max-w-sm' :
+                                previewMode === 'tablet' ? 'max-w-4xl' : 'w-full'
+                            }`}>
+                                <iframe
+                                    ref={iframeRef}
+                                    src={getCurrentUrl()}
+                                    className="live-iframe"
+                                    title="Live Website Preview"
+                                    onLoad={() => {
+                                        debugLog(`📄 Loaded page: ${currentPage}`);
+                                    }}
+                                />
                             </div>
                         </div>
+
+                        {/* Live Changes Indicator */}
+                        {liveChanges > 0 && (
+                            <div className="live-changes-indicator bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
+                                🔴 {liveChanges} live changes broadcasted
+                            </div>
+                        )}
                     </div>
                 );
             };
@@ -675,28 +822,23 @@
             useEffect(() => {
                 const token = localStorage.getItem('authToken');
                 if (token) {
-                    debugLog('Found existing token, validating...');
                     apiCall('/auth/profile')
                         .then(response => {
                             const userData = response.user || response;
-                            debugLog('Token validation response:', userData);
                             if (userData && userData.isAdmin) {
                                 setUser(userData);
                                 setIsAuthenticated(true);
-                                debugLog('Admin authenticated from existing token');
                             } else {
-                                debugLog('User is not admin, removing token');
                                 localStorage.removeItem('authToken');
                             }
                         })
-                        .catch((error) => {
-                            debugLog('Token validation failed:', error.message);
+                        .catch(() => {
                             localStorage.removeItem('authToken');
                         });
                 }
             }, []);
 
-            debugLog('🎨 RTi Admin Design Studio Loaded');
+            debugLog('🔴 RTi Live Design Studio Initialized');
 
             if (!isAuthenticated) {
                 return React.createElement(LoginForm);
@@ -705,7 +847,7 @@
             return (
                 <div className="design-grid">
                     <ComponentTree />
-                    <PreviewArea />
+                    <LivePreviewArea />
                     <PropertyPanel />
                 </div>
             );
@@ -713,7 +855,7 @@
 
         // Render the application
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(RTiAdminDesignStudio));
+        root.render(React.createElement(RTiLiveDesignStudio));
     </script>
 </body>
 </html>
