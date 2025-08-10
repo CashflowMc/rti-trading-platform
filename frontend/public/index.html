@@ -99,7 +99,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
         // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
@@ -124,6 +124,7 @@
             const [showAdminPanel, setShowAdminPanel] = useState(false);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
+            const [initialized, setInitialized] = useState(false);
 
             // Chat state
             const [chatMessages, setChatMessages] = useState([]);
@@ -131,11 +132,15 @@
             const [chatExpanded, setChatExpanded] = useState(false);
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
+            const socketRef = useRef(null);
+            const initializationRef = useRef(false);
 
-            // Initialize socket connection
+            // Initialize socket connection with guard
             useEffect(() => {
-                if (user && !socket && !showSubscriptionPicker) {
-                    socket = io(API_BASE_URL.replace('/api', ''));
+                if (user && !socketRef.current && !showSubscriptionPicker && !initializationRef.current) {
+                    initializationRef.current = true;
+                    socketRef.current = io(API_BASE_URL.replace('/api', ''));
+                    socket = socketRef.current;
                     
                     socket.on('connect', () => {
                         debugLog('Connected to server');
@@ -162,7 +167,7 @@
                         debugLog('New chat message received:', message);
                         setChatMessages(prev => [...prev, {
                             ...message,
-                            id: Date.now() + Math.random(),
+                            id: message.id || Date.now() + Math.random(),
                             timestamp: new Date()
                         }]);
                         
@@ -194,12 +199,14 @@
                 }
 
                 return () => {
-                    if (socket) {
-                        socket.disconnect();
+                    if (socketRef.current) {
+                        socketRef.current.disconnect();
+                        socketRef.current = null;
                         socket = null;
+                        initializationRef.current = false;
                     }
                 };
-            }, [user, showSubscriptionPicker]);
+            }, [user, showSubscriptionPicker, chatExpanded]);
 
             // Auto-scroll chat to bottom
             useEffect(() => {
@@ -316,20 +323,20 @@
                 }
             };
 
-            const fetchAlerts = async () => {
+            const fetchAlerts = useCallback(async () => {
                 try {
                     const data = await apiCall(`/alerts?type=${filterType}`);
                     setAlerts(data);
                 } catch (err) {
                     setError('Failed to fetch alerts');
                 }
-            };
+            }, [filterType]);
 
-            const fetchActiveUsers = async () => {
+            const fetchActiveUsers = useCallback(async () => {
                 try {
                     const data = await apiCall('/users/active');
-                    setMembers(data.map(user => ({
-                        id: user._id,
+                    setMembers(data.map((user, index) => ({
+                        id: user._id || `user-${index}`,
                         username: user.username,
                         avatar: user.avatar,
                         tier: user.tier,
@@ -338,14 +345,14 @@
                 } catch (err) {
                     console.error('Failed to fetch users:', err);
                 }
-            };
+            }, []);
 
             useEffect(() => {
                 if (user && !showSubscriptionPicker) {
                     fetchAlerts();
                     fetchActiveUsers();
                 }
-            }, [user, filterType, showSubscriptionPicker]);
+            }, [user, filterType, showSubscriptionPicker, fetchAlerts, fetchActiveUsers]);
 
             const formatTimeAgo = (timestamp) => {
                 const diff = Date.now() - new Date(timestamp).getTime();
@@ -588,14 +595,13 @@
 
                             <div className="bg-black/80 backdrop-blur-lg border border-green-500/30 rounded-2xl shadow-2xl p-8 w-full max-w-md">
                                 {error && (
-                                    <div key="landing-error" className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
+                                    <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
                                         {error}
                                     </div>
                                 )}
 
                                 <div className="flex gap-2 mb-6">
                                     <button
-                                        key="login-tab"
                                         onClick={() => setIsRegistering(false)}
                                         className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                                             !isRegistering 
@@ -606,7 +612,6 @@
                                         Login
                                     </button>
                                     <button
-                                        key="register-tab"
                                         onClick={() => setIsRegistering(true)}
                                         className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                                             isRegistering 
@@ -618,7 +623,7 @@
                                     </button>
                                 </div>
 
-                                <div key="admin-section" className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                                <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
                                     <div className="flex items-center justify-between">
                                         <span className="text-red-300 text-sm font-medium">🔐 Admin Access</span>
                                         <button
@@ -641,7 +646,7 @@
 
                                 <div className="space-y-6">
                                     {isRegistering && (
-                                        <div key="email-field">
+                                        <div>
                                             <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Email</label>
                                             <input
                                                 type="email"
@@ -653,7 +658,7 @@
                                         </div>
                                     )}
 
-                                    <div key="username-field">
+                                    <div>
                                         <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Username</label>
                                         <input
                                             type="text"
@@ -670,7 +675,7 @@
                                         />
                                     </div>
 
-                                    <div key="password-field">
+                                    <div>
                                         <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Password</label>
                                         <input
                                             type="password"
@@ -688,7 +693,6 @@
                                     </div>
 
                                     <button
-                                        key="submit-button"
                                         onClick={isRegistering ? handleRegister : handleLogin}
                                         disabled={loading}
                                         className="w-full bg-gradient-to-r from-green-500 via-yellow-500 to-orange-500 text-black py-4 rounded-lg font-black text-lg hover:from-green-600 hover:via-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
@@ -802,7 +806,7 @@
 
                         <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
                             <div className="w-full max-w-6xl">
-                                <div key="subscription-header" className="text-center mb-12">
+                                <div className="text-center mb-12">
                                     <div className="text-6xl mb-6">🚀🌕</div>
                                     <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-wider"
                                         style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
@@ -817,7 +821,7 @@
                                 </div>
 
                                 {error && (
-                                    <div key="subscription-error" className="max-w-2xl mx-auto mb-8 bg-red-500/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg text-center">
+                                    <div className="max-w-2xl mx-auto mb-8 bg-red-500/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg text-center">
                                         {error}
                                     </div>
                                 )}
@@ -830,14 +834,14 @@
                                                 : 'border-gray-500 hover:border-green-400'
                                         }`}>
                                             {plan.popular && (
-                                                <div key={`${plan.id}-popular`} className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                                                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                                                     <span className="bg-green-500 text-black px-4 py-2 rounded-full text-sm font-black uppercase">
                                                         🔥 Most Popular
                                                     </span>
                                                 </div>
                                             )}
 
-                                            <div key={`${plan.id}-header`} className="text-center mb-6">
+                                            <div className="text-center mb-6">
                                                 <h3 className="text-2xl font-black text-white mb-2">{plan.name}</h3>
                                                 <div className="text-4xl font-black text-green-400 mb-2">
                                                     ${plan.price}
@@ -848,7 +852,7 @@
                                                 </p>
                                             </div>
 
-                                            <ul key={`${plan.id}-features`} className="space-y-3 mb-8">
+                                            <ul className="space-y-3 mb-8">
                                                 {plan.features.map((feature, idx) => (
                                                     <li key={`${plan.id}-feature-${idx}`} className="flex items-center text-gray-300">
                                                         <span className="text-green-400 mr-3">✅</span>
@@ -858,7 +862,6 @@
                                             </ul>
 
                                             <button
-                                                key={`${plan.id}-button`}
                                                 onClick={() => handlePlanSelection(plan.id)}
                                                 disabled={isProcessing}
                                                 className={`w-full py-4 px-6 rounded-lg font-black text-lg transition-all duration-300 ${
@@ -873,7 +876,7 @@
                                     ))}
                                 </div>
 
-                                <div key="subscription-footer" className="text-center">
+                                <div className="text-center">
                                     <button
                                         onClick={handleSkipForNow}
                                         className="text-gray-400 hover:text-white transition-colors text-sm underline"
@@ -896,11 +899,10 @@
                 const maxMessages = isPaidUser ? 100 : 10;
 
                 return (
-                    <div key="chat-panel" className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
+                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
                         chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
                     }`}>
                         <div 
-                            key="chat-header"
                             className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
                             onClick={() => setChatExpanded(!chatExpanded)}
                         >
@@ -922,30 +924,29 @@
                         </div>
 
                         {chatExpanded && (
-                            <div key="chat-content" className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
+                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
                                 <div 
-                                    key="chat-messages"
                                     ref={chatMessagesRef}
                                     className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
                                 >
                                     {chatMessages.length === 0 ? (
-                                        <div key="chat-empty" className="text-center text-gray-500 py-8">
+                                        <div className="text-center text-gray-500 py-8">
                                             <span className="text-4xl mb-2 block">🚀</span>
                                             <p className="text-sm">Welcome to RTi Trading Chat!</p>
                                             <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
                                         </div>
                                     ) : (
-                                        <div key="chat-messages-list" className="space-y-3">
+                                        <div className="space-y-3">
                                             {chatMessages.slice(-maxMessages).map((message) => (
                                                 <div key={message.id} className="chat-message-enter">
                                                     {message.type === 'system' ? (
-                                                        <div key={`${message.id}-system`} className="text-center">
+                                                        <div className="text-center">
                                                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                                                                 {message.message}
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <div key={`${message.id}-user`} className="flex items-start gap-2">
+                                                        <div className="flex items-start gap-2">
                                                             <img 
                                                                 src={message.user.avatar} 
                                                                 alt="" 
@@ -975,7 +976,7 @@
                                     )}
                                     
                                     {!isPaidUser && chatMessages.length > maxMessages && (
-                                        <div key="chat-upgrade-prompt" className="text-center py-2 border-t">
+                                        <div className="text-center py-2 border-t">
                                             <p className="text-xs text-gray-500">
                                                 Showing last {maxMessages} messages
                                             </p>
@@ -989,7 +990,7 @@
                                     )}
                                 </div>
 
-                                <div key="chat-input" className="border-t p-3">
+                                <div className="border-t p-3">
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -1037,324 +1038,6 @@
                 const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
                 const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
 
-                // Create arrays for conditional content to ensure proper keys
-                const dashboardSections = [];
-                
-                // Add error section
-                if (error) {
-                    dashboardSections.push(
-                        <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                            {error}
-                            <button 
-                                onClick={() => setError('')}
-                                className="float-right text-red-500 hover:text-red-700"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    );
-                }
-                
-                // Add upgrade banner section
-                if (!isPaidUser) {
-                    dashboardSections.push(
-                        <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="text-4xl">🚀</div>
-                                    <div>
-                                        <h3 className="text-xl font-black">UPGRADE TO PREMIUM - TO THE MOON! 🌕</h3>
-                                        <p className="text-yellow-100">
-                                            You're on the FREE tier with limited access. Upgrade to get:
-                                        </p>
-                                        <ul className="text-sm text-yellow-100 mt-2 space-y-1">
-                                            <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
-                                            <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
-                                            <li key="upgrade-feature-3">• Full chat participation & history</li>
-                                            <li key="upgrade-feature-4">• Priority customer support</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <button 
-                                    onClick={() => setShowSubscriptionPicker(true)}
-                                    className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
-                                >
-                                    💎 UPGRADE NOW
-                                </button>
-                            </div>
-                        </div>
-                    );
-                }
-                
-                // Add admin panel section
-                if (user.isAdmin && showAdminPanel) {
-                    dashboardSections.push(
-                        <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-                            <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
-                                ⚙️ Admin Panel - Create Alert
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
-                                    <select
-                                        value={newAlert.type}
-                                        onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="NEWS">News Alert</option>
-                                        <option value="BOT_SIGNAL">Bot Signal</option>
-                                        <option value="MARKET_UPDATE">Market Update</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                    <select
-                                        value={newAlert.priority}
-                                        onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="LOW">Low</option>
-                                        <option value="MEDIUM">Medium</option>
-                                        <option value="HIGH">High</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                                    <input
-                                        type="text"
-                                        value={newAlert.title}
-                                        onChange={(e) => setNewAlert({...newAlert, title: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Alert title"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                                    <textarea
-                                        value={newAlert.message}
-                                        onChange={(e) => setNewAlert({...newAlert, message: e.target.value})}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        rows="3"
-                                        placeholder="Alert message"
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleCreateAlert}
-                                    disabled={loading}
-                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    ➕ {loading ? 'Creating...' : 'Create Alert'}
-                                </button>
-                            </div>
-                        </div>
-                    );
-                }
-
-                // Add main grid section
-                dashboardSections.push(
-                    <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                        <div className="lg:col-span-3 space-y-6">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
-                                <div className="flex gap-2">
-                                    {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
-                                        <button
-                                            key={`filter-${type}-${index}`}
-                                            onClick={() => setFilterType(type)}
-                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                                                filterType === type 
-                                                    ? 'bg-blue-500 text-white' 
-                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                            }`}
-                                        >
-                                            {type === 'BOT_SIGNAL' ? 'Bot Signals' : 
-                                             type === 'NEWS' ? 'News' : 
-                                             type === 'MARKET_UPDATE' ? 'Market' : 'All'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                {limitedAlerts.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {limitedAlerts.map(alert => (
-                                            <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
-                                                alert.priority === 'HIGH' ? 'border-red-500' :
-                                                alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-300'
-                                            }`}>
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-3 mb-2">
-                                                            <span className="text-xl">
-                                                                {alert.type === 'BOT_SIGNAL' ? '🤖' : 
-                                                                 alert.type === 'MARKET_UPDATE' ? '📊' : '🔔'}
-                                                            </span>
-                                                            <div>
-                                                                <h3 className="font-bold text-gray-900">{alert.title}</h3>
-                                                                {alert.botName && (
-                                                                    <p className="text-sm text-blue-600 font-medium">{alert.botName}</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <p className="text-gray-700 mb-3">{alert.message}</p>
-                                                        
-                                                        {alert.pnl && (
-                                                            <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                                                                alert.pnl.includes('+') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                            }`}>
-                                                                {alert.pnl.includes('+') ? '📈' : '📉'}
-                                                                {alert.pnl}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    
-                                                    <div className="text-right ml-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <span>🕐</span>
-                                                            <span className="text-sm text-gray-500">{formatTimeAgo(alert.createdAt)}</span>
-                                                            {user.isAdmin && (
-                                                                <button
-                                                                    onClick={() => handleDeleteAlert(alert._id)}
-                                                                    className="p-1 text-red-400 hover:text-red-600"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        
-                                        {!isPaidUser && filteredAlerts.length > 3 && (
-                                            <div key="paywall-section" className="relative">
-                                                <div className="filter blur-sm pointer-events-none">
-                                                    {filteredAlerts.slice(3, 6).map(alert => (
-                                                        <div key={`preview-${alert._id}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
-                                                            <div className="flex items-start justify-between">
-                                                                <div className="flex-1">
-                                                                    <div className="flex items-center gap-3 mb-2">
-                                                                        <span className="text-xl">🔔</span>
-                                                                        <h3 className="font-bold text-gray-900">{alert.title}</h3>
-                                                                    </div>
-                                                                    <p className="text-gray-700">{alert.message}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                
-                                                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/50 flex items-center justify-center">
-                                                    <div className="text-center bg-white p-8 rounded-lg shadow-xl border border-orange-200">
-                                                        <div className="text-4xl mb-4">🔒</div>
-                                                        <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
-                                                        <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
-                                                        <button 
-                                                            onClick={() => setShowSubscriptionPicker(true)}
-                                                            className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
-                                                        >
-                                                            🚀 UPGRADE NOW
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="lg:col-span-1">
-                            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    👥 Active Users ({members.length})
-                                </h3>
-                                
-                                <div className="space-y-3">
-                                    {(isPaidUser ? members : members.slice(0, 3)).map(member => (
-                                        <div key={member.id} className="flex items-center gap-3">
-                                            <div className="relative">
-                                                <img src={member.avatar} alt="" className="w-10 h-10 rounded-full" />
-                                                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                                                    member.status === 'online' ? 'bg-green-500' :
-                                                    member.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
-                                                }`}></div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900 text-sm">{member.username}</p>
-                                                <span className={`text-xs px-2 py-0.5 rounded ${
-                                                    member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
-                                                    member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
-                                                    member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
-                                                    'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                    {member.tier}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    
-                                    {!isPaidUser && members.length > 3 && (
-                                        <div className="text-center py-3 text-sm text-gray-500 border-t">
-                                            <p>+{members.length - 3} more members</p>
-                                            <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
-                                                Upgrade to see all
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="bg-white rounded-lg shadow-sm p-6 relative">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                    📈 Live Markets
-                                    {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">LIMITED</span>}
-                                </h3>
-                                
-                                {isPaidUser ? (
-                                    <div className="space-y-3">
-                                        {Object.entries(marketData).map(([symbol, data]) => (
-                                            <div key={symbol} className="flex justify-between items-center">
-                                                <span className="font-medium text-gray-900">{symbol}</span>
-                                                <div className="text-right">
-                                                    <div className="font-bold text-gray-900">
-                                                        ${data.price.toFixed(2)}
-                                                    </div>
-                                                    <div className={`text-xs ${
-                                                        data.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                                                    }`}>
-                                                        {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <div className="text-4xl mb-3">🔒</div>
-                                        <p className="text-gray-600 mb-3">Real-time market data</p>
-                                        <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
-                                        <button 
-                                            onClick={() => setShowSubscriptionPicker(true)}
-                                            className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
-                                        >
-                                            Unlock Premium
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-
                 return (
                     <div className="min-h-screen bg-gray-50 relative">
                         <header className="bg-white shadow-sm border-b">
@@ -1399,8 +1082,9 @@
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
                                                     setShowLanding(true);
-                                                    if (socket) {
-                                                        socket.disconnect();
+                                                    if (socketRef.current) {
+                                                        socketRef.current.disconnect();
+                                                        socketRef.current = null;
                                                         socket = null;
                                                     }
                                                 }}
@@ -1415,17 +1099,326 @@
                         </header>
 
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                            {dashboardSections.map((section, index) => (
-                                <React.Fragment key={`section-${index}`}>
-                                    {section}
-                                </React.Fragment>
-                            ))}
+                            {/* 🚨 FIXED: Error Section with Key */}
+                            {error && (
+                                <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                                    {error}
+                                    <button 
+                                        onClick={() => setError('')}
+                                        className="float-right text-red-500 hover:text-red-700"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* 🚨 FIXED: Upgrade Banner Section with Key */}
+                            {!isPaidUser && (
+                                <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-4xl">🚀</div>
+                                            <div>
+                                                <h3 className="text-xl font-black">UPGRADE TO PREMIUM - TO THE MOON! 🌕</h3>
+                                                <p className="text-yellow-100">
+                                                    You're on the FREE tier with limited access. Upgrade to get:
+                                                </p>
+                                                <ul className="text-sm text-yellow-100 mt-2 space-y-1">
+                                                    <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
+                                                    <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
+                                                    <li key="upgrade-feature-3">• Full chat participation & history</li>
+                                                    <li key="upgrade-feature-4">• Priority customer support</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
+                                        >
+                                            💎 UPGRADE NOW
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 🚨 FIXED: Admin Panel Section with Key */}
+                            {user.isAdmin && showAdminPanel && (
+                                <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+                                    <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
+                                        ⚙️ Admin Panel - Create Alert
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
+                                            <select
+                                                value={newAlert.type}
+                                                onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="NEWS">News Alert</option>
+                                                <option value="BOT_SIGNAL">Bot Signal</option>
+                                                <option value="MARKET_UPDATE">Market Update</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                            <select
+                                                value={newAlert.priority}
+                                                onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="LOW">Low</option>
+                                                <option value="MEDIUM">Medium</option>
+                                                <option value="HIGH">High</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                            <input
+                                                type="text"
+                                                value={newAlert.title}
+                                                onChange={(e) => setNewAlert({...newAlert, title: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Alert title"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                            <textarea
+                                                value={newAlert.message}
+                                                onChange={(e) => setNewAlert({...newAlert, message: e.target.value})}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                rows="3"
+                                                placeholder="Alert message"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleCreateAlert}
+                                            disabled={loading}
+                                            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            ➕ {loading ? 'Creating...' : 'Create Alert'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 🚨 FIXED: Main Dashboard Grid with Key */}
+                            <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                <div className="lg:col-span-3 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
+                                        <div className="flex gap-2">
+                                            {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
+                                                <button
+                                                    key={`filter-${type}-${index}`}
+                                                    onClick={() => setFilterType(type)}
+                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                                                        filterType === type 
+                                                            ? 'bg-blue-500 text-white' 
+                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    }`}
+                                                >
+                                                    {type === 'BOT_SIGNAL' ? 'Bot Signals' : 
+                                                     type === 'NEWS' ? 'News' : 
+                                                     type === 'MARKET_UPDATE' ? 'Market' : 'All'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {limitedAlerts.length === 0 ? (
+                                            <div key="no-alerts" className="text-center py-8 text-gray-500">
+                                                No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {limitedAlerts.map((alert, alertIndex) => (
+                                                    <div key={alert._id || `alert-${alertIndex}`} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
+                                                        alert.priority === 'HIGH' ? 'border-red-500' :
+                                                        alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-300'
+                                                    }`}>
+                                                        <div className="flex items-start justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-3 mb-2">
+                                                                    <span className="text-xl">
+                                                                        {alert.type === 'BOT_SIGNAL' ? '🤖' : 
+                                                                         alert.type === 'MARKET_UPDATE' ? '📊' : '🔔'}
+                                                                    </span>
+                                                                    <div>
+                                                                        <h3 className="font-bold text-gray-900">{alert.title}</h3>
+                                                                        {alert.botName && (
+                                                                            <p className="text-sm text-blue-600 font-medium">{alert.botName}</p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <p className="text-gray-700 mb-3">{alert.message}</p>
+                                                                
+                                                                {alert.pnl && (
+                                                                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                                                                        alert.pnl.includes('+') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                                    }`}>
+                                                                        {alert.pnl.includes('+') ? '📈' : '📉'}
+                                                                        {alert.pnl}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            <div className="text-right ml-4">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>🕐</span>
+                                                                    <span className="text-sm text-gray-500">{formatTimeAgo(alert.createdAt)}</span>
+                                                                    {user.isAdmin && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteAlert(alert._id)}
+                                                                            className="p-1 text-red-400 hover:text-red-600"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                
+                                                {!isPaidUser && filteredAlerts.length > 3 && (
+                                                    <div key="paywall-section" className="relative">
+                                                        <div className="filter blur-sm pointer-events-none">
+                                                            {filteredAlerts.slice(3, 6).map((alert, previewIndex) => (
+                                                                <div key={`preview-${alert._id || `preview-alert-${previewIndex}`}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
+                                                                    <div className="flex items-start justify-between">
+                                                                        <div className="flex-1">
+                                                                            <div className="flex items-center gap-3 mb-2">
+                                                                                <span className="text-xl">🔔</span>
+                                                                                <h3 className="font-bold text-gray-900">{alert.title}</h3>
+                                                                            </div>
+                                                                            <p className="text-gray-700">{alert.message}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/50 flex items-center justify-center">
+                                                            <div className="text-center bg-white p-8 rounded-lg shadow-xl border border-orange-200">
+                                                                <div className="text-4xl mb-4">🔒</div>
+                                                                <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
+                                                                <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
+                                                                <button 
+                                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
+                                                                >
+                                                                    🚀 UPGRADE NOW
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-1">
+                                    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            👥 Active Users ({members.length})
+                                        </h3>
+                                        
+                                        <div className="space-y-3">
+                                            {(isPaidUser ? members : members.slice(0, 3)).map((member, memberIndex) => (
+                                                <div key={member.id || `member-${memberIndex}`} className="flex items-center gap-3">
+                                                    <div className="relative">
+                                                        <img src={member.avatar} alt="" className="w-10 h-10 rounded-full" />
+                                                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                                                            member.status === 'online' ? 'bg-green-500' :
+                                                            member.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
+                                                        }`}></div>
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="font-medium text-gray-900 text-sm">{member.username}</p>
+                                                        <span className={`text-xs px-2 py-0.5 rounded ${
+                                                            member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
+                                                            member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
+                                                            member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
+                                                            'bg-gray-100 text-gray-800'
+                                                        }`}>
+                                                            {member.tier}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            
+                                            {!isPaidUser && members.length > 3 && (
+                                                <div key="members-paywall" className="text-center py-3 text-sm text-gray-500 border-t">
+                                                    <p>+{members.length - 3} more members</p>
+                                                    <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
+                                                        Upgrade to see all
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-lg shadow-sm p-6 relative">
+                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            📈 Live Markets
+                                            {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">LIMITED</span>}
+                                        </h3>
+                                        
+                                        {isPaidUser ? (
+                                            <div className="space-y-3">
+                                                {Object.entries(marketData).map(([symbol, data], marketIndex) => (
+                                                    <div key={symbol || `market-${marketIndex}`} className="flex justify-between items-center">
+                                                        <span className="font-medium text-gray-900">{symbol}</span>
+                                                        <div className="text-right">
+                                                            <div className="font-bold text-gray-900">
+                                                                ${data.price.toFixed(2)}
+                                                            </div>
+                                                            <div className={`text-xs ${
+                                                                data.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                                                            }`}>
+                                                                {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div key="market-paywall" className="text-center py-8">
+                                                <div className="text-4xl mb-3">🔒</div>
+                                                <p className="text-gray-600 mb-3">Real-time market data</p>
+                                                <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
+                                                <button 
+                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
+                                                >
+                                                    Unlock Premium
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <ChatPanel />
                     </div>
                 );
             };
+
+            // Dashboard initialization with guard
+            useEffect(() => {
+                if (!initialized) {
+                    setInitialized(true);
+                    debugLog('🚀 RTi Cashflowops Dashboard Loaded');
+                }
+            }, [initialized]);
 
             useEffect(() => {
                 const token = localStorage.getItem('authToken');
@@ -1459,18 +1452,18 @@
             debugLog('🚀 RTi Cashflowops Dashboard Loaded');
 
             if (showLanding) {
-                return React.createElement(LandingPage);
+                return <LandingPage />;
             }
 
             if (showSubscriptionPicker) {
-                return React.createElement(SubscriptionPicker);
+                return <SubscriptionPicker />;
             }
 
-            return React.createElement(Dashboard);
+            return <Dashboard />;
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(TradingGroupDashboard));
+        root.render(<TradingGroupDashboard />);
     </script>
 </body>
 </html>
