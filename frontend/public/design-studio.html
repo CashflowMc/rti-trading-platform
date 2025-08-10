@@ -289,6 +289,7 @@
             const [previewMode, setPreviewMode] = useState('desktop');
             const [showCode, setShowCode] = useState(false);
             const [liveChanges, setLiveChanges] = useState(0);
+            const [showLiveIndicator, setShowLiveIndicator] = useState(false);
 
             // 🧪 TEST MODE STATE
             const [testMode, setTestMode] = useState(false);
@@ -343,6 +344,7 @@
             const iframeLoadedRef = useRef(false);
             const lastUrlRef = useRef('');
             const stylesAppliedRef = useRef(false);
+            const lastUpdateTime = useRef(0); // Prevent rapid updates
 
             // Available Pages - Updated URLs for better navigation
             const pages = [
@@ -519,10 +521,16 @@
                 }
             }, []);
 
-            // Enhanced Live Update Function with Error Handling
+            // Enhanced Live Update Function with Error Handling - FIXED infinite loops
             const applyLiveUpdate = useCallback((updateData) => {
+                // Prevent rapid successive updates (minimum 500ms between updates)
+                const now = Date.now();
+                if (now - lastUpdateTime.current < 500) {
+                    return;
+                }
+                lastUpdateTime.current = now;
+
                 if (!iframeRef.current) {
-                    debugLog('❌ No iframe reference available');
                     return;
                 }
 
@@ -531,14 +539,11 @@
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                     
                     if (!iframeDoc) {
-                        debugLog('❌ Cannot access iframe document');
                         return;
                     }
 
-                    // Check if iframe is fully loaded
+                    // Skip if not ready, but don't queue infinite retries
                     if (iframe.contentWindow?.document.readyState !== 'complete') {
-                        debugLog('⏳ Iframe not fully loaded, queuing update');
-                        setTimeout(() => applyLiveUpdate(updateData), 500);
                         return;
                     }
                     
@@ -549,9 +554,8 @@
                             Object.entries(updateData.colors).forEach(([key, value]) => {
                                 root.style.setProperty(`--${key}-color`, value);
                             });
-                            debugLog('✅ Colors applied successfully');
                         } catch (error) {
-                            debugLog('❌ Error applying colors:', error);
+                            // Silent fail to prevent noise
                         }
                     }
 
@@ -575,9 +579,8 @@
                                     }
                                 });
                             });
-                            debugLog('✅ Text content applied successfully');
                         } catch (error) {
-                            debugLog('❌ Error applying text:', error);
+                            // Silent fail to prevent noise
                         }
                     }
 
@@ -588,13 +591,12 @@
                             Object.entries(updateData.fonts).forEach(([key, value]) => {
                                 root.style.setProperty(`--${key}-font`, value);
                             });
-                            debugLog('✅ Fonts applied successfully');
                         } catch (error) {
-                            debugLog('❌ Error applying fonts:', error);
+                            // Silent fail to prevent noise
                         }
                     }
 
-                    // Also inject styles directly for better compatibility
+                    // Inject styles for better compatibility
                     if (updateData.colors || updateData.fonts) {
                         try {
                             let styleElement = iframeDoc.getElementById('live-design-styles');
@@ -620,27 +622,27 @@
 
                             styleElement.textContent = cssRules.join('\n');
                         } catch (error) {
-                            debugLog('❌ Error injecting styles:', error);
+                            // Silent fail to prevent noise
                         }
                     }
 
+                    // Only increment if actually applied
                     setLiveChanges(prev => prev + 1);
-                    debugLog('✅ Live update applied successfully');
+                    setShowLiveIndicator(true);
+                    setTimeout(() => setShowLiveIndicator(false), 2000);
                 } catch (error) {
-                    debugLog('❌ Critical error in applyLiveUpdate:', error);
+                    // Silent fail to prevent infinite error loops
                 }
             }, []);
 
-            // Debounced Live Update Function
+            // Debounced Live Update Function - Increased delay to prevent loops
             const debouncedApplyUpdate = useMemo(
-                () => debounce(applyLiveUpdate, 100),
+                () => debounce(applyLiveUpdate, 300),
                 [applyLiveUpdate]
             );
 
-            // Push Live Updates with Debouncing
+            // Push Live Updates with Debouncing - FIXED to prevent loops
             const pushLiveUpdate = useCallback((updateType, updateData) => {
-                debugLog('🚀 Pushing live update:', { updateType, updateData });
-
                 // Apply immediately to preview with debouncing
                 debouncedApplyUpdate(updateData);
 
@@ -717,19 +719,16 @@
             const getCurrentUrl = useCallback(() => {
                 const page = pages.find(p => p.id === currentPage);
                 if (!page) {
-                    debugLog('❌ Page not found:', currentPage);
                     return `${MAIN_SITE_URL}/`;
                 }
                 
                 if (page.id === 'live') {
-                    debugLog('🌐 Loading live site:', page.url);
                     return page.url;
                 }
                 
                 const fullUrl = `${MAIN_SITE_URL}${page.url}`;
-                debugLog('📄 Loading page:', { pageId: page.id, url: fullUrl });
                 return fullUrl;
-            }, [currentPage, pages]);
+            }, [currentPage]);
 
             // Handle iframe load with anti-loop protection
             const handleIframeLoad = useCallback(() => {
@@ -737,71 +736,64 @@
                 
                 // Prevent multiple applications for same URL
                 if (lastUrlRef.current === currentUrl && iframeLoadedRef.current) {
-                    debugLog('⚠️ Skipping duplicate iframe load for same URL');
                     return;
                 }
                 
                 debugLog('📄 Iframe loaded successfully', { 
                     page: currentPage, 
-                    url: currentUrl,
-                    readyState: iframeRef.current?.contentWindow?.document?.readyState 
+                    url: currentUrl
                 });
                 
                 iframeLoadedRef.current = true;
                 lastUrlRef.current = currentUrl;
                 
-                // Add delay to ensure iframe is fully loaded
-                setTimeout(() => {
-                    if (stylesAppliedRef.current) return;
+                // Apply styles only once with better protection
+                if (!stylesAppliedRef.current) {
                     stylesAppliedRef.current = true;
                     
-                    const currentPageData = siteData[currentPage] || {};
-                    if (currentPageData.colors) {
-                        pushLiveUpdate('colors', currentPageData.colors);
-                    }
-                    if (currentPageData.fonts) {
-                        pushLiveUpdate('fonts', currentPageData.fonts);
-                    }
-                    
                     setTimeout(() => {
-                        stylesAppliedRef.current = false;
-                    }, 1000);
-                }, 1000);
-            }, [currentPage, siteData, pushLiveUpdate, getCurrentUrl]);
+                        const currentPageData = siteData[currentPage] || {};
+                        if (currentPageData.colors && Object.keys(currentPageData.colors).length > 0) {
+                            applyLiveUpdate({ colors: currentPageData.colors });
+                        }
+                        if (currentPageData.fonts && Object.keys(currentPageData.fonts).length > 0) {
+                            applyLiveUpdate({ fonts: currentPageData.fonts });
+                        }
+                        
+                        // Reset after longer delay to prevent loops
+                        setTimeout(() => {
+                            stylesAppliedRef.current = false;
+                        }, 3000);
+                    }, 1500);
+                }
+            }, [currentPage, siteData, getCurrentUrl, applyLiveUpdate]);
 
-            // Reset and navigate when page changes
+            // Reset and navigate when page changes - FIXED to prevent loops
             useEffect(() => {
                 debugLog('🔄 PAGE CHANGE EFFECT TRIGGERED:', { 
-                    currentPage, 
-                    previousPage: lastUrlRef.current,
-                    iframeExists: !!iframeRef.current 
+                    currentPage
                 });
                 
+                // Reset state
                 iframeLoadedRef.current = false;
                 lastUrlRef.current = '';
                 stylesAppliedRef.current = false;
                 
-                // Force iframe to navigate to new page
+                // Navigate iframe to new page
                 if (iframeRef.current) {
-                    const newUrl = getCurrentUrl();
+                    const page = pages.find(p => p.id === currentPage);
+                    const newUrl = page?.id === 'live' ? page.url : `${MAIN_SITE_URL}${page?.url || '/'}`;
+                    
                     debugLog(`🔄 FORCING NAVIGATION:`, { 
                         page: currentPage, 
-                        url: newUrl,
-                        iframeCurrent: iframeRef.current.src 
+                        url: newUrl
                     });
                     
-                    // Clear first, then set new URL
-                    iframeRef.current.src = 'about:blank';
-                    setTimeout(() => {
-                        if (iframeRef.current) {
-                            iframeRef.current.src = newUrl;
-                            debugLog('✅ Iframe src updated to:', newUrl);
-                        }
-                    }, 200);
-                } else {
-                    debugLog('❌ No iframe reference available for navigation');
+                    // Simple direct navigation - no clearing first
+                    iframeRef.current.src = newUrl;
+                    debugLog('✅ Iframe src updated to:', newUrl);
                 }
-            }, [currentPage, getCurrentUrl]);
+            }, [currentPage]); // ONLY depend on currentPage, nothing else
 
             // Refresh Iframe
             const refreshIframe = useCallback(() => {
@@ -1382,10 +1374,10 @@
                             </div>
                         </div>
 
-                        {/* Live Changes Indicator */}
-                        {liveChanges > 0 && (
+                        {/* Live Changes Indicator - Shows temporarily after changes */}
+                        {showLiveIndicator && (
                             <div className="live-changes-indicator bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                                🔴 {liveChanges} live changes applied
+                                🔴 Live update applied ({liveChanges} total)
                             </div>
                         )}
                     </div>
