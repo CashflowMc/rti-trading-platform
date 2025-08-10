@@ -268,12 +268,17 @@
                     <div style="font-weight: bold; margin-bottom: 10px;">🚨 Error Console</div>
                     <button onclick="clearErrors()" style="background: darkred; color: white; border: none; padding: 2px 5px; border-radius: 3px;">Clear</button>
                     <hr style="margin: 10px 0;">
-                    ${recentErrors.map(error => `
-                        <div style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.1);">
-                            <div style="font-weight: bold;">[${error.timestamp.split('T')[1].split('.')[0]}] ${error.context}</div>
-                            <div style="font-size: 10px;">${error.message}</div>
-                        </div>
-                    `).join('')}
+                    ${recentErrors.map(error => {
+                        const timeStr = error.timestamp ? 
+                            (error.timestamp.split ? error.timestamp.split('T')[1]?.split('.')[0] : error.timestamp) : 
+                            'Unknown';
+                        return `
+                            <div style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.1);">
+                                <div style="font-weight: bold;">[${timeStr}] ${error.context || 'Unknown'}</div>
+                                <div style="font-size: 10px;">${error.message || 'No message'}</div>
+                            </div>
+                        `;
+                    }).join('')}
                 `;
             } else if (panel) {
                 panel.style.display = 'none';
@@ -1082,6 +1087,68 @@
                                     )}
                                 </div>
 
+                                {/* 🧪 TEMPORARY: Design Studio Testing */}
+                                <div className="mb-6 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
+                                    <div className="text-center">
+                                        <span className="text-blue-300 text-sm font-medium">🧪 Design Studio Test Mode</span>
+                                        <div className="mt-2 space-x-2">
+                                            <button
+                                                onClick={() => {
+                                                    const mockUser = {
+                                                        id: 'test-123',
+                                                        username: 'TestUser',
+                                                        avatar: 'https://ui-avatars.com/api/?name=Test&background=22c55e&color=fff',
+                                                        tier: 'MONTHLY',
+                                                        isAdmin: false
+                                                    };
+                                                    setUser(mockUser);
+                                                    navigateToPage('dashboard');
+                                                    debugLog('🧪 MOCK: User logged in for testing', mockUser, 'SUCCESS');
+                                                }}
+                                                className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                                            >
+                                                🚀 Mock Login (User)
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const mockAdmin = {
+                                                        id: 'admin-123',
+                                                        username: 'AdminTest',
+                                                        avatar: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
+                                                        tier: 'ADMIN',
+                                                        isAdmin: true
+                                                    };
+                                                    setUser(mockAdmin);
+                                                    navigateToPage('dashboard');
+                                                    debugLog('🧪 MOCK: Admin logged in for testing', mockAdmin, 'SUCCESS');
+                                                }}
+                                                className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
+                                            >
+                                                👑 Mock Login (Admin)
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const mockUser = {
+                                                        id: 'free-123',
+                                                        username: 'FreeUser',
+                                                        avatar: 'https://ui-avatars.com/api/?name=Free&background=6b7280&color=fff',
+                                                        tier: 'FREE'
+                                                    };
+                                                    setUser(mockUser);
+                                                    navigateToPage('subscription');
+                                                    debugLog('🧪 MOCK: Free user needs subscription', mockUser, 'SUCCESS');
+                                                }}
+                                                className="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600"
+                                            >
+                                                🆓 Mock Login (Free)
+                                            </button>
+                                        </div>
+                                        <div className="mt-2 text-xs text-blue-200">
+                                            🧪 Use these to test design studio navigation without real login
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-6">
                                     {isRegistering && (
                                         <div>
@@ -1148,6 +1215,22 @@
 
             const SubscriptionPicker = () => {
                 debugLog('Rendering SubscriptionPicker component');
+                
+                // Safety check for user
+                if (!user) {
+                    debugLog('SubscriptionPicker: No user found - showing loading', null, 'WARN');
+                    return (
+                        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+                            <div className="text-center text-white">
+                                <div className="text-6xl mb-4">🚀</div>
+                                <h2 className="text-2xl font-bold mb-2">Loading Subscription Options...</h2>
+                                <p className="text-gray-300">Preparing your mission to the moon...</p>
+                                <div className="mt-4 animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto"></div>
+                            </div>
+                        </div>
+                    );
+                }
+                
                 const [selectedPlan, setSelectedPlan] = useState('');
                 const [isProcessing, setIsProcessing] = useState(false);
 
@@ -1334,7 +1417,11 @@
 
             // Chat Panel Component
             const ChatPanel = () => {
-                const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
+                // Safety check for user
+                if (!user) return null;
+                
+                const userTier = user.tier || (user.isAdmin ? 'ADMIN' : 'FREE');
+                const isPaidUser = userTier === 'WEEKLY' || userTier === 'MONTHLY' || user.isAdmin;
                 const maxMessages = isPaidUser ? 100 : 10;
 
                 return (
@@ -1468,6 +1555,21 @@
             const Dashboard = () => {
                 debugLog('Rendering Dashboard component');
                 
+                // 🛡️ SAFETY CHECK: Don't render dashboard without user
+                if (!user) {
+                    debugLog('Dashboard: No user found - showing loading', null, 'WARN');
+                    return (
+                        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                            <div className="text-center">
+                                <div className="text-6xl mb-4">🚀</div>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Loading RTi Dashboard...</h2>
+                                <p className="text-gray-600">Authenticating your space mission...</p>
+                                <div className="mt-4 animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto"></div>
+                            </div>
+                        </div>
+                    );
+                }
+                
                 if (showSubscriptionPicker) {
                     return null;
                 }
@@ -1478,6 +1580,9 @@
 
                 const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
                 const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
+
+                // Handle undefined tier safely
+                const userTier = user.tier || (user.isAdmin ? 'ADMIN' : 'FREE');
 
                 return (
                     <div className="min-h-screen bg-gray-50 relative">
@@ -1510,12 +1615,12 @@
                                             <div className="text-right">
                                                 <p className="text-sm font-medium text-gray-900">{user.username}</p>
                                                 <p className={`text-xs ${
-                                                    user.tier === 'ADMIN' ? 'text-red-600' :
-                                                    user.tier === 'MONTHLY' ? 'text-green-600' :
-                                                    user.tier === 'WEEKLY' ? 'text-blue-600' :
-                                                    user.tier === 'FREE' ? 'text-gray-500' : 'text-gray-600'
+                                                    userTier === 'ADMIN' ? 'text-red-600' :
+                                                    userTier === 'MONTHLY' ? 'text-green-600' :
+                                                    userTier === 'WEEKLY' ? 'text-blue-600' :
+                                                    userTier === 'FREE' ? 'text-gray-500' : 'text-gray-600'
                                                 }`}>
-                                                    {user.tier === 'FREE' ? 'FREE TIER' : user.tier}
+                                                    {userTier === 'FREE' ? 'FREE TIER' : userTier}
                                                 </p>
                                             </div>
                                             <button
@@ -1921,9 +2026,11 @@
             debugLog('Component completed render', { 
                 showLanding, 
                 showSubscriptionPicker, 
-                userLoggedIn: !!user 
+                userLoggedIn: !!user,
+                authCheckCompleted 
             });
 
+            // 🛡️ RENDER LOGIC WITH COMPONENT-LEVEL SAFETY CHECKS
             if (showLanding) {
                 return <LandingPage />;
             }
