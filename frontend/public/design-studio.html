@@ -306,11 +306,11 @@
             const lastUrlRef = useRef('');
             const stylesAppliedRef = useRef(false);
 
-            // Available Pages
+            // Available Pages - Updated URLs for better navigation
             const pages = [
                 { id: 'landing', name: '🏠 Landing Page', url: '/', icon: '🏠' },
-                { id: 'dashboard', name: '📊 Dashboard', url: '/?page=dashboard', icon: '📊' },
-                { id: 'subscription', name: '💎 Subscription', url: '/?page=subscription', icon: '💎' },
+                { id: 'dashboard', name: '📊 Dashboard', url: '/dashboard', icon: '📊' },
+                { id: 'subscription', name: '💎 Subscription', url: '/subscription', icon: '💎' },
                 { id: 'live', name: '🔴 Live Site', url: MAIN_SITE_URL, icon: '🌐' }
             ];
 
@@ -567,16 +567,39 @@
                 }
             }, [isAuthenticated, applyLiveUpdate, user, currentPage]);
 
+            const getCurrentUrl = useCallback(() => {
+                const page = pages.find(p => p.id === currentPage);
+                if (!page) {
+                    debugLog('❌ Page not found:', currentPage);
+                    return `${MAIN_SITE_URL}/`;
+                }
+                
+                if (page.id === 'live') {
+                    debugLog('🌐 Loading live site:', page.url);
+                    return page.url;
+                }
+                
+                const fullUrl = `${MAIN_SITE_URL}${page.url}`;
+                debugLog('📄 Loading page:', { pageId: page.id, url: fullUrl });
+                return fullUrl;
+            }, [currentPage, pages]);
+
             // Handle iframe load with anti-loop protection
             const handleIframeLoad = useCallback(() => {
                 const currentUrl = getCurrentUrl();
                 
                 // Prevent multiple applications for same URL
                 if (lastUrlRef.current === currentUrl && iframeLoadedRef.current) {
+                    debugLog('⚠️ Skipping duplicate iframe load for same URL');
                     return;
                 }
                 
-                debugLog('📄 Iframe loaded, applying current styles');
+                debugLog('📄 Iframe loaded successfully', { 
+                    page: currentPage, 
+                    url: currentUrl,
+                    readyState: iframeRef.current?.contentWindow?.document?.readyState 
+                });
+                
                 iframeLoadedRef.current = true;
                 lastUrlRef.current = currentUrl;
                 
@@ -597,20 +620,21 @@
                         stylesAppliedRef.current = false;
                     }, 1000);
                 }, 1000);
-            }, [currentPage, siteData, pushLiveUpdate]);
+            }, [currentPage, siteData, pushLiveUpdate, getCurrentUrl]);
 
-            // Reset when page changes
+            // Reset and navigate when page changes
             useEffect(() => {
                 iframeLoadedRef.current = false;
                 lastUrlRef.current = '';
                 stylesAppliedRef.current = false;
-            }, [currentPage]);
-
-            const getCurrentUrl = useCallback(() => {
-                const page = pages.find(p => p.id === currentPage);
-                if (page?.id === 'live') return page.url;
-                return `${MAIN_SITE_URL}${page?.url || '/'}`;
-            }, [currentPage, pages]);
+                
+                // Force iframe to navigate to new page
+                if (iframeRef.current) {
+                    const newUrl = getCurrentUrl();
+                    debugLog(`🔄 Navigating to page: ${currentPage}`, { url: newUrl });
+                    iframeRef.current.src = newUrl;
+                }
+            }, [currentPage, getCurrentUrl]);
 
             // Refresh Iframe
             const refreshIframe = useCallback(() => {
@@ -1015,6 +1039,9 @@
                                     </span>
                                 </div>
                                 <span className="text-gray-600">Real-Time Editor</span>
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                    {getCurrentUrl()}
+                                </span>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -1042,7 +1069,10 @@
                             {pages.map((page, index) => (
                                 <button
                                     key={`page-${page.id}-${index}`}
-                                    onClick={() => setCurrentPage(page.id)}
+                                    onClick={() => {
+                                        debugLog('🔄 Page tab clicked:', { from: currentPage, to: page.id });
+                                        setCurrentPage(page.id);
+                                    }}
                                     className={`page-tab px-4 py-3 text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
                                         currentPage === page.id ? 'active' : ''
                                     }`}
@@ -1060,11 +1090,19 @@
                                 previewMode === 'tablet' ? 'max-w-4xl' : 'w-full'
                             }`}>
                                 <iframe
+                                    key={`iframe-${currentPage}`}
                                     ref={iframeRef}
                                     src={getCurrentUrl()}
                                     className="live-iframe"
                                     title="Live Website Preview"
                                     onLoad={handleIframeLoad}
+                                    onError={(e) => {
+                                        debugLog('❌ Iframe failed to load:', { 
+                                            page: currentPage, 
+                                            url: getCurrentUrl(),
+                                            error: e 
+                                        });
+                                    }}
                                 />
                             </div>
                         </div>
