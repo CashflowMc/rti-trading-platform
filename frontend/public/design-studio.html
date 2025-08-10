@@ -149,6 +149,31 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .test-mode-panel {
+            background: #1e3a8a;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            animation: testModeGlow 2s infinite alternate;
+        }
+
+        @keyframes testModeGlow {
+            0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+            100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); }
+        }
+
+        .test-button {
+            transition: all 0.2s;
+            transform: scale(1);
+        }
+
+        .test-button:hover {
+            transform: scale(1.02);
+        }
+
+        .test-button:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -265,6 +290,11 @@
             const [showCode, setShowCode] = useState(false);
             const [liveChanges, setLiveChanges] = useState(0);
 
+            // 🧪 TEST MODE STATE
+            const [testMode, setTestMode] = useState(false);
+            const [testUser, setTestUser] = useState(null);
+            const [testStatus, setTestStatus] = useState('');
+
             // Debug currentPage changes
             useEffect(() => {
                 debugLog('📄 CURRENT PAGE STATE CHANGED:', { 
@@ -321,6 +351,115 @@
                 { id: 'subscription', name: '💎 Subscription', url: '/subscription', icon: '💎' },
                 { id: 'live', name: '🔴 Live Site', url: MAIN_SITE_URL, icon: '🌐' }
             ];
+
+            // 🧪 TEST MODE FUNCTIONS
+            const testUsers = [
+                {
+                    id: 'test-free-123',
+                    username: 'FreeUser',
+                    avatar: 'https://ui-avatars.com/api/?name=Free&background=6b7280&color=fff',
+                    tier: 'FREE',
+                    isAdmin: false,
+                    description: 'Free tier user - limited access'
+                },
+                {
+                    id: 'test-weekly-123',
+                    username: 'WeeklyUser',
+                    avatar: 'https://ui-avatars.com/api/?name=Weekly&background=3b82f6&color=fff',
+                    tier: 'WEEKLY',
+                    isAdmin: false,
+                    description: 'Weekly subscriber - full access'
+                },
+                {
+                    id: 'test-monthly-123',
+                    username: 'MonthlyUser',
+                    avatar: 'https://ui-avatars.com/api/?name=Monthly&background=22c55e&color=fff',
+                    tier: 'MONTHLY',
+                    isAdmin: false,
+                    description: 'Monthly subscriber - full access'
+                },
+                {
+                    id: 'test-admin-123',
+                    username: 'AdminUser',
+                    avatar: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
+                    tier: 'ADMIN',
+                    isAdmin: true,
+                    description: 'Admin user - full control'
+                }
+            ];
+
+            const injectTestUser = useCallback((user) => {
+                if (!iframeRef.current) {
+                    setTestStatus('❌ No iframe available');
+                    return;
+                }
+
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeWindow = iframe.contentWindow;
+                    
+                    if (!iframeWindow) {
+                        setTestStatus('❌ Cannot access iframe window');
+                        return;
+                    }
+
+                    // Create mock token and inject user
+                    const mockToken = `mock-token-${user.id}-${Date.now()}`;
+                    
+                    // Set localStorage in iframe
+                    iframeWindow.localStorage.setItem('authToken', mockToken);
+                    
+                    // Inject user data directly into iframe's window
+                    iframeWindow.testMockUser = user;
+                    
+                    // Force refresh to apply changes
+                    setTimeout(() => {
+                        iframe.src = iframe.src;
+                        setTestUser(user);
+                        setTestStatus(`✅ Injected: ${user.username} (${user.tier})`);
+                        debugLog('🧪 TEST: User injected', user);
+                    }, 100);
+                    
+                } catch (error) {
+                    setTestStatus(`❌ Error: ${error.message}`);
+                    debugLog('🧪 TEST ERROR:', error);
+                }
+            }, []);
+
+            const clearTestSession = useCallback(() => {
+                if (!iframeRef.current) {
+                    setTestStatus('❌ No iframe available');
+                    return;
+                }
+
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeWindow = iframe.contentWindow;
+                    
+                    if (iframeWindow) {
+                        // Clear all test data
+                        iframeWindow.localStorage.removeItem('authToken');
+                        delete iframeWindow.testMockUser;
+                        
+                        // Force refresh
+                        setTimeout(() => {
+                            iframe.src = iframe.src;
+                            setTestUser(null);
+                            setTestStatus('✅ Session cleared - logged out');
+                            debugLog('🧪 TEST: Session cleared');
+                        }, 100);
+                    }
+                } catch (error) {
+                    setTestStatus(`❌ Error: ${error.message}`);
+                    debugLog('🧪 TEST ERROR:', error);
+                }
+            }, []);
+
+            const forcePageState = useCallback((pageId) => {
+                setCurrentPage(pageId);
+                setTestStatus(`✅ Forced navigation to: ${pageId}`);
+                debugLog('🧪 TEST: Forced page navigation', { pageId });
+            }, []);
 
             // Components for each page
             const getPageComponents = useCallback((pageId) => {
@@ -827,11 +966,25 @@
                                 <div className="text-xs text-gray-400">Live Editing Mode</div>
                             </div>
                         </div>
+
+                        {/* 🧪 TEST MODE TOGGLE */}
+                        <div className="mt-4">
+                            <button
+                                onClick={() => setTestMode(!testMode)}
+                                className={`w-full p-3 rounded-lg font-bold text-sm transition-all ${
+                                    testMode 
+                                        ? 'bg-blue-600 text-white border-2 border-blue-400' 
+                                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                            >
+                                🧪 {testMode ? 'EXIT TEST MODE' : 'ENTER TEST MODE'}
+                            </button>
+                        </div>
                     </div>
                 );
             });
 
-            // Property Panel with Live Controls
+            // Property Panel with Live Controls + Test Mode
             const PropertyPanel = memo(() => {
                 const colors = [
                     '#22c55e', '#ef4444', '#3b82f6', '#f59e0b', 
@@ -888,6 +1041,73 @@
                                 </button>
                             </div>
                         </div>
+
+                        {/* 🧪 TEST MODE PANEL */}
+                        {testMode && (
+                            <div className="test-mode-panel p-4 mb-6">
+                                <h4 className="font-bold mb-3 text-blue-300 flex items-center gap-2">
+                                    🧪 Test Mode 
+                                    <span className="text-xs bg-blue-600 px-2 py-1 rounded animate-pulse">ACTIVE</span>
+                                </h4>
+                                
+                                {testStatus && (
+                                    <div className="mb-3 p-2 bg-blue-900/50 rounded text-sm">
+                                        {testStatus}
+                                    </div>
+                                )}
+
+                                {testUser && (
+                                    <div className="mb-3 p-2 bg-green-900/50 rounded">
+                                        <div className="text-xs text-green-300">Current Test User:</div>
+                                        <div className="font-bold text-green-200">{testUser.username} ({testUser.tier})</div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2 mb-4">
+                                    <div className="text-sm font-medium text-blue-300">🎭 Mock Users:</div>
+                                    {testUsers.map((user, index) => (
+                                        <button
+                                            key={`test-user-${user.id}-${index}`}
+                                            onClick={() => injectTestUser(user)}
+                                            className={`test-button w-full p-2 rounded text-left text-sm ${
+                                                testUser?.id === user.id 
+                                                    ? 'bg-green-600 text-white' 
+                                                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                                            }`}
+                                        >
+                                            <div className="font-medium">{user.username}</div>
+                                            <div className="text-xs opacity-75">{user.description}</div>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 mb-4">
+                                    <button
+                                        onClick={() => forcePageState('dashboard')}
+                                        className="test-button px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm"
+                                    >
+                                        📊 Force Dashboard
+                                    </button>
+                                    <button
+                                        onClick={() => forcePageState('subscription')}
+                                        className="test-button px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm"
+                                    >
+                                        💎 Force Subscription
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={clearTestSession}
+                                    className="test-button w-full px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium"
+                                >
+                                    🚪 Clear Session (Logout)
+                                </button>
+
+                                <div className="mt-3 text-xs text-blue-300 opacity-75">
+                                    Test mode injects mock users into the iframe for testing navigation and user states.
+                                </div>
+                            </div>
+                        )}
 
                         {selectedComponent ? (
                             <div className="space-y-6">
@@ -1070,6 +1290,11 @@
                                 <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded font-mono">
                                     Page: {currentPage}
                                 </span>
+                                {testMode && (
+                                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold animate-pulse">
+                                        🧪 TEST MODE
+                                    </span>
+                                )}
                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                     {getCurrentUrl()}
                                 </span>
