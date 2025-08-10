@@ -113,26 +113,146 @@
             border-left-color: #10b981;
             background: rgba(16, 185, 129, 0.2);
         }
+
+        .error-boundary {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #7c3aed 0%, #dc2626 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo, memo } = React;
 
         // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
         const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
         const MAIN_SITE_URL = window.location.origin;
 
-        // Socket.io connection for real-time updates
+        // Global socket reference
         let socket = null;
 
         const debugLog = (message, data = null) => {
             console.log(`🎨 [RTi LIVE DESIGN] ${message}`);
             if (data) console.log('📊 Data:', data);
         };
+
+        // Debounce utility function
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        // Error Boundary Component
+        const DesignStudioErrorBoundary = ({ children }) => {
+            const [hasError, setHasError] = useState(false);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const handleError = (event) => {
+                    debugLog('❌ Uncaught error:', event.error);
+                    setError(event.error);
+                    setHasError(true);
+                };
+
+                const handleUnhandledRejection = (event) => {
+                    debugLog('❌ Unhandled promise rejection:', event.reason);
+                    setError(event.reason);
+                    setHasError(true);
+                };
+
+                window.addEventListener('error', handleError);
+                window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+                return () => {
+                    window.removeEventListener('error', handleError);
+                    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+                };
+            }, []);
+
+            if (hasError) {
+                return (
+                    <div className="error-boundary">
+                        <div className="bg-white/10 backdrop-blur-lg border border-red-500 rounded-2xl p-8 max-w-md">
+                            <div className="text-center">
+                                <div className="text-6xl mb-4">💥</div>
+                                <h1 className="text-2xl font-bold text-white mb-4">Design Studio Error</h1>
+                                <p className="text-red-300 mb-4">
+                                    The live design studio encountered an error and needs to restart.
+                                </p>
+                                {error && (
+                                    <pre className="text-xs text-red-200 bg-black/20 p-2 rounded mb-4 overflow-auto max-h-32">
+                                        {error.toString()}
+                                    </pre>
+                                )}
+                                <button
+                                    onClick={() => {
+                                        setHasError(false);
+                                        setError(null);
+                                        window.location.reload();
+                                    }}
+                                    className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded font-medium"
+                                >
+                                    🔄 Restart Design Studio
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            return children;
+        };
+
+        // Loading Component
+        const LoadingOverlay = ({ message = "Loading..." }) => (
+            <div className="loading-overlay">
+                <div className="text-center">
+                    <div className="spinner mb-4"></div>
+                    <p className="text-white text-lg">{message}</p>
+                </div>
+            </div>
+        );
 
         const RTiLiveDesignStudio = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -182,6 +302,11 @@
             });
 
             const iframeRef = useRef(null);
+            const socketRef = useRef(null);
+            const connectionAttempted = useRef(false);
+            const iframeLoadedRef = useRef(false);
+            const lastUrlRef = useRef('');
+            const stylesAppliedRef = useRef(false);
 
             // Available Pages
             const pages = [
@@ -249,112 +374,84 @@
                 }
             };
 
-            // Real-Time Socket Connection
-            useEffect(() => {
-                if (isAuthenticated && !socket) {
-                    debugLog('Connecting to live design socket...');
-                    socket = io(SOCKET_URL);
-                    
-                    socket.on('connect', () => {
-                        debugLog('🔴 LIVE CONNECTION ESTABLISHED');
-                        setIsConnected(true);
-                        socket.emit('joinDesignRoom', { 
-                            userId: user?.id, 
-                            role: 'designer',
-                            page: currentPage 
-                        });
-                    });
-
-                    socket.on('disconnect', () => {
-                        debugLog('❌ Live connection lost');
-                        setIsConnected(false);
-                    });
-
-                    socket.on('designUpdate', (data) => {
-                        debugLog('📡 Received live design update:', data);
-                        // Apply updates to iframe in real-time
-                        applyLiveUpdate(data);
-                    });
-
-                    socket.on('pageChange', (data) => {
-                        debugLog('📄 Page change detected:', data);
-                        refreshIframe();
-                    });
+            // Enhanced Live Update Function with Error Handling
+            const applyLiveUpdate = useCallback((updateData) => {
+                if (!iframeRef.current) {
+                    debugLog('❌ No iframe reference available');
+                    return;
                 }
-
-                return () => {
-                    if (socket) {
-                        socket.disconnect();
-                        socket = null;
-                    }
-                };
-            }, [isAuthenticated, user]);
-
-            // Apply Live Updates to Iframe
-            const applyLiveUpdate = (updateData) => {
-                if (!iframeRef.current) return;
 
                 try {
-                    const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
-                    if (!iframeDoc) return;
+                    const iframe = iframeRef.current;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
                     
-                    // Update colors in real-time
+                    if (!iframeDoc) {
+                        debugLog('❌ Cannot access iframe document');
+                        return;
+                    }
+
+                    // Check if iframe is fully loaded
+                    if (iframe.contentWindow?.document.readyState !== 'complete') {
+                        debugLog('⏳ Iframe not fully loaded, queuing update');
+                        setTimeout(() => applyLiveUpdate(updateData), 500);
+                        return;
+                    }
+                    
+                    // Apply colors
                     if (updateData.colors) {
-                        const root = iframeDoc.documentElement;
-                        Object.entries(updateData.colors).forEach(([key, value]) => {
-                            root.style.setProperty(`--${key}-color`, value);
-                        });
-                    }
-
-                    // Update text content
-                    if (updateData.text) {
-                        Object.entries(updateData.text).forEach(([selector, content]) => {
-                            // Try multiple selectors for text updates
-                            const elements = [
-                                ...iframeDoc.querySelectorAll(`[data-design="${selector}"]`),
-                                ...iframeDoc.querySelectorAll(`#${selector}`),
-                                ...iframeDoc.querySelectorAll(`.${selector}`)
-                            ];
-                            
-                            elements.forEach(el => {
-                                if (el) {
-                                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                                        el.value = content;
-                                    } else {
-                                        el.textContent = content;
-                                    }
-                                }
+                        try {
+                            const root = iframeDoc.documentElement;
+                            Object.entries(updateData.colors).forEach(([key, value]) => {
+                                root.style.setProperty(`--${key}-color`, value);
                             });
-                        });
+                            debugLog('✅ Colors applied successfully');
+                        } catch (error) {
+                            debugLog('❌ Error applying colors:', error);
+                        }
                     }
 
-                    // Update fonts
+                    // Apply text content
+                    if (updateData.text) {
+                        try {
+                            Object.entries(updateData.text).forEach(([selector, content]) => {
+                                const elements = [
+                                    ...iframeDoc.querySelectorAll(`[data-design="${selector}"]`),
+                                    ...iframeDoc.querySelectorAll(`#${selector}`),
+                                    ...iframeDoc.querySelectorAll(`.${selector}`)
+                                ];
+                                
+                                elements.forEach(el => {
+                                    if (el) {
+                                        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                            el.value = content;
+                                        } else {
+                                            el.textContent = content;
+                                        }
+                                    }
+                                });
+                            });
+                            debugLog('✅ Text content applied successfully');
+                        } catch (error) {
+                            debugLog('❌ Error applying text:', error);
+                        }
+                    }
+
+                    // Apply fonts
                     if (updateData.fonts) {
-                        const root = iframeDoc.documentElement;
-                        Object.entries(updateData.fonts).forEach(([key, value]) => {
-                            root.style.setProperty(`--${key}-font`, value);
-                        });
+                        try {
+                            const root = iframeDoc.documentElement;
+                            Object.entries(updateData.fonts).forEach(([key, value]) => {
+                                root.style.setProperty(`--${key}-font`, value);
+                            });
+                            debugLog('✅ Fonts applied successfully');
+                        } catch (error) {
+                            debugLog('❌ Error applying fonts:', error);
+                        }
                     }
 
-                    setLiveChanges(prev => prev + 1);
-                    debugLog('✅ Live update applied successfully');
-                } catch (error) {
-                    debugLog('❌ Error applying live update:', error);
-                }
-            };
-
-            // Push Live Updates
-            const pushLiveUpdate = (updateType, updateData) => {
-                debugLog('🚀 Pushing live update:', { updateType, updateData });
-
-                // Apply immediately to preview
-                applyLiveUpdate(updateData);
-
-                // Also try to inject styles directly
-                if (updateType === 'colors' && iframeRef.current) {
-                    try {
-                        const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
-                        if (iframeDoc) {
+                    // Also inject styles directly for better compatibility
+                    if (updateData.colors || updateData.fonts) {
+                        try {
                             let styleElement = iframeDoc.getElementById('live-design-styles');
                             if (!styleElement) {
                                 styleElement = iframeDoc.createElement('style');
@@ -362,18 +459,47 @@
                                 iframeDoc.head.appendChild(styleElement);
                             }
 
-                            const cssRules = Object.entries(updateData).map(([key, value]) => {
-                                return `:root { --${key}-color: ${value} !important; }`;
-                            }).join('\n');
+                            const cssRules = [];
+                            
+                            if (updateData.colors) {
+                                Object.entries(updateData.colors).forEach(([key, value]) => {
+                                    cssRules.push(`:root { --${key}-color: ${value} !important; }`);
+                                });
+                            }
+                            
+                            if (updateData.fonts) {
+                                Object.entries(updateData.fonts).forEach(([key, value]) => {
+                                    cssRules.push(`:root { --${key}-font: ${value} !important; }`);
+                                });
+                            }
 
-                            styleElement.textContent = cssRules;
+                            styleElement.textContent = cssRules.join('\n');
+                        } catch (error) {
+                            debugLog('❌ Error injecting styles:', error);
                         }
-                    } catch (error) {
-                        debugLog('❌ Error injecting styles:', error);
                     }
-                }
 
-                if (socket && isConnected) {
+                    setLiveChanges(prev => prev + 1);
+                    debugLog('✅ Live update applied successfully');
+                } catch (error) {
+                    debugLog('❌ Critical error in applyLiveUpdate:', error);
+                }
+            }, []);
+
+            // Debounced Live Update Function
+            const debouncedApplyUpdate = useMemo(
+                () => debounce(applyLiveUpdate, 100),
+                [applyLiveUpdate]
+            );
+
+            // Push Live Updates with Debouncing
+            const pushLiveUpdate = useCallback((updateType, updateData) => {
+                debugLog('🚀 Pushing live update:', { updateType, updateData });
+
+                // Apply immediately to preview with debouncing
+                debouncedApplyUpdate(updateData);
+
+                if (socketRef.current && isConnected) {
                     const payload = {
                         type: updateType,
                         page: currentPage,
@@ -382,23 +508,133 @@
                         user: user?.username
                     };
 
-                    socket.emit('liveDesignUpdate', payload);
+                    socketRef.current.emit('liveDesignUpdate', payload);
                 }
+            }, [isConnected, currentPage, user, debouncedApplyUpdate]);
+
+            // Optimized Socket Connection
+            useEffect(() => {
+                if (isAuthenticated && !socketRef.current && !connectionAttempted.current) {
+                    connectionAttempted.current = true;
+                    debugLog('Connecting to live design socket...');
+                    
+                    const newSocket = io(SOCKET_URL, {
+                        transports: ['websocket'],
+                        timeout: 10000,
+                        forceNew: true,
+                        autoConnect: true
+                    });
+                    
+                    socketRef.current = newSocket;
+                    socket = newSocket;
+                    
+                    newSocket.on('connect', () => {
+                        debugLog('🔴 LIVE CONNECTION ESTABLISHED');
+                        setIsConnected(true);
+                        newSocket.emit('joinDesignRoom', { 
+                            userId: user?.id, 
+                            role: 'designer',
+                            page: currentPage 
+                        });
+                    });
+
+                    newSocket.on('disconnect', (reason) => {
+                        debugLog('❌ Live connection lost:', reason);
+                        setIsConnected(false);
+                        
+                        if (reason === 'io server disconnect') {
+                            connectionAttempted.current = false;
+                        }
+                    });
+
+                    newSocket.on('designUpdate', (data) => {
+                        debugLog('📡 Received live design update:', data);
+                        applyLiveUpdate(data);
+                    });
+
+                    newSocket.on('pageChange', (data) => {
+                        debugLog('📄 Page change detected:', data);
+                    });
+
+                    newSocket.on('connect_error', (error) => {
+                        debugLog('❌ Socket connection error:', error);
+                        connectionAttempted.current = false;
+                    });
+                }
+
+                return () => {
+                    if (socketRef.current) {
+                        debugLog('🔌 Cleaning up socket connection');
+                        socketRef.current.disconnect();
+                        socketRef.current = null;
+                        socket = null;
+                        connectionAttempted.current = false;
+                    }
+                };
+            }, [isAuthenticated, applyLiveUpdate]);
+
+            // Handle iframe load with anti-loop protection
+            const handleIframeLoad = useCallback(() => {
+                const currentUrl = getCurrentUrl();
+                
+                // Prevent multiple applications for same URL
+                if (lastUrlRef.current === currentUrl && iframeLoadedRef.current) {
+                    return;
+                }
+                
+                debugLog('📄 Iframe loaded, applying current styles');
+                iframeLoadedRef.current = true;
+                lastUrlRef.current = currentUrl;
+                
+                // Add delay to ensure iframe is fully loaded
+                setTimeout(() => {
+                    if (stylesAppliedRef.current) return;
+                    stylesAppliedRef.current = true;
+                    
+                    const currentPageData = siteData[currentPage] || {};
+                    if (currentPageData.colors) {
+                        pushLiveUpdate('colors', currentPageData.colors);
+                    }
+                    if (currentPageData.fonts) {
+                        pushLiveUpdate('fonts', currentPageData.fonts);
+                    }
+                    
+                    setTimeout(() => {
+                        stylesAppliedRef.current = false;
+                    }, 1000);
+                }, 1000);
+            }, [currentPage, siteData, pushLiveUpdate]);
+
+            // Reset when page changes
+            useEffect(() => {
+                iframeLoadedRef.current = false;
+                lastUrlRef.current = '';
+                stylesAppliedRef.current = false;
+            }, [currentPage]);
+
+            const getCurrentUrl = () => {
+                const page = pages.find(p => p.id === currentPage);
+                if (page?.id === 'live') return page.url;
+                return `${MAIN_SITE_URL}${page?.url || '/'}`;
             };
 
             // Refresh Iframe
-            const refreshIframe = () => {
+            const refreshIframe = useCallback(() => {
                 if (iframeRef.current) {
+                    iframeLoadedRef.current = false;
+                    lastUrlRef.current = '';
+                    stylesAppliedRef.current = false;
+                    
                     const currentSrc = iframeRef.current.src;
                     iframeRef.current.src = '';
                     setTimeout(() => {
                         iframeRef.current.src = currentSrc;
                     }, 100);
                 }
-            };
+            }, []);
 
             // Update Site Data and Push Live
-            const updateSiteData = (pageId, updates) => {
+            const updateSiteData = useCallback((pageId, updates) => {
                 setSiteData(prev => ({
                     ...prev,
                     [pageId]: {
@@ -409,25 +645,10 @@
 
                 // Push live update immediately
                 pushLiveUpdate('siteData', { [pageId]: updates });
-            };
-
-            // Handle iframe load to inject styles
-            const handleIframeLoad = () => {
-                debugLog('📄 Iframe loaded, applying current styles');
-                
-                setTimeout(() => {
-                    const currentPageData = siteData[currentPage] || {};
-                    if (currentPageData.colors) {
-                        pushLiveUpdate('colors', currentPageData.colors);
-                    }
-                    if (currentPageData.fonts) {
-                        pushLiveUpdate('fonts', currentPageData.fonts);
-                    }
-                }, 500);
-            };
+            }, [pushLiveUpdate]);
 
             // Login Component
-            const LoginForm = () => {
+            const LoginForm = memo(() => {
                 const [credentials, setCredentials] = useState({ username: '', password: '' });
 
                 const handleLogin = async () => {
@@ -504,10 +725,10 @@
                         </div>
                     </div>
                 );
-            };
+            });
 
             // Component Tree Panel
-            const ComponentTree = () => {
+            const ComponentTree = memo(() => {
                 const components = getPageComponents(currentPage);
 
                 return (
@@ -518,9 +739,9 @@
                         </div>
                         
                         <div className="space-y-2">
-                            {components.map(component => (
+                            {components.map((component, index) => (
                                 <div
-                                    key={component.id}
+                                    key={`${component.id}-${component.page}-${index}`}
                                     onClick={() => setSelectedComponent(component)}
                                     className={`component-item p-3 rounded-lg cursor-pointer ${
                                         selectedComponent?.id === component.id ? 'selected' : ''
@@ -560,10 +781,10 @@
                         </div>
                     </div>
                 );
-            };
+            });
 
             // Property Panel with Live Controls
-            const PropertyPanel = () => {
+            const PropertyPanel = memo(() => {
                 const colors = [
                     '#22c55e', '#ef4444', '#3b82f6', '#f59e0b', 
                     '#8b5cf6', '#f97316', '#06b6d4', '#84cc16',
@@ -571,6 +792,34 @@
                 ];
 
                 const currentPageData = siteData[currentPage] || {};
+
+                const handleTextChange = useCallback((componentId, value) => {
+                    updateSiteData(currentPage, {
+                        [componentId]: value
+                    });
+                    
+                    pushLiveUpdate('text', {
+                        [componentId]: value
+                    });
+                }, [currentPage, updateSiteData, pushLiveUpdate]);
+
+                const handleColorChange = useCallback((colorType, color) => {
+                    const newColors = { 
+                        ...currentPageData.colors, 
+                        [colorType]: color 
+                    };
+                    updateSiteData(currentPage, { colors: newColors });
+                    pushLiveUpdate('colors', { [colorType]: color });
+                }, [currentPage, currentPageData.colors, updateSiteData, pushLiveUpdate]);
+
+                const handleFontChange = useCallback((fontType, font) => {
+                    const newFonts = { 
+                        ...currentPageData.fonts, 
+                        [fontType]: font 
+                    };
+                    updateSiteData(currentPage, { fonts: newFonts });
+                    pushLiveUpdate('fonts', { [fontType]: font });
+                }, [currentPage, currentPageData.fonts, updateSiteData, pushLiveUpdate]);
 
                 return (
                     <div className="property-panel p-4">
@@ -600,17 +849,7 @@
                                         <label className="block text-sm font-medium mb-2">📝 Live Text</label>
                                         <textarea
                                             value={currentPageData[selectedComponent.id] || ''}
-                                            onChange={(e) => {
-                                                const newValue = e.target.value;
-                                                updateSiteData(currentPage, {
-                                                    [selectedComponent.id]: newValue
-                                                });
-                                                
-                                                // Push immediate text update
-                                                pushLiveUpdate('text', {
-                                                    [selectedComponent.id]: newValue
-                                                });
-                                            }}
+                                            onChange={(e) => handleTextChange(selectedComponent.id, e.target.value)}
                                             className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
                                             rows="3"
                                             placeholder="Enter text..."
@@ -629,17 +868,10 @@
                                             <div>
                                                 <label className="text-xs text-gray-400 mb-2 block">Primary Color</label>
                                                 <div className="color-picker-grid">
-                                                    {colors.map(color => (
+                                                    {colors.map((color, index) => (
                                                         <div
-                                                            key={color}
-                                                            onClick={() => {
-                                                                const newColors = { 
-                                                                    ...currentPageData.colors, 
-                                                                    primary: color 
-                                                                };
-                                                                updateSiteData(currentPage, { colors: newColors });
-                                                                pushLiveUpdate('colors', { primary: color });
-                                                            }}
+                                                            key={`primary-${color}-${index}`}
+                                                            onClick={() => handleColorChange('primary', color)}
                                                             className={`color-swatch ${
                                                                 currentPageData.colors?.primary === color ? 'selected' : ''
                                                             }`}
@@ -652,17 +884,10 @@
                                             <div>
                                                 <label className="text-xs text-gray-400 mb-2 block">Secondary Color</label>
                                                 <div className="color-picker-grid">
-                                                    {colors.map(color => (
+                                                    {colors.map((color, index) => (
                                                         <div
-                                                            key={color}
-                                                            onClick={() => {
-                                                                const newColors = { 
-                                                                    ...currentPageData.colors, 
-                                                                    secondary: color 
-                                                                };
-                                                                updateSiteData(currentPage, { colors: newColors });
-                                                                pushLiveUpdate('colors', { secondary: color });
-                                                            }}
+                                                            key={`secondary-${color}-${index}`}
+                                                            onClick={() => handleColorChange('secondary', color)}
                                                             className={`color-swatch ${
                                                                 currentPageData.colors?.secondary === color ? 'selected' : ''
                                                             }`}
@@ -684,17 +909,10 @@
                                             { name: 'Roboto', value: 'Roboto, sans-serif' },
                                             { name: 'Montserrat', value: 'Montserrat, sans-serif' },
                                             { name: 'Playfair', value: 'Playfair Display, serif' }
-                                        ].map(font => (
+                                        ].map((font, index) => (
                                             <button
-                                                key={font.value}
-                                                onClick={() => {
-                                                    const newFonts = { 
-                                                        ...currentPageData.fonts, 
-                                                        heading: font.value 
-                                                    };
-                                                    updateSiteData(currentPage, { fonts: newFonts });
-                                                    pushLiveUpdate('fonts', { heading: font.value });
-                                                }}
+                                                key={`font-${font.name}-${index}`}
+                                                onClick={() => handleFontChange('heading', font.value)}
                                                 className={`w-full text-left p-3 rounded border transition-all ${
                                                     currentPageData.fonts?.heading === font.value 
                                                         ? 'border-blue-500 bg-blue-500/20' 
@@ -785,16 +1003,10 @@
                         )}
                     </div>
                 );
-            };
+            });
 
             // Live Preview Area with Real Iframe
-            const LivePreviewArea = () => {
-                const getCurrentUrl = () => {
-                    const page = pages.find(p => p.id === currentPage);
-                    if (page?.id === 'live') return page.url;
-                    return `${MAIN_SITE_URL}${page?.url || '/'}`;
-                };
-
+            const LivePreviewArea = memo(() => {
                 return (
                     <div className="bg-gray-100 flex flex-col h-full">
                         {/* Live Toolbar */}
@@ -831,9 +1043,9 @@
 
                         {/* Page Navigation Tabs */}
                         <div className="bg-white border-b border-gray-200 flex overflow-x-auto">
-                            {pages.map(page => (
+                            {pages.map((page, index) => (
                                 <button
-                                    key={page.id}
+                                    key={`page-${page.id}-${index}`}
                                     onClick={() => setCurrentPage(page.id)}
                                     className={`page-tab px-4 py-3 text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
                                         currentPage === page.id ? 'active' : ''
@@ -869,12 +1081,13 @@
                         )}
                     </div>
                 );
-            };
+            });
 
             // Check authentication on load
             useEffect(() => {
                 const token = localStorage.getItem('authToken');
                 if (token) {
+                    setLoading(true);
                     apiCall('/auth/profile')
                         .then(response => {
                             const userData = response.user || response;
@@ -887,14 +1100,21 @@
                         })
                         .catch(() => {
                             localStorage.removeItem('authToken');
+                        })
+                        .finally(() => {
+                            setLoading(false);
                         });
                 }
             }, []);
 
             debugLog('🔴 RTi Live Design Studio Initialized');
 
+            if (loading) {
+                return <LoadingOverlay message="Initializing Live Design Studio..." />;
+            }
+
             if (!isAuthenticated) {
-                return React.createElement(LoginForm);
+                return <LoginForm />;
             }
 
             return (
@@ -906,9 +1126,13 @@
             );
         };
 
-        // Render the application
+        // Render the application with Error Boundary
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement(RTiLiveDesignStudio));
+        root.render(
+            React.createElement(DesignStudioErrorBoundary, null,
+                React.createElement(RTiLiveDesignStudio)
+            )
+        );
     </script>
 </body>
 </html>
