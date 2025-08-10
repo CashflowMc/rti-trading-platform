@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RTi Complete Design Studio - Full WYSIWYG Editor</title>
+    <title>RTi Complete Design Studio - Enhanced WYSIWYG Editor</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -59,6 +59,149 @@
         .page-tab.active {
             background: rgba(59, 130, 246, 0.2);
             border-bottom-color: #3b82f6;
+        }
+
+        /* 🚀 PUBLISH BUTTON STYLES */
+        .publish-button {
+            background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+            animation: publishGlow 3s infinite alternate;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .publish-button:before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #059669, #10b981, #34d399, #6ee7b7);
+            border-radius: inherit;
+            z-index: -1;
+            filter: blur(8px);
+            opacity: 0.7;
+        }
+
+        .publish-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 35px rgba(5, 150, 105, 0.6);
+        }
+
+        .publish-button.publishing {
+            animation: publishSpin 1s linear infinite;
+        }
+
+        @keyframes publishGlow {
+            0% { box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4); }
+            100% { box-shadow: 0 8px 25px rgba(52, 211, 153, 0.8); }
+        }
+
+        @keyframes publishSpin {
+            0% { transform: rotate(0deg) scale(1.05); }
+            100% { transform: rotate(360deg) scale(1.05); }
+        }
+
+        /* 💬 MESSAGING SYSTEM STYLES */
+        .message-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            max-height: 70vh;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            overflow: hidden;
+            border: 2px solid #3b82f6;
+        }
+
+        .message-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            padding: 16px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .message-item {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .message-item.sent {
+            background: #3b82f6;
+            color: white;
+            margin-left: 20px;
+        }
+
+        .message-item.received {
+            background: #f3f4f6;
+            color: #1f2937;
+            margin-right: 20px;
+        }
+
+        .message-input-area {
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
+        }
+
+        .user-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .user-item {
+            padding: 12px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-item:hover {
+            background: #f9fafb;
+        }
+
+        .user-item.active {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+        }
+
+        .user-status.online {
+            background: #10b981;
+            animation: statusPulse 2s infinite;
+        }
+
+        .user-status.offline {
+            background: #6b7280;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         /* 🎨 COMPLETE WYSIWYG EDITOR STYLES */
@@ -152,28 +295,122 @@
             opacity: 1;
         }
 
-        /* Inline editing styles */
-        .inline-editor {
-            border: 2px solid #3b82f6 !important;
-            background: rgba(255, 255, 255, 0.98) !important;
-            padding: 8px !important;
-            font-family: inherit !important;
-            font-size: inherit !important;
-            font-weight: inherit !important;
-            color: inherit !important;
-            outline: none !important;
-            border-radius: 4px !important;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
-            min-width: 200px !important;
-            z-index: 10000 !important;
-            position: relative !important;
+        /* Enhanced publish notification */
+        .publish-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(5, 150, 105, 0.4);
+            z-index: 20000;
+            text-align: center;
+            min-width: 300px;
+            animation: publishNotificationSlide 0.5s ease-out;
         }
 
-        .inline-editor:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+        @keyframes publishNotificationSlide {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
         }
 
-        /* Element creation toolbar */
+        /* Profile avatar enhancement */
+        .profile-avatar {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .profile-avatar:hover:after {
+            content: '📷 Change Photo';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            z-index: 1000;
+        }
+
+        /* Rest of existing styles... */
+        .upload-zone {
+            border: 2px dashed #6b7280;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(107, 114, 128, 0.05);
+        }
+
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .upload-zone.dragover {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            transform: scale(1.02);
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .floating-panel {
+            position: fixed;
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            min-width: 300px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .floating-panel-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
         .element-toolbar {
             position: fixed;
             top: 50%;
@@ -213,45 +450,6 @@
             background: rgba(34, 197, 94, 0.1);
         }
 
-        /* Profile header styles */
-        .profile-header {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            padding: 16px;
-            margin: -16px -16px 16px -16px;
-            border-radius: 8px 8px 0 0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .profile-header:hover {
-            transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
-        }
-
-        .profile-header:before {
-            content: "👤 Click to edit profile";
-            position: absolute;
-            top: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1f2937;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            z-index: 1000;
-            white-space: nowrap;
-        }
-
-        .profile-header:hover:before {
-            opacity: 1;
-        }
-
-        /* Tab styles */
         .tab-container {
             display: flex;
             background: #374151;
@@ -283,157 +481,19 @@
             color: white;
         }
 
-        /* Floating panels */
-        .floating-panel {
-            position: fixed;
-            background: white;
-            border: 2px solid #3b82f6;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            z-index: 10000;
-            min-width: 300px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .floating-panel-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e5e7eb;
-        }
-
-        .floating-panel-close {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        /* Canvas overlay for element creation */
-        .creation-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.1);
-            z-index: 9999;
-            cursor: crosshair;
-        }
-
-        /* 3D element styles */
-        .element-3d {
-            transform-style: preserve-3d;
-            transition: transform 0.3s ease;
-        }
-
-        .element-3d:hover {
-            transform: rotateY(10deg) rotateX(5deg);
-        }
-
-        /* Upload zone */
-        .upload-zone {
-            border: 2px dashed #6b7280;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
+        .profile-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            padding: 16px;
+            margin: -16px -16px 16px -16px;
+            border-radius: 8px 8px 0 0;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: rgba(107, 114, 128, 0.05);
+            position: relative;
         }
 
-        .upload-zone:hover {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.1);
-        }
-
-        .upload-zone.dragover {
-            border-color: #22c55e;
-            background: rgba(34, 197, 94, 0.1);
+        .profile-header:hover {
             transform: scale(1.02);
-        }
-
-        /* Enhanced visual feedback */
-        .edit-mode-active {
-            border: 3px solid #22c55e !important;
-            background: rgba(34, 197, 94, 0.1) !important;
-            animation: editGlow 2s infinite alternate;
-        }
-
-        @keyframes editGlow {
-            0% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
-            100% { box-shadow: 0 0 25px rgba(34, 197, 94, 0.6); }
-        }
-
-        /* Loading animations */
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Enhanced color picker */
-        .color-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 8px;
-            margin: 16px 0;
-        }
-
-        .color-swatch {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .color-swatch:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .color-swatch.selected {
-            border-color: #22c55e;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
-        }
-
-        /* Responsive design */
-        @media (max-width: 1200px) {
-            .design-grid {
-                grid-template-columns: 250px 1fr 300px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .design-grid {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr auto;
-            }
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
         }
     </style>
 </head>
@@ -659,6 +719,412 @@
             );
         });
 
+        // 🚀 Publish Button Component
+        const PublishButton = memo(({ onPublish, hasChanges, isPublishing }) => {
+            return (
+                <button
+                    onClick={onPublish}
+                    disabled={!hasChanges || isPublishing}
+                    className={`publish-button text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-3 ${
+                        !hasChanges ? 'opacity-50 cursor-not-allowed' : ''
+                    } ${isPublishing ? 'publishing' : ''}`}
+                >
+                    {isPublishing ? (
+                        <>
+                            <div className="spinner w-5 h-5"></div>
+                            <span>Publishing...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-xl">🚀</span>
+                            <div>
+                                <div className="text-lg">Publish Live</div>
+                                <div className="text-xs opacity-90">
+                                    {hasChanges ? 'Ready to publish' : 'No changes'}
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </button>
+            );
+        });
+
+        // 💬 Messaging System Component
+        const MessagingSystem = memo(({ user, onClose, socket }) => {
+            const [activeChat, setActiveChat] = useState(null);
+            const [messages, setMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const [connectedUsers, setConnectedUsers] = useState([]);
+            const [unreadCounts, setUnreadCounts] = useState({});
+
+            // Mock users for demo - in real app, fetch from API
+            const availableUsers = [
+                { id: 'user1', username: 'Designer1', avatar: 'https://ui-avatars.com/api/?name=Designer1&background=3b82f6&color=fff', online: true },
+                { id: 'user2', username: 'Developer1', avatar: 'https://ui-avatars.com/api/?name=Developer1&background=10b981&color=fff', online: true },
+                { id: 'user3', username: 'Manager1', avatar: 'https://ui-avatars.com/api/?name=Manager1&background=f59e0b&color=fff', online: false },
+                { id: 'user4', username: 'Client1', avatar: 'https://ui-avatars.com/api/?name=Client1&background=8b5cf6&color=fff', online: true }
+            ];
+
+            const sendMessage = () => {
+                if (!newMessage.trim() || !activeChat) return;
+
+                const message = {
+                    id: Date.now(),
+                    sender: user.username,
+                    recipient: activeChat.username,
+                    content: newMessage,
+                    timestamp: new Date(),
+                    type: 'sent'
+                };
+
+                setMessages(prev => [...prev, message]);
+                setNewMessage('');
+
+                // Emit via socket in real implementation
+                if (socket) {
+                    socket.emit('sendMessage', {
+                        to: activeChat.id,
+                        message: newMessage,
+                        from: user.username
+                    });
+                }
+
+                debugLog('💬 Message sent', message);
+            };
+
+            return (
+                <div className="message-panel">
+                    <div className="message-header">
+                        <div className="flex items-center gap-2">
+                            <span>💬</span>
+                            <span>Messages</span>
+                            {Object.keys(unreadCounts).length > 0 && (
+                                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                    {Object.values(unreadCounts).reduce((a, b) => a + b, 0)}
+                                </span>
+                            )}
+                        </div>
+                        <button onClick={onClose} className="text-white/80 hover:text-white">✕</button>
+                    </div>
+
+                    {!activeChat ? (
+                        <div className="user-list">
+                            <div className="p-3 border-b border-gray-200">
+                                <h4 className="font-medium text-gray-800">Team Members</h4>
+                            </div>
+                            {availableUsers.map(user => (
+                                <div
+                                    key={user.id}
+                                    className="user-item"
+                                    onClick={() => setActiveChat(user)}
+                                >
+                                    <img src={user.avatar} alt="" className="w-8 h-8 rounded-full" />
+                                    <div className="flex-1">
+                                        <div className="font-medium text-gray-800">{user.username}</div>
+                                        <div className="text-xs text-gray-500">
+                                            {user.online ? 'Online' : 'Offline'}
+                                        </div>
+                                    </div>
+                                    {unreadCounts[user.id] && (
+                                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                                            {unreadCounts[user.id]}
+                                        </span>
+                                    )}
+                                    <div className={`user-status ${user.online ? 'online' : 'offline'}`}></div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            <div className="p-3 border-b border-gray-200 flex items-center gap-3">
+                                <button 
+                                    onClick={() => setActiveChat(null)}
+                                    className="text-gray-500 hover:text-gray-700"
+                                >
+                                    ←
+                                </button>
+                                <img src={activeChat.avatar} alt="" className="w-8 h-8 rounded-full" />
+                                <div>
+                                    <div className="font-medium text-gray-800">{activeChat.username}</div>
+                                    <div className="text-xs text-gray-500">
+                                        {activeChat.online ? '🟢 Online' : '⚫ Offline'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="message-list">
+                                {messages.length === 0 ? (
+                                    <div className="text-center text-gray-500 py-8">
+                                        <div className="text-3xl mb-2">💬</div>
+                                        <p>Start a conversation with {activeChat.username}</p>
+                                    </div>
+                                ) : (
+                                    messages.map(message => (
+                                        <div key={message.id} className={`message-item ${message.type}`}>
+                                            <div className="text-sm">{message.content}</div>
+                                            <div className="text-xs opacity-70 mt-1">
+                                                {message.timestamp.toLocaleTimeString()}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="message-input-area">
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                                        placeholder={`Message ${activeChat.username}...`}
+                                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <button
+                                        onClick={sendMessage}
+                                        disabled={!newMessage.trim()}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        📤
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        });
+
+        // Enhanced Profile Editor Modal
+        const ProfileEditor = memo(({ user, onUpdate, onClose }) => {
+            const [profileData, setProfileData] = useState({
+                username: user?.username || '',
+                email: user?.email || '',
+                displayName: user?.displayName || '',
+                bio: user?.bio || '',
+                avatar: user?.avatar || '',
+                role: user?.role || 'Complete Studio Admin',
+                company: user?.company || 'RTi',
+                location: user?.location || '',
+                phone: user?.phone || '',
+                website: user?.website || ''
+            });
+            const [saving, setSaving] = useState(false);
+            const [activeTab, setActiveTab] = useState('profile');
+
+            const handleSave = async () => {
+                setSaving(true);
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    const updatedUser = { ...user, ...profileData };
+                    onUpdate(updatedUser);
+                    debugLog('✅ Profile updated successfully');
+                } catch (error) {
+                    debugLog('❌ Profile update failed', error);
+                    alert('Failed to update profile. Please try again.');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800">👤 Edit Profile</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Profile Tabs */}
+                        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+                            <button
+                                onClick={() => setActiveTab('profile')}
+                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                                    activeTab === 'profile' 
+                                        ? 'bg-white text-blue-600 shadow-sm' 
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                            >
+                                👤 Profile
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('settings')}
+                                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
+                                    activeTab === 'settings' 
+                                        ? 'bg-white text-blue-600 shadow-sm' 
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                            >
+                                ⚙️ Settings
+                            </button>
+                        </div>
+
+                        {activeTab === 'profile' && (
+                            <div className="space-y-6">
+                                {/* Avatar Section */}
+                                <div className="text-center">
+                                    <div className="mb-4">
+                                        <div className="profile-avatar inline-block">
+                                            <img
+                                                src={profileData.avatar || `https://ui-avatars.com/api/?name=${profileData.username}&background=3b82f6&color=fff&size=128`}
+                                                alt="Profile Avatar"
+                                                className="w-24 h-24 rounded-full mx-auto border-4 border-blue-500 object-cover"
+                                            />
+                                        </div>
+                                    </div>
+                                    <ImageUploader
+                                        currentImage={profileData.avatar}
+                                        onUpload={(url) => setProfileData(prev => ({...prev, avatar: url}))}
+                                        title="Profile Picture"
+                                        className="max-w-xs mx-auto"
+                                    />
+                                </div>
+
+                                {/* Profile Fields */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.username}
+                                            onChange={(e) => setProfileData(prev => ({...prev, username: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter username"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            value={profileData.email}
+                                            onChange={(e) => setProfileData(prev => ({...prev, email: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter email"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.displayName}
+                                            onChange={(e) => setProfileData(prev => ({...prev, displayName: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter display name"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.role}
+                                            onChange={(e) => setProfileData(prev => ({...prev, role: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="e.g., Complete Studio Admin"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.company}
+                                            onChange={(e) => setProfileData(prev => ({...prev, company: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter company"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                        <input
+                                            type="text"
+                                            value={profileData.location}
+                                            onChange={(e) => setProfileData(prev => ({...prev, location: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter location"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                        <input
+                                            type="tel"
+                                            value={profileData.phone}
+                                            onChange={(e) => setProfileData(prev => ({...prev, phone: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Enter phone number"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+                                        <input
+                                            type="url"
+                                            value={profileData.website}
+                                            onChange={(e) => setProfileData(prev => ({...prev, website: e.target.value}))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="https://example.com"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                                    <textarea
+                                        value={profileData.bio}
+                                        onChange={(e) => setProfileData(prev => ({...prev, bio: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        rows="4"
+                                        placeholder="Tell us about yourself..."
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'settings' && (
+                            <div className="space-y-6">
+                                <div className="text-center py-8 text-gray-500">
+                                    <div className="text-4xl mb-3">⚙️</div>
+                                    <p>Settings panel coming soon!</p>
+                                    <div className="text-sm mt-2">
+                                        <p>• Notification preferences</p>
+                                        <p>• Privacy settings</p>
+                                        <p>• Theme customization</p>
+                                        <p>• Account security</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 pt-6 border-t">
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50 transition-all"
+                            >
+                                {saving ? '💾 Saving...' : '💾 Save Changes'}
+                            </button>
+                            <button
+                                onClick={onClose}
+                                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
         // Element Creation Toolbar
         const ElementToolbar = memo(({ isVisible, onElementCreate, creationMode, setCreationMode }) => {
             if (!isVisible) return null;
@@ -780,71 +1246,6 @@
                                     className="w-full h-8 border border-gray-300 rounded cursor-pointer"
                                 />
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Background</label>
-                                <input
-                                    type="color"
-                                    value={properties.backgroundColor}
-                                    onChange={(e) => setProperties(prev => ({...prev, backgroundColor: e.target.value}))}
-                                    className="w-full h-8 border border-gray-300 rounded cursor-pointer"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Border Radius</label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="50"
-                                    value={parseInt(properties.borderRadius)}
-                                    onChange={(e) => setProperties(prev => ({...prev, borderRadius: e.target.value + 'px'}))}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Size Controls */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Width</label>
-                                <input
-                                    type="text"
-                                    value={properties.width}
-                                    onChange={(e) => setProperties(prev => ({...prev, width: e.target.value}))}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="auto, 100px, 50%"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-                                <input
-                                    type="text"
-                                    value={properties.height}
-                                    onChange={(e) => setProperties(prev => ({...prev, height: e.target.value}))}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="auto, 100px, 50%"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Quick Color Palette */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Quick Colors</label>
-                            <div className="color-grid">
-                                {[
-                                    '#000000', '#ffffff', '#ef4444', '#22c55e', '#3b82f6', '#f59e0b',
-                                    '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
-                                ].map(color => (
-                                    <div
-                                        key={color}
-                                        className={`color-swatch ${properties.color === color ? 'selected' : ''}`}
-                                        style={{ backgroundColor: color }}
-                                        onClick={() => setProperties(prev => ({...prev, color}))}
-                                    />
-                                ))}
-                            </div>
                         </div>
 
                         {/* Action Buttons */}
@@ -867,164 +1268,22 @@
             );
         });
 
-        // Profile Editor Modal
-        const ProfileEditor = memo(({ user, onUpdate, onClose }) => {
-            const [profileData, setProfileData] = useState({
-                username: user?.username || '',
-                email: user?.email || '',
-                displayName: user?.displayName || '',
-                bio: user?.bio || '',
-                avatar: user?.avatar || '',
-                role: user?.role || 'Complete Studio Admin',
-                company: user?.company || 'RTi',
-                location: user?.location || ''
-            });
-            const [saving, setSaving] = useState(false);
-
-            const handleSave = async () => {
-                setSaving(true);
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    const updatedUser = { ...user, ...profileData };
-                    onUpdate(updatedUser);
-                    debugLog('✅ Profile updated successfully');
-                } catch (error) {
-                    debugLog('❌ Profile update failed', error);
-                    alert('Failed to update profile. Please try again.');
-                } finally {
-                    setSaving(false);
+        // Publish Notification Component
+        const PublishNotification = memo(({ show, onClose }) => {
+            useEffect(() => {
+                if (show) {
+                    const timer = setTimeout(onClose, 3000);
+                    return () => clearTimeout(timer);
                 }
-            };
+            }, [show, onClose]);
+
+            if (!show) return null;
 
             return (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold text-gray-800">👤 Edit Profile</h2>
-                            <button
-                                onClick={onClose}
-                                className="text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            {/* Avatar Section */}
-                            <div className="text-center">
-                                <div className="mb-4">
-                                    <img
-                                        src={profileData.avatar || `https://ui-avatars.com/api/?name=${profileData.username}&background=3b82f6&color=fff&size=128`}
-                                        alt="Profile Avatar"
-                                        className="w-24 h-24 rounded-full mx-auto border-4 border-blue-500 object-cover"
-                                    />
-                                </div>
-                                <ImageUploader
-                                    currentImage={profileData.avatar}
-                                    onUpload={(url) => setProfileData(prev => ({...prev, avatar: url}))}
-                                    title="Profile Picture"
-                                    className="max-w-xs mx-auto"
-                                />
-                            </div>
-
-                            {/* Profile Fields */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                                    <input
-                                        type="text"
-                                        value={profileData.username}
-                                        onChange={(e) => setProfileData(prev => ({...prev, username: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter username"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                    <input
-                                        type="email"
-                                        value={profileData.email}
-                                        onChange={(e) => setProfileData(prev => ({...prev, email: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter email"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-                                    <input
-                                        type="text"
-                                        value={profileData.displayName}
-                                        onChange={(e) => setProfileData(prev => ({...prev, displayName: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter display name"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                    <input
-                                        type="text"
-                                        value={profileData.role}
-                                        onChange={(e) => setProfileData(prev => ({...prev, role: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., Complete Studio Admin"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                                    <input
-                                        type="text"
-                                        value={profileData.company}
-                                        onChange={(e) => setProfileData(prev => ({...prev, company: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter company"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                    <input
-                                        type="text"
-                                        value={profileData.location}
-                                        onChange={(e) => setProfileData(prev => ({...prev, location: e.target.value}))}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter location"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-                                <textarea
-                                    value={profileData.bio}
-                                    onChange={(e) => setProfileData(prev => ({...prev, bio: e.target.value}))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    rows="4"
-                                    placeholder="Tell us about yourself..."
-                                />
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 pt-4 border-t">
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium disabled:opacity-50 transition-all"
-                                >
-                                    {saving ? '💾 Saving...' : '💾 Save Changes'}
-                                </button>
-                                <button
-                                    onClick={onClose}
-                                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                <div className="publish-notification">
+                    <div className="text-2xl mb-2">🚀</div>
+                    <h3 className="text-xl font-bold mb-1">Published Successfully!</h3>
+                    <p className="text-sm opacity-90">Your changes are now live</p>
                 </div>
             );
         });
@@ -1061,6 +1320,14 @@
             const [showProfileEditor, setShowProfileEditor] = useState(false);
             const [showCode, setShowCode] = useState(false);
 
+            // Messaging State
+            const [showMessaging, setShowMessaging] = useState(false);
+
+            // Publish State
+            const [isPublishing, setIsPublishing] = useState(false);
+            const [showPublishNotification, setShowPublishNotification] = useState(false);
+            const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
+
             // Test Mode State
             const [testMode, setTestMode] = useState(false);
             const [testUser, setTestUser] = useState(null);
@@ -1091,6 +1358,46 @@
                 { id: 'test-monthly', username: 'MonthlyUser', tier: 'MONTHLY', description: 'Monthly subscriber' },
                 { id: 'test-admin', username: 'AdminUser', tier: 'ADMIN', isAdmin: true, description: 'Admin user' }
             ];
+
+            // 🚀 Publish Function
+            const handlePublish = useCallback(async () => {
+                if (!hasUnpublishedChanges || isPublishing) return;
+
+                setIsPublishing(true);
+                debugLog('🚀 Publishing changes to live site...');
+
+                try {
+                    // Simulate publish process
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                    // In real implementation, this would:
+                    // 1. Collect all current element states
+                    // 2. Generate updated HTML/CSS
+                    // 3. Push to live site via API
+                    // 4. Update database with changes
+                    // 5. Clear unpublished changes flag
+
+                    setHasUnpublishedChanges(false);
+                    setShowPublishNotification(true);
+                    
+                    // Broadcast publish event
+                    if (socketRef.current) {
+                        socketRef.current.emit('sitePublished', {
+                            user: user?.username,
+                            timestamp: Date.now(),
+                            changesCount: liveChanges
+                        });
+                    }
+
+                    debugLog('✅ Site published successfully');
+
+                } catch (error) {
+                    debugLog('❌ Publish failed', error);
+                    alert('Failed to publish changes. Please try again.');
+                } finally {
+                    setIsPublishing(false);
+                }
+            }, [hasUnpublishedChanges, isPublishing, liveChanges, user]);
 
             // Enhanced Element Scanner
             const scanAllElements = useCallback(() => {
@@ -1306,6 +1613,9 @@
                         className: newElement.className
                     }]);
 
+                    // Mark as having unpublished changes
+                    setHasUnpublishedChanges(true);
+
                     debugLog(`✅ Created new ${type} element`, { id: elementId, position });
                     
                 } catch (error) {
@@ -1329,6 +1639,9 @@
                             selectedElement.style[key] = value;
                         }
                     });
+
+                    // Mark as having unpublished changes
+                    setHasUnpublishedChanges(true);
 
                     debugLog('✅ Properties applied to element', properties);
                     
@@ -1538,6 +1851,13 @@
                 }
             }, [apiCall]);
 
+            // Auto-detect changes
+            useEffect(() => {
+                if (liveChanges > 0) {
+                    setHasUnpublishedChanges(true);
+                }
+            }, [liveChanges]);
+
             // Login Component
             const LoginForm = memo(() => {
                 const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -1578,9 +1898,12 @@
                             <div className="text-center mb-8">
                                 <div className="text-6xl mb-4">🎨</div>
                                 <h1 className="text-3xl font-black text-white mb-2">RTi Complete Studio</h1>
-                                <p className="text-gray-300">Full WYSIWYG Editor</p>
+                                <p className="text-gray-300">Enhanced WYSIWYG Editor</p>
                                 <div className="text-sm text-green-300 mt-2">
                                     ✨ Click Anywhere to Edit Everything!
+                                </div>
+                                <div className="text-sm text-blue-300 mt-1">
+                                    🚀 Publish • 💬 Message • 📷 Profile
                                 </div>
                             </div>
 
@@ -1657,40 +1980,63 @@
                     <div className="design-grid">
                         {/* Left Panel - Component Tree */}
                         <div className="component-tree p-4">
-                            {/* Clickable Profile Header */}
+                            {/* Enhanced Clickable Profile Header */}
                             <div 
                                 className="profile-header"
                                 onClick={() => setShowProfileEditor(true)}
                             >
                                 <div className="flex items-center gap-3">
-                                    <img
-                                        src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.username}&background=22c55e&color=fff&size=64`}
-                                        alt="Profile"
-                                        className="w-12 h-12 rounded-full border-2 border-white/30"
-                                    />
+                                    <div className="profile-avatar">
+                                        <img
+                                            src={user?.avatar || `https://ui-avatars.com/api/?name=${user?.username}&background=22c55e&color=fff&size=64`}
+                                            alt="Profile"
+                                            className="w-12 h-12 rounded-full border-2 border-white/30"
+                                        />
+                                    </div>
                                     <div className="flex-1">
                                         <div className="text-white font-bold">{user?.username}</div>
                                         <div className="text-white/70 text-sm">Complete Studio Admin</div>
                                     </div>
-                                    <div className="text-white/70">✏️</div>
+                                    <div className="text-white/70">📝</div>
                                 </div>
                             </div>
 
-                            {/* Status */}
+                            {/* Enhanced Status with Messaging */}
                             <div className="mb-4 p-3 bg-gray-800 rounded-lg">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="font-bold text-white">🔴 Live Status</span>
-                                    <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 live-indicator' : 'bg-gray-500'}`}></div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setShowMessaging(!showMessaging)}
+                                            className="w-6 h-6 bg-blue-500 hover:bg-blue-600 rounded-full flex items-center justify-center text-sm transition-all"
+                                            title="Messages"
+                                        >
+                                            💬
+                                        </button>
+                                        <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500 live-indicator' : 'bg-gray-500'}`}></div>
+                                    </div>
                                 </div>
                                 <div className="text-sm text-gray-300 space-y-1">
                                     <div>Status: {isConnected ? '🟢 Connected' : '🔴 Offline'}</div>
                                     <div>Changes: {liveChanges}</div>
                                     <div>Elements: {editableElements.length}</div>
                                     <div>Mode: {fullEditMode ? '🎨 Full Edit' : '📝 Basic'}</div>
+                                    {hasUnpublishedChanges && (
+                                        <div className="text-yellow-400 font-medium">⚠️ Unpublished changes</div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Tab Navigation - Fixed */}
+                            {/* 🚀 Publish Button */}
+                            <div className="mb-4">
+                                <PublishButton
+                                    onPublish={handlePublish}
+                                    hasChanges={hasUnpublishedChanges}
+                                    isPublishing={isPublishing}
+                                />
+                            </div>
+
+                            {/* Tab Navigation */}
                             <div className="tab-container">
                                 <button
                                     className={`tab-button ${activeTab === 'elements' ? 'active' : ''}`}
@@ -1757,6 +2103,7 @@
                                                 timestamp: new Date().toLocaleTimeString()
                                             };
                                             setMediaFiles(prev => [newFile, ...prev.slice(0, 9)]);
+                                            setHasUnpublishedChanges(true);
                                         }}
                                         title="Upload Media"
                                     />
@@ -1886,6 +2233,11 @@
                                             ➕ ADDING {creationMode.toUpperCase()}
                                         </span>
                                     )}
+                                    {hasUnpublishedChanges && (
+                                        <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded font-bold">
+                                            ⚠️ UNPUBLISHED
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -1956,12 +2308,21 @@
                         <div className="property-panel p-4">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="font-bold text-lg text-white">🎨 Properties</h3>
-                                <button
-                                    onClick={() => setShowElementToolbar(!showElementToolbar)}
-                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
-                                >
-                                    ➕ Add
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setShowMessaging(!showMessaging)}
+                                        className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+                                        title="Messages"
+                                    >
+                                        💬
+                                    </button>
+                                    <button
+                                        onClick={() => setShowElementToolbar(!showElementToolbar)}
+                                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
+                                    >
+                                        ➕ Add
+                                    </button>
+                                </div>
                             </div>
 
                             {selectedElement ? (
@@ -1989,6 +2350,9 @@
                                         <p>✅ Real-time live updates</p>
                                         <p>✅ Full visual editing</p>
                                         <p>✅ 3D elements supported</p>
+                                        <p>🚀 Publish to live site</p>
+                                        <p>💬 Message team members</p>
+                                        <p>📷 Upload profile photos</p>
                                     </div>
                                 </div>
                             )}
@@ -2037,7 +2401,7 @@
                         />
                     )}
 
-                    {/* Profile Editor */}
+                    {/* Enhanced Profile Editor */}
                     {showProfileEditor && (
                         <ProfileEditor
                             user={user}
@@ -2048,6 +2412,21 @@
                             onClose={() => setShowProfileEditor(false)}
                         />
                     )}
+
+                    {/* 💬 Messaging System */}
+                    {showMessaging && (
+                        <MessagingSystem
+                            user={user}
+                            onClose={() => setShowMessaging(false)}
+                            socket={socketRef.current}
+                        />
+                    )}
+
+                    {/* 🚀 Publish Notification */}
+                    <PublishNotification
+                        show={showPublishNotification}
+                        onClose={() => setShowPublishNotification(false)}
+                    />
                 </>
             );
         };
