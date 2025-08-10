@@ -99,7 +99,13 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
+
+        // 🚨 INITIALIZATION GUARDS - Prevent Multiple Loads
+        let dashboardInitialized = false;
+        let socketInitialized = false;
+        let authCheckCompleted = false;
+        let apiCallsInProgress = new Set();
 
         // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
@@ -108,6 +114,10 @@
         let socket = null;
 
         const debugLog = (message, data = null) => {
+            // Prevent spam of repeated initialization messages
+            if (message.includes('RTi Cashflowops Dashboard Loaded') && dashboardInitialized) {
+                return;
+            }
             console.log(`🐛 [RTi DEBUG] ${message}`);
             if (data) console.log('📊 Data:', data);
         };
@@ -124,7 +134,6 @@
             const [showAdminPanel, setShowAdminPanel] = useState(false);
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
-            const [initialized, setInitialized] = useState(false);
 
             // Chat state
             const [chatMessages, setChatMessages] = useState([]);
@@ -132,15 +141,12 @@
             const [chatExpanded, setChatExpanded] = useState(false);
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
-            const socketRef = useRef(null);
-            const initializationRef = useRef(false);
 
             // Initialize socket connection with guard
             useEffect(() => {
-                if (user && !socketRef.current && !showSubscriptionPicker && !initializationRef.current) {
-                    initializationRef.current = true;
-                    socketRef.current = io(API_BASE_URL.replace('/api', ''));
-                    socket = socketRef.current;
+                if (user && !socket && !showSubscriptionPicker && !socketInitialized) {
+                    socketInitialized = true;
+                    socket = io(API_BASE_URL.replace('/api', ''));
                     
                     socket.on('connect', () => {
                         debugLog('Connected to server');
@@ -199,11 +205,10 @@
                 }
 
                 return () => {
-                    if (socketRef.current) {
-                        socketRef.current.disconnect();
-                        socketRef.current = null;
+                    if (socket) {
+                        socket.disconnect();
                         socket = null;
-                        initializationRef.current = false;
+                        socketInitialized = false;
                     }
                 };
             }, [user, showSubscriptionPicker, chatExpanded]);
@@ -323,16 +328,28 @@
                 }
             };
 
-            const fetchAlerts = useCallback(async () => {
+            // 🚨 FIXED: fetchAlerts with duplicate call prevention
+            const fetchAlerts = async () => {
+                const callId = 'fetchAlerts';
+                if (apiCallsInProgress.has(callId)) return;
+                
+                apiCallsInProgress.add(callId);
                 try {
                     const data = await apiCall(`/alerts?type=${filterType}`);
                     setAlerts(data);
                 } catch (err) {
                     setError('Failed to fetch alerts');
+                } finally {
+                    apiCallsInProgress.delete(callId);
                 }
-            }, [filterType]);
+            };
 
-            const fetchActiveUsers = useCallback(async () => {
+            // 🚨 FIXED: fetchActiveUsers with duplicate call prevention
+            const fetchActiveUsers = async () => {
+                const callId = 'fetchActiveUsers';
+                if (apiCallsInProgress.has(callId)) return;
+                
+                apiCallsInProgress.add(callId);
                 try {
                     const data = await apiCall('/users/active');
                     setMembers(data.map((user, index) => ({
@@ -344,15 +361,20 @@
                     })));
                 } catch (err) {
                     console.error('Failed to fetch users:', err);
+                } finally {
+                    apiCallsInProgress.delete(callId);
                 }
-            }, []);
+            };
 
+            // 🚨 FIXED: Data fetching with initialization guard
             useEffect(() => {
-                if (user && !showSubscriptionPicker) {
+                if (user && !showSubscriptionPicker && !dashboardInitialized) {
+                    dashboardInitialized = true;
+                    debugLog('🚀 RTi Cashflowops Dashboard Loaded');
                     fetchAlerts();
                     fetchActiveUsers();
                 }
-            }, [user, filterType, showSubscriptionPicker, fetchAlerts, fetchActiveUsers]);
+            }, [user, filterType, showSubscriptionPicker]);
 
             const formatTimeAgo = (timestamp) => {
                 const diff = Date.now() - new Date(timestamp).getTime();
@@ -1082,11 +1104,14 @@
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
                                                     setShowLanding(true);
-                                                    if (socketRef.current) {
-                                                        socketRef.current.disconnect();
-                                                        socketRef.current = null;
+                                                    if (socket) {
+                                                        socket.disconnect();
                                                         socket = null;
                                                     }
+                                                    // Reset initialization flags
+                                                    dashboardInitialized = false;
+                                                    socketInitialized = false;
+                                                    authCheckCompleted = false;
                                                 }}
                                                 className="p-1 text-gray-400 hover:text-gray-600"
                                             >
@@ -1099,9 +1124,8 @@
                         </header>
 
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                            {/* 🚨 FIXED: Error Section with Key */}
                             {error && (
-                                <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                                     {error}
                                     <button 
                                         onClick={() => setError('')}
@@ -1112,9 +1136,8 @@
                                 </div>
                             )}
 
-                            {/* 🚨 FIXED: Upgrade Banner Section with Key */}
                             {!isPaidUser && (
-                                <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
+                                <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className="text-4xl">🚀</div>
@@ -1124,10 +1147,10 @@
                                                     You're on the FREE tier with limited access. Upgrade to get:
                                                 </p>
                                                 <ul className="text-sm text-yellow-100 mt-2 space-y-1">
-                                                    <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
-                                                    <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
-                                                    <li key="upgrade-feature-3">• Full chat participation & history</li>
-                                                    <li key="upgrade-feature-4">• Priority customer support</li>
+                                                    <li>• Unlimited live alerts & bot signals</li>
+                                                    <li>• Real-time market data & PnL tracking</li>
+                                                    <li>• Full chat participation & history</li>
+                                                    <li>• Priority customer support</li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -1141,9 +1164,8 @@
                                 </div>
                             )}
 
-                            {/* 🚨 FIXED: Admin Panel Section with Key */}
                             {user.isAdmin && showAdminPanel && (
-                                <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
                                     <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
                                         ⚙️ Admin Panel - Create Alert
                                     </h3>
@@ -1205,8 +1227,7 @@
                                 </div>
                             )}
 
-                            {/* 🚨 FIXED: Main Dashboard Grid with Key */}
-                            <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                                 <div className="lg:col-span-3 space-y-6">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
@@ -1231,7 +1252,7 @@
 
                                     <div className="space-y-4">
                                         {limitedAlerts.length === 0 ? (
-                                            <div key="no-alerts" className="text-center py-8 text-gray-500">
+                                            <div className="text-center py-8 text-gray-500">
                                                 No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
                                             </div>
                                         ) : (
@@ -1287,7 +1308,7 @@
                                                 ))}
                                                 
                                                 {!isPaidUser && filteredAlerts.length > 3 && (
-                                                    <div key="paywall-section" className="relative">
+                                                    <div className="relative">
                                                         <div className="filter blur-sm pointer-events-none">
                                                             {filteredAlerts.slice(3, 6).map((alert, previewIndex) => (
                                                                 <div key={`preview-${alert._id || `preview-alert-${previewIndex}`}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
@@ -1355,7 +1376,7 @@
                                             ))}
                                             
                                             {!isPaidUser && members.length > 3 && (
-                                                <div key="members-paywall" className="text-center py-3 text-sm text-gray-500 border-t">
+                                                <div className="text-center py-3 text-sm text-gray-500 border-t">
                                                     <p>+{members.length - 3} more members</p>
                                                     <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
                                                         Upgrade to see all
@@ -1390,7 +1411,7 @@
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div key="market-paywall" className="text-center py-8">
+                                            <div className="text-center py-8">
                                                 <div className="text-4xl mb-3">🔒</div>
                                                 <p className="text-gray-600 mb-3">Real-time market data</p>
                                                 <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
@@ -1412,15 +1433,11 @@
                 );
             };
 
-            // Dashboard initialization with guard
+            // 🚨 FIXED: Auth check with single execution guard
             useEffect(() => {
-                if (!initialized) {
-                    setInitialized(true);
-                    debugLog('🚀 RTi Cashflowops Dashboard Loaded');
-                }
-            }, [initialized]);
-
-            useEffect(() => {
+                if (authCheckCompleted) return;
+                authCheckCompleted = true;
+                
                 const token = localStorage.getItem('authToken');
                 if (token) {
                     debugLog('Found existing token, validating...');
@@ -1443,13 +1460,17 @@
                         .catch((error) => {
                             debugLog('❌ Token invalid, removing:', error.message);
                             localStorage.removeItem('authToken');
+                            authCheckCompleted = false;
                         });
                 } else {
                     debugLog('No existing token found');
                 }
             }, []);
 
-            debugLog('🚀 RTi Cashflowops Dashboard Loaded');
+            // 🚨 FIXED: Single initialization log
+            if (!dashboardInitialized) {
+                debugLog('🚀 RTi Cashflowops Dashboard Loaded');
+            }
 
             if (showLanding) {
                 return <LandingPage />;
