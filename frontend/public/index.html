@@ -93,19 +93,214 @@
         .chat-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #a0aec0;
         }
+
+        /* Debug Panel Styles */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            z-index: 10000;
+            border: 2px solid #00ff00;
+        }
+
+        .debug-toggle {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #ff0000;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10001;
+            font-weight: bold;
+        }
+
+        .error-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            width: 350px;
+            z-index: 10000;
+            border: 2px solid #ff0000;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
-        // 🚨 INITIALIZATION GUARDS - Prevent Multiple Loads
+        // 🚨 ENHANCED DEBUGGING SYSTEM
+        let debugLogs = [];
+        let errorLogs = [];
+        let performanceMetrics = {};
+        let initializationSteps = [];
+
+        // State tracking for debugging
         let dashboardInitialized = false;
         let socketInitialized = false;
         let authCheckCompleted = false;
         let apiCallsInProgress = new Set();
+        let componentRenderCount = 0;
+
+        // Enhanced debug logging system
+        const debugLog = (message, data = null, level = 'INFO') => {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const logEntry = {
+                timestamp,
+                level,
+                message,
+                data,
+                renderCount: componentRenderCount,
+                stack: new Error().stack.split('\n')[2]?.trim()
+            };
+
+            debugLogs.push(logEntry);
+            if (debugLogs.length > 50) debugLogs.shift(); // Keep last 50 logs
+
+            // Console output with enhanced formatting
+            const prefix = level === 'ERROR' ? '❌' : level === 'WARN' ? '⚠️' : level === 'SUCCESS' ? '✅' : '🐛';
+            console.log(`${prefix} [${timestamp}][${level}][R:${componentRenderCount}] ${message}`);
+            if (data) {
+                console.log('📊 Data:', data);
+                console.log('📍 Stack:', logEntry.stack);
+            }
+
+            // Track initialization steps
+            if (message.includes('Dashboard Loaded') || message.includes('Socket') || message.includes('Auth')) {
+                initializationSteps.push(logEntry);
+            }
+
+            // Auto-detect potential issues
+            if (level === 'ERROR' || message.includes('failed') || message.includes('error')) {
+                errorLogs.push(logEntry);
+                if (errorLogs.length > 20) errorLogs.shift();
+            }
+
+            // Update debug panel if visible
+            updateDebugPanel();
+        };
+
+        // Error tracking system
+        const trackError = (error, context = 'Unknown') => {
+            const errorEntry = {
+                timestamp: new Date().toISOString(),
+                context,
+                message: error.message || error,
+                stack: error.stack,
+                renderCount: componentRenderCount
+            };
+            
+            errorLogs.push(errorEntry);
+            debugLog(`ERROR in ${context}: ${error.message || error}`, error, 'ERROR');
+            
+            // Update error panel
+            updateErrorPanel();
+        };
+
+        // Performance monitoring
+        const startPerformanceTimer = (operation) => {
+            performanceMetrics[operation] = { start: performance.now() };
+        };
+
+        const endPerformanceTimer = (operation) => {
+            if (performanceMetrics[operation]) {
+                const duration = performance.now() - performanceMetrics[operation].start;
+                performanceMetrics[operation].duration = duration;
+                debugLog(`PERF: ${operation} took ${duration.toFixed(2)}ms`, null, 'INFO');
+            }
+        };
+
+        // Debug panel management
+        let debugPanelVisible = false;
+        const updateDebugPanel = () => {
+            if (!debugPanelVisible) return;
+            
+            const panel = document.getElementById('debug-panel');
+            if (panel) {
+                const recentLogs = debugLogs.slice(-10);
+                panel.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 10px;">🔍 RTi Debug Console</div>
+                    <div style="margin-bottom: 5px;">Renders: ${componentRenderCount}</div>
+                    <div style="margin-bottom: 5px;">Dashboard Init: ${dashboardInitialized ? '✅' : '❌'}</div>
+                    <div style="margin-bottom: 5px;">Socket Init: ${socketInitialized ? '✅' : '❌'}</div>
+                    <div style="margin-bottom: 5px;">Auth Complete: ${authCheckCompleted ? '✅' : '❌'}</div>
+                    <div style="margin-bottom: 5px;">API Calls Active: ${apiCallsInProgress.size}</div>
+                    <hr style="margin: 10px 0;">
+                    <div style="font-weight: bold;">Recent Logs:</div>
+                    ${recentLogs.map(log => `
+                        <div style="margin: 2px 0; font-size: 10px;">
+                            [${log.timestamp}] ${log.level}: ${log.message}
+                        </div>
+                    `).join('')}
+                `;
+            }
+        };
+
+        const updateErrorPanel = () => {
+            const panel = document.getElementById('error-panel');
+            if (panel && errorLogs.length > 0) {
+                panel.style.display = 'block';
+                const recentErrors = errorLogs.slice(-5);
+                panel.innerHTML = `
+                    <div style="font-weight: bold; margin-bottom: 10px;">🚨 Error Console</div>
+                    <button onclick="clearErrors()" style="background: darkred; color: white; border: none; padding: 2px 5px; border-radius: 3px;">Clear</button>
+                    <hr style="margin: 10px 0;">
+                    ${recentErrors.map(error => `
+                        <div style="margin: 5px 0; padding: 5px; background: rgba(255,255,255,0.1);">
+                            <div style="font-weight: bold;">[${error.timestamp.split('T')[1].split('.')[0]}] ${error.context}</div>
+                            <div style="font-size: 10px;">${error.message}</div>
+                        </div>
+                    `).join('')}
+                `;
+            } else if (panel) {
+                panel.style.display = 'none';
+            }
+        };
+
+        // Global error handlers
+        window.addEventListener('error', (event) => {
+            trackError(event.error || event, 'Global Error Handler');
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            trackError(event.reason, 'Unhandled Promise Rejection');
+        });
+
+        // Clear functions for panels
+        window.clearErrors = () => {
+            errorLogs = [];
+            updateErrorPanel();
+        };
+
+        window.toggleDebug = () => {
+            debugPanelVisible = !debugPanelVisible;
+            const panel = document.getElementById('debug-panel');
+            if (panel) {
+                panel.style.display = debugPanelVisible ? 'block' : 'none';
+            }
+            updateDebugPanel();
+        };
 
         // API Configuration
         const API_BASE_URL = 'https://rti-trading-backend-production.up.railway.app/api';
@@ -113,16 +308,13 @@
         // Socket.io connection
         let socket = null;
 
-        const debugLog = (message, data = null) => {
-            // Prevent spam of repeated initialization messages
-            if (message.includes('RTi Cashflowops Dashboard Loaded') && dashboardInitialized) {
-                return;
-            }
-            console.log(`🐛 [RTi DEBUG] ${message}`);
-            if (data) console.log('📊 Data:', data);
-        };
-
         const TradingGroupDashboard = () => {
+            componentRenderCount++;
+            debugLog(`Component render #${componentRenderCount}`, { 
+                timestamp: new Date().toISOString(),
+                location: 'TradingGroupDashboard'
+            });
+
             const [user, setUser] = useState(null);
             const [showLanding, setShowLanding] = useState(true);
             const [showSubscriptionPicker, setShowSubscriptionPicker] = useState(false);
@@ -142,70 +334,119 @@
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
 
-            // Initialize socket connection with guard
+            // Debug state changes
             useEffect(() => {
-                if (user && !socket && !showSubscriptionPicker && !socketInitialized) {
-                    socketInitialized = true;
-                    socket = io(API_BASE_URL.replace('/api', ''));
-                    
-                    socket.on('connect', () => {
-                        debugLog('Connected to server');
-                        socket.emit('joinTradingRoom', user.id);
-                    });
+                debugLog('State Change: User', { user: user?.username || 'null', id: user?.id });
+            }, [user]);
 
-                    socket.on('newAlert', (alert) => {
-                        setAlerts(prev => [alert, ...prev]);
-                    });
+            useEffect(() => {
+                debugLog('State Change: showLanding', showLanding);
+            }, [showLanding]);
 
-                    socket.on('alertDeleted', (alertId) => {
-                        setAlerts(prev => prev.filter(alert => alert._id !== alertId));
-                    });
+            useEffect(() => {
+                debugLog('State Change: showSubscriptionPicker', showSubscriptionPicker);
+            }, [showSubscriptionPicker]);
 
-                    socket.on('marketUpdate', (data) => {
-                        setMarketData(prev => ({
-                            ...prev,
-                            [data.symbol]: data
-                        }));
-                    });
+            useEffect(() => {
+                debugLog('State Change: alerts count', alerts.length);
+            }, [alerts]);
 
-                    // Chat events
-                    socket.on('chatMessage', (message) => {
-                        debugLog('New chat message received:', message);
-                        setChatMessages(prev => [...prev, {
-                            ...message,
-                            id: message.id || Date.now() + Math.random(),
-                            timestamp: new Date()
-                        }]);
+            useEffect(() => {
+                debugLog('State Change: members count', members.length);
+            }, [members]);
+
+            // Initialize socket connection with enhanced debugging
+            useEffect(() => {
+                debugLog('useEffect: Socket initialization triggered', {
+                    user: !!user,
+                    socket: !!socket,
+                    showSubscriptionPicker,
+                    socketInitialized
+                });
+
+                try {
+                    if (user && !socket && !showSubscriptionPicker && !socketInitialized) {
+                        startPerformanceTimer('socket-init');
+                        socketInitialized = true;
+                        debugLog('SOCKET: Starting initialization...', { userId: user.id });
                         
-                        // Increment unread if chat is collapsed
-                        if (!chatExpanded) {
-                            setUnreadMessages(prev => prev + 1);
-                        }
-                    });
+                        socket = io(API_BASE_URL.replace('/api', ''));
+                        
+                        socket.on('connect', () => {
+                            endPerformanceTimer('socket-init');
+                            debugLog('SOCKET: Connected successfully', { socketId: socket.id }, 'SUCCESS');
+                            socket.emit('joinTradingRoom', user.id);
+                        });
 
-                    socket.on('userJoined', (userData) => {
-                        debugLog('User joined:', userData);
-                        setChatMessages(prev => [...prev, {
-                            id: Date.now() + Math.random(),
-                            type: 'system',
-                            message: `${userData.username} joined the trading room`,
-                            timestamp: new Date()
-                        }]);
-                    });
+                        socket.on('disconnect', (reason) => {
+                            debugLog('SOCKET: Disconnected', { reason }, 'WARN');
+                        });
 
-                    socket.on('userLeft', (userData) => {
-                        debugLog('User left:', userData);
-                        setChatMessages(prev => [...prev, {
-                            id: Date.now() + Math.random(),
-                            type: 'system',
-                            message: `${userData.username} left the trading room`,
-                            timestamp: new Date()
-                        }]);
-                    });
+                        socket.on('connect_error', (error) => {
+                            trackError(error, 'Socket Connection');
+                        });
+
+                        socket.on('newAlert', (alert) => {
+                            debugLog('SOCKET: New alert received', { alertId: alert._id });
+                            setAlerts(prev => [alert, ...prev]);
+                        });
+
+                        socket.on('alertDeleted', (alertId) => {
+                            debugLog('SOCKET: Alert deleted', { alertId });
+                            setAlerts(prev => prev.filter(alert => alert._id !== alertId));
+                        });
+
+                        socket.on('marketUpdate', (data) => {
+                            debugLog('SOCKET: Market update', { symbol: data.symbol });
+                            setMarketData(prev => ({
+                                ...prev,
+                                [data.symbol]: data
+                            }));
+                        });
+
+                        // Chat events with debugging
+                        socket.on('chatMessage', (message) => {
+                            debugLog('SOCKET: Chat message received', { from: message.user?.username });
+                            setChatMessages(prev => [...prev, {
+                                ...message,
+                                id: message.id || Date.now() + Math.random(),
+                                timestamp: new Date()
+                            }]);
+                            
+                            if (!chatExpanded) {
+                                setUnreadMessages(prev => prev + 1);
+                            }
+                        });
+
+                        socket.on('userJoined', (userData) => {
+                            debugLog('SOCKET: User joined', { username: userData.username });
+                            setChatMessages(prev => [...prev, {
+                                id: Date.now() + Math.random(),
+                                type: 'system',
+                                message: `${userData.username} joined the trading room`,
+                                timestamp: new Date()
+                            }]);
+                        });
+
+                        socket.on('userLeft', (userData) => {
+                            debugLog('SOCKET: User left', { username: userData.username });
+                            setChatMessages(prev => [...prev, {
+                                id: Date.now() + Math.random(),
+                                type: 'system',
+                                message: `${userData.username} left the trading room`,
+                                timestamp: new Date()
+                            }]);
+                        });
+
+                        debugLog('SOCKET: All event listeners attached', null, 'SUCCESS');
+                    }
+                } catch (error) {
+                    trackError(error, 'Socket useEffect');
                 }
 
                 return () => {
                     if (socket) {
+                        debugLog('SOCKET: Cleaning up connection');
                         socket.disconnect();
                         socket = null;
                         socketInitialized = false;
@@ -227,15 +468,22 @@
                 }
             }, [chatExpanded]);
 
-            // API Functions
+            // Enhanced API Functions with debugging
             const apiCall = async (endpoint, options = {}) => {
+                const callId = `${options.method || 'GET'}-${endpoint}`;
+                startPerformanceTimer(callId);
+                
                 const token = localStorage.getItem('authToken');
                 const headers = {
                     'Content-Type': 'application/json',
                     ...(token && { 'Authorization': `Bearer ${token}` })
                 };
 
-                debugLog(`API Call: ${endpoint}`, { options, hasToken: !!token });
+                debugLog(`API: Starting call to ${endpoint}`, { 
+                    method: options.method || 'GET',
+                    hasToken: !!token,
+                    hasBody: !!options.body
+                });
 
                 try {
                     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -243,25 +491,40 @@
                         ...options
                     });
 
-                    debugLog(`API Response: ${endpoint}`, { 
+                    endPerformanceTimer(callId);
+                    
+                    debugLog(`API: Response from ${endpoint}`, { 
                         status: response.status, 
-                        ok: response.ok 
+                        ok: response.ok,
+                        statusText: response.statusText
                     });
 
                     if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || 'API Error');
+                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                        const error = new Error(errorData.error || `HTTP ${response.status}`);
+                        trackError(error, `API Call: ${endpoint}`);
+                        throw error;
                     }
 
-                    return response.json();
+                    const data = await response.json();
+                    debugLog(`API: Success ${endpoint}`, { dataKeys: Object.keys(data) }, 'SUCCESS');
+                    return data;
                 } catch (error) {
-                    debugLog(`API Error: ${endpoint}`, error.message);
+                    endPerformanceTimer(callId);
+                    trackError(error, `API Call: ${endpoint}`);
                     throw error;
                 }
             };
 
             // Check if user requires subscription selection
             const requiresSubscriptionSelection = (user) => {
+                debugLog('Checking subscription requirements', { 
+                    userId: user?.id,
+                    tier: user?.tier,
+                    isAdmin: user?.isAdmin,
+                    subscriptionStatus: user?.subscriptionStatus
+                });
+
                 if (!user) return false;
                 if (user.isAdmin) return false;
                 
@@ -273,12 +536,9 @@
                     user.subscriptionStatus === 'cancelled' ||
                     (!user.subscriptionId && user.tier !== 'WEEKLY' && user.tier !== 'MONTHLY');
                 
-                debugLog('Subscription check:', {
-                    username: user.username,
-                    tier: user.tier,
-                    subscriptionStatus: user.subscriptionStatus,
-                    hasSubscriptionId: !!user.subscriptionId,
-                    needsSubscription: needsSubscription
+                debugLog('Subscription check result', {
+                    needsSubscription,
+                    reason: needsSubscription ? 'Missing or invalid subscription' : 'Valid subscription found'
                 });
                 
                 return needsSubscription;
@@ -300,7 +560,7 @@
                     timestamp: new Date()
                 };
 
-                debugLog('Sending chat message:', messageData);
+                debugLog('CHAT: Sending message', { messageLength: messageData.message.length });
                 socket.emit('chatMessage', messageData);
                 setNewMessage('');
             };
@@ -328,51 +588,82 @@
                 }
             };
 
-            // 🚨 FIXED: fetchAlerts with duplicate call prevention
+            // Enhanced fetchAlerts with debugging
             const fetchAlerts = async () => {
                 const callId = 'fetchAlerts';
-                if (apiCallsInProgress.has(callId)) return;
+                if (apiCallsInProgress.has(callId)) {
+                    debugLog('API: Skipping fetchAlerts - already in progress', null, 'WARN');
+                    return;
+                }
                 
                 apiCallsInProgress.add(callId);
+                debugLog('API: Starting fetchAlerts', { filterType });
+                
                 try {
                     const data = await apiCall(`/alerts?type=${filterType}`);
                     setAlerts(data);
+                    debugLog('API: fetchAlerts completed', { count: data?.length || 0 }, 'SUCCESS');
                 } catch (err) {
+                    trackError(err, 'fetchAlerts');
                     setError('Failed to fetch alerts');
                 } finally {
                     apiCallsInProgress.delete(callId);
                 }
             };
 
-            // 🚨 FIXED: fetchActiveUsers with duplicate call prevention
+            // Enhanced fetchActiveUsers with debugging
             const fetchActiveUsers = async () => {
                 const callId = 'fetchActiveUsers';
-                if (apiCallsInProgress.has(callId)) return;
+                if (apiCallsInProgress.has(callId)) {
+                    debugLog('API: Skipping fetchActiveUsers - already in progress', null, 'WARN');
+                    return;
+                }
                 
                 apiCallsInProgress.add(callId);
+                debugLog('API: Starting fetchActiveUsers');
+                
                 try {
                     const data = await apiCall('/users/active');
-                    setMembers(data.map((user, index) => ({
+                    const mappedUsers = data.map((user, index) => ({
                         id: user._id || `user-${index}`,
                         username: user.username,
                         avatar: user.avatar,
                         tier: user.tier,
                         status: 'online'
-                    })));
+                    }));
+                    setMembers(mappedUsers);
+                    debugLog('API: fetchActiveUsers completed', { count: mappedUsers.length }, 'SUCCESS');
                 } catch (err) {
-                    console.error('Failed to fetch users:', err);
+                    trackError(err, 'fetchActiveUsers');
                 } finally {
                     apiCallsInProgress.delete(callId);
                 }
             };
 
-            // 🚨 FIXED: Data fetching with initialization guard
+            // Enhanced data fetching with initialization guard
             useEffect(() => {
-                if (user && !showSubscriptionPicker && !dashboardInitialized) {
-                    dashboardInitialized = true;
-                    debugLog('🚀 RTi Cashflowops Dashboard Loaded');
-                    fetchAlerts();
-                    fetchActiveUsers();
+                debugLog('useEffect: Data fetching triggered', {
+                    user: !!user,
+                    showSubscriptionPicker,
+                    dashboardInitialized,
+                    filterType
+                });
+
+                try {
+                    if (user && !showSubscriptionPicker && !dashboardInitialized) {
+                        dashboardInitialized = true;
+                        debugLog('🚀 RTi Cashflowops Dashboard Loaded', null, 'SUCCESS');
+                        
+                        // Start both API calls
+                        fetchAlerts();
+                        fetchActiveUsers();
+                    } else if (user && !showSubscriptionPicker && dashboardInitialized) {
+                        // Only refetch alerts when filter changes
+                        debugLog('Dashboard already initialized, refetching alerts for filter change');
+                        fetchAlerts();
+                    }
+                } catch (error) {
+                    trackError(error, 'Data fetching useEffect');
                 }
             }, [user, filterType, showSubscriptionPicker]);
 
@@ -388,6 +679,8 @@
                 if (!user.isAdmin || !newAlert.title || !newAlert.message) return;
                 
                 setLoading(true);
+                debugLog('ADMIN: Creating new alert', { title: newAlert.title, type: newAlert.type });
+                
                 try {
                     await apiCall('/alerts', {
                         method: 'POST',
@@ -395,7 +688,9 @@
                     });
                     setNewAlert({ title: '', message: '', priority: 'MEDIUM', type: 'NEWS' });
                     setError('');
+                    debugLog('ADMIN: Alert created successfully', null, 'SUCCESS');
                 } catch (err) {
+                    trackError(err, 'Create Alert');
                     setError('Failed to create alert');
                 } finally {
                     setLoading(false);
@@ -405,21 +700,29 @@
             const handleDeleteAlert = async (alertId) => {
                 if (!user.isAdmin) return;
                 
+                debugLog('ADMIN: Deleting alert', { alertId });
                 try {
                     await apiCall(`/alerts/${alertId}`, { method: 'DELETE' });
+                    debugLog('ADMIN: Alert deleted successfully', null, 'SUCCESS');
                 } catch (err) {
+                    trackError(err, 'Delete Alert');
                     setError('Failed to delete alert');
                 }
             };
 
             const LandingPage = () => {
+                debugLog('Rendering LandingPage component');
                 const [loginData, setLoginData] = useState({ username: '', password: '' });
                 const [isRegistering, setIsRegistering] = useState(false);
                 const [registerData, setRegisterData] = useState({ username: '', email: '', password: '' });
                 const [isAdminLogin, setIsAdminLogin] = useState(false);
 
                 const handleLogin = async () => {
-                    debugLog('=== LOGIN ATTEMPT ===');
+                    debugLog('=== LOGIN ATTEMPT ===', {
+                        username: loginData.username,
+                        hasPassword: !!loginData.password,
+                        isAdminLogin
+                    });
                     
                     if (!loginData.username || !loginData.password) {
                         setError('Please enter username and password');
@@ -430,31 +733,29 @@
                     setError('');
 
                     try {
-                        debugLog('Sending login request', { 
-                            username: loginData.username, 
-                            passwordLength: loginData.password.length 
-                        });
-
+                        startPerformanceTimer('login');
                         const response = await apiCall('/auth/login', {
                             method: 'POST',
                             body: JSON.stringify(loginData)
                         });
+                        endPerformanceTimer('login');
 
-                        debugLog('✅ Login successful', { user: response.user });
+                        debugLog('LOGIN: Success', { userId: response.user?.id }, 'SUCCESS');
 
                         localStorage.setItem('authToken', response.token);
                         setUser(response.user);
 
                         if (requiresSubscriptionSelection(response.user)) {
-                            debugLog('🔒 User requires subscription selection');
+                            debugLog('LOGIN: Redirecting to subscription picker');
                             setShowSubscriptionPicker(true);
                             setShowLanding(false);
                             return;
                         }
 
+                        debugLog('LOGIN: Redirecting to dashboard');
                         setShowLanding(false);
                     } catch (err) {
-                        debugLog('❌ Login failed', err.message);
+                        trackError(err, 'Login');
                         setError(err.message);
                     } finally {
                         setLoading(false);
@@ -462,7 +763,11 @@
                 };
 
                 const handleRegister = async () => {
-                    debugLog('=== REGISTRATION ATTEMPT ===');
+                    debugLog('=== REGISTRATION ATTEMPT ===', {
+                        username: registerData.username,
+                        email: registerData.email,
+                        hasPassword: !!registerData.password
+                    });
                     
                     if (!registerData.username || !registerData.email || !registerData.password) {
                         setError('Please fill in all fields');
@@ -473,26 +778,23 @@
                     setError('');
 
                     try {
-                        debugLog('Sending registration request', { 
-                            username: registerData.username, 
-                            email: registerData.email 
-                        });
-
+                        startPerformanceTimer('register');
                         const response = await apiCall('/auth/register', {
                             method: 'POST',
                             body: JSON.stringify(registerData)
                         });
+                        endPerformanceTimer('register');
 
-                        debugLog('✅ Registration successful', { user: response.user });
+                        debugLog('REGISTER: Success', { userId: response.user?.id }, 'SUCCESS');
 
                         localStorage.setItem('authToken', response.token);
                         setUser(response.user);
                         
-                        debugLog('🔒 New user registration - showing subscription picker');
+                        debugLog('REGISTER: New user - showing subscription picker');
                         setShowSubscriptionPicker(true);
                         setShowLanding(false);
                     } catch (err) {
-                        debugLog('❌ Registration failed', err.message);
+                        trackError(err, 'Registration');
                         setError(err.message);
                     } finally {
                         setLoading(false);
@@ -731,6 +1033,7 @@
             };
 
             const SubscriptionPicker = () => {
+                debugLog('Rendering SubscriptionPicker component');
                 const [selectedPlan, setSelectedPlan] = useState('');
                 const [isProcessing, setIsProcessing] = useState(false);
 
@@ -770,10 +1073,10 @@
 
                 const handlePlanSelection = async (planId) => {
                     setIsProcessing(true);
-                    debugLog('Plan selected:', planId);
+                    debugLog('SUBSCRIPTION: Plan selected', { planId });
                     
                     try {
-                        debugLog('Processing payment for plan:', planId);
+                        debugLog('SUBSCRIPTION: Opening payment window', { planId });
                         
                         if (planId === 'weekly') {
                             window.open('https://buy.stripe.com/aFa3cw2g84qA9E78Wq18c00', '_blank');
@@ -784,7 +1087,7 @@
                         setError('🚀 Redirecting to secure payment... Complete payment to access dashboard!');
                         
                     } catch (error) {
-                        debugLog('Payment error:', error.message);
+                        trackError(error, 'Plan Selection');
                         setError('Payment failed. Please try again.');
                     } finally {
                         setIsProcessing(false);
@@ -792,7 +1095,7 @@
                 };
 
                 const handleSkipForNow = () => {
-                    debugLog('User chose to skip subscription selection');
+                    debugLog('SUBSCRIPTION: User chose to skip');
                     
                     if (user && (!user.tier || user.tier === undefined)) {
                         setUser({
@@ -1049,6 +1352,8 @@
             };
 
             const Dashboard = () => {
+                debugLog('Rendering Dashboard component');
+                
                 if (showSubscriptionPicker) {
                     return null;
                 }
@@ -1101,6 +1406,7 @@
                                             </div>
                                             <button
                                                 onClick={() => {
+                                                    debugLog('LOGOUT: User logging out');
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
                                                     setShowLanding(true);
@@ -1191,7 +1497,7 @@
                                             >
                                                 <option value="LOW">Low</option>
                                                 <option value="MEDIUM">Medium</option>
-                                                <option value="HIGH">High</option>
+                                                <option value="MEDIUM">High</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1235,7 +1541,10 @@
                                             {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
                                                 <button
                                                     key={`filter-${type}-${index}`}
-                                                    onClick={() => setFilterType(type)}
+                                                    onClick={() => {
+                                                        debugLog(`Filter changed to: ${type}`);
+                                                        setFilterType(type);
+                                                    }}
                                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
                                                         filterType === type 
                                                             ? 'bg-blue-500 text-white' 
@@ -1433,44 +1742,60 @@
                 );
             };
 
-            // 🚨 FIXED: Auth check with single execution guard
+            // Enhanced auth check with single execution guard
             useEffect(() => {
-                if (authCheckCompleted) return;
+                debugLog('useEffect: Auth check triggered', { authCheckCompleted });
+                
+                if (authCheckCompleted) {
+                    debugLog('AUTH: Skipping - already completed', null, 'WARN');
+                    return;
+                }
+                
                 authCheckCompleted = true;
+                startPerformanceTimer('auth-check');
                 
                 const token = localStorage.getItem('authToken');
+                debugLog('AUTH: Starting check', { hasToken: !!token });
+                
                 if (token) {
-                    debugLog('Found existing token, validating...');
                     apiCall('/auth/profile')
                         .then(response => {
+                            endPerformanceTimer('auth-check');
                             const userData = response.user || response;
-                            debugLog('✅ Token valid, user loaded:', userData.username || 'Unknown User');
-                            debugLog('User data:', userData);
+                            debugLog('AUTH: Token valid', { 
+                                username: userData.username,
+                                tier: userData.tier,
+                                isAdmin: userData.isAdmin
+                            }, 'SUCCESS');
+                            
                             setUser(userData);
                             
                             if (requiresSubscriptionSelection(userData)) {
-                                debugLog('🔒 Existing user requires subscription selection');
+                                debugLog('AUTH: Needs subscription - showing picker');
                                 setShowSubscriptionPicker(true);
                                 setShowLanding(false);
                             } else {
-                                debugLog('✅ User has valid subscription, going to dashboard');
+                                debugLog('AUTH: Valid subscription - going to dashboard');
                                 setShowLanding(false);
                             }
                         })
                         .catch((error) => {
-                            debugLog('❌ Token invalid, removing:', error.message);
+                            endPerformanceTimer('auth-check');
+                            trackError(error, 'Auth Token Validation');
                             localStorage.removeItem('authToken');
                             authCheckCompleted = false;
                         });
                 } else {
-                    debugLog('No existing token found');
+                    endPerformanceTimer('auth-check');
+                    debugLog('AUTH: No token found - staying on landing');
                 }
             }, []);
 
-            // 🚨 FIXED: Single initialization log
-            if (!dashboardInitialized) {
-                debugLog('🚀 RTi Cashflowops Dashboard Loaded');
-            }
+            debugLog('Component completed render', { 
+                showLanding, 
+                showSubscriptionPicker, 
+                userLoggedIn: !!user 
+            });
 
             if (showLanding) {
                 return <LandingPage />;
@@ -1482,6 +1807,34 @@
 
             return <Dashboard />;
         };
+
+        // Initialize debug panels
+        useEffect(() => {
+            // Create debug panels
+            const debugPanel = document.createElement('div');
+            debugPanel.id = 'debug-panel';
+            debugPanel.className = 'debug-panel';
+            debugPanel.style.display = 'none';
+            document.body.appendChild(debugPanel);
+
+            const errorPanel = document.createElement('div');
+            errorPanel.id = 'error-panel';
+            errorPanel.className = 'error-panel';
+            errorPanel.style.display = 'none';
+            document.body.appendChild(errorPanel);
+
+            const debugToggle = document.createElement('button');
+            debugToggle.className = 'debug-toggle';
+            debugToggle.textContent = '🔍 DEBUG';
+            debugToggle.onclick = toggleDebug;
+            document.body.appendChild(debugToggle);
+
+            return () => {
+                debugPanel?.remove();
+                errorPanel?.remove();
+                debugToggle?.remove();
+            };
+        }, []);
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<TradingGroupDashboard />);
