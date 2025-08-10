@@ -61,6 +61,7 @@
             border-bottom-color: #3b82f6;
         }
 
+        /* 🚀 PUBLISH BUTTON STYLES */
         .publish-button {
             background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
             box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
@@ -102,6 +103,7 @@
             100% { transform: rotate(360deg) scale(1.05); }
         }
 
+        /* 💬 MESSAGING SYSTEM STYLES */
         .message-panel {
             position: fixed;
             top: 20px;
@@ -202,6 +204,7 @@
             50% { opacity: 0.5; }
         }
 
+        /* 🎨 COMPLETE WYSIWYG EDITOR STYLES */
         .full-edit-mode {
             position: relative !important;
         }
@@ -254,6 +257,7 @@
             background: rgba(168, 85, 247, 0.1) !important;
         }
 
+        /* Element tooltips */
         .full-edit-mode .editable-element:before {
             content: attr(data-edit-type);
             position: absolute;
@@ -291,6 +295,7 @@
             opacity: 1;
         }
 
+        /* Enhanced publish notification */
         .publish-notification {
             position: fixed;
             top: 50%;
@@ -318,6 +323,7 @@
             }
         }
 
+        /* Profile avatar enhancement */
         .profile-avatar {
             position: relative;
             cursor: pointer;
@@ -338,6 +344,7 @@
             z-index: 1000;
         }
 
+        /* Rest of existing styles... */
         .upload-zone {
             border: 2px dashed #6b7280;
             border-radius: 8px;
@@ -506,131 +513,6 @@
             if (data) console.log('📊 Data:', data);
         };
 
-        // Utility functions
-        const debounce = (func, wait) => {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        };
-
-        const generateId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-        // 🎯 Generate CSS Selector for Element
-        const generateElementSelector = (element) => {
-            if (element.id) return `#${element.id}`;
-            
-            const path = [];
-            let current = element;
-            
-            while (current && current.nodeType === Node.ELEMENT_NODE) {
-                let selector = current.nodeName.toLowerCase();
-                
-                if (current.className) {
-                    selector += '.' + current.className.split(' ').join('.');
-                }
-                
-                // Add nth-child if needed for uniqueness
-                const siblings = current.parentNode ? 
-                    Array.from(current.parentNode.children).filter(e => e.nodeName === current.nodeName) : [];
-                
-                if (siblings.length > 1) {
-                    const index = siblings.indexOf(current) + 1;
-                    selector += `:nth-child(${index})`;
-                }
-                
-                path.unshift(selector);
-                current = current.parentElement;
-                
-                if (path.length > 5) break; // Limit depth
-            }
-            
-            return path.join(' > ');
-        };
-
-        // 🎯 Generate XPath for Element
-        const generateXPath = (element) => {
-            if (element.id) return `//*[@id="${element.id}"]`;
-            
-            const path = [];
-            let current = element;
-            
-            while (current && current.nodeType === Node.ELEMENT_NODE) {
-                const tagName = current.nodeName.toLowerCase();
-                const siblings = current.parentNode ? 
-                    Array.from(current.parentNode.children).filter(e => e.nodeName === current.nodeName) : [];
-                
-                if (siblings.length > 1) {
-                    const index = siblings.indexOf(current) + 1;
-                    path.unshift(`${tagName}[${index}]`);
-                } else {
-                    path.unshift(tagName);
-                }
-                
-                current = current.parentElement;
-                if (path.length > 10) break; // Limit depth
-            }
-            
-            return '//' + path.join('/');
-        };
-
-        // 🗄️ IndexedDB Storage
-        const saveToIndexedDB = async (key, data) => {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('RTiDesignStudio', 1);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    const db = request.result;
-                    const transaction = db.transaction(['changes'], 'readwrite');
-                    const store = transaction.objectStore('changes');
-                    
-                    store.put({ id: key, data: data, timestamp: Date.now() });
-                    transaction.oncomplete = () => resolve();
-                    transaction.onerror = () => reject(transaction.error);
-                };
-                
-                request.onupgradeneeded = () => {
-                    const db = request.result;
-                    if (!db.objectStoreNames.contains('changes')) {
-                        db.createObjectStore('changes', { keyPath: 'id' });
-                    }
-                };
-            });
-        };
-
-        // 🗄️ Load from IndexedDB
-        const loadFromIndexedDB = async (key) => {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open('RTiDesignStudio', 1);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    const db = request.result;
-                    const transaction = db.transaction(['changes'], 'readonly');
-                    const store = transaction.objectStore('changes');
-                    const getRequest = store.get(key);
-                    
-                    getRequest.onsuccess = () => {
-                        resolve(getRequest.result ? getRequest.result.data : null);
-                    };
-                    getRequest.onerror = () => reject(getRequest.error);
-                };
-                
-                request.onupgradeneeded = () => {
-                    const db = request.result;
-                    if (!db.objectStoreNames.contains('changes')) {
-                        db.createObjectStore('changes', { keyPath: 'id' });
-                    }
-                };
-            });
-        };
-
         // Enhanced file upload with multiple fallbacks
         const uploadFile = async (file, type = 'image') => {
             debugLog('📁 Starting enhanced upload...', { fileName: file.name, size: file.size });
@@ -699,6 +581,21 @@
                 }
             }
         };
+
+        // Utility functions
+        const debounce = (func, wait) => {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        const generateId = () => `element-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
         // Enhanced Image Uploader Component
         const ImageUploader = memo(({ onUpload, currentImage = null, title = "Upload Image", className = "" }) => {
@@ -857,6 +754,7 @@
             const [activeChat, setActiveChat] = useState(null);
             const [messages, setMessages] = useState([]);
             const [newMessage, setNewMessage] = useState('');
+            const [connectedUsers, setConnectedUsers] = useState([]);
             const [unreadCounts, setUnreadCounts] = useState({});
 
             // Mock users for demo - in real app, fetch from API
@@ -1328,23 +1226,14 @@
                                     onChange={(e) => setProperties(prev => ({...prev, fontSize: e.target.value}))}
                                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
-                                    <option value="10px">10px - Tiny</option>
-                                    <option value="12px">12px - Small</option>
-                                    <option value="14px">14px - Regular</option>
-                                    <option value="16px">16px - Medium</option>
-                                    <option value="18px">18px - Large</option>
-                                    <option value="20px">20px - Extra Large</option>
-                                    <option value="24px">24px - Heading</option>
-                                    <option value="28px">28px - Big Heading</option>
-                                    <option value="32px">32px - Large Heading</option>
-                                    <option value="36px">36px - Extra Large Heading</option>
-                                    <option value="40px">40px - Huge</option>
-                                    <option value="48px">48px - Massive</option>
-                                    <option value="56px">56px - Giant</option>
-                                    <option value="64px">64px - Enormous</option>
-                                    <option value="72px">72px - Colossal</option>
-                                    <option value="96px">96px - Mega</option>
-                                    <option value="128px">128px - Ultra</option>
+                                    <option value="12px">12px</option>
+                                    <option value="14px">14px</option>
+                                    <option value="16px">16px</option>
+                                    <option value="18px">18px</option>
+                                    <option value="20px">20px</option>
+                                    <option value="24px">24px</option>
+                                    <option value="32px">32px</option>
+                                    <option value="48px">48px</option>
                                 </select>
                             </div>
 
@@ -1413,9 +1302,10 @@
             const [previewMode, setPreviewMode] = useState('desktop');
             const [liveChanges, setLiveChanges] = useState(0);
             const [showLiveIndicator, setShowLiveIndicator] = useState(false);
+            const [isInitializing, setIsInitializing] = useState(true);
 
             // Edit Mode State
-            const [fullEditMode, setFullEditMode] = useState(true);
+            const [fullEditMode, setFullEditMode] = useState(true); // Auto-enabled
             const [editableElements, setEditableElements] = useState([]);
             const [selectedElement, setSelectedElement] = useState(null);
             const [propertyEditor, setPropertyEditor] = useState(null);
@@ -1441,6 +1331,30 @@
             // Auto-save State
             const [autoSaving, setAutoSaving] = useState(false);
             const [lastSaved, setLastSaved] = useState(null);
+
+            // Auto-save functionality
+            const autoSaveChanges = useCallback(debounce(async () => {
+                if (!hasUnpublishedChanges) return;
+                
+                setAutoSaving(true);
+                try {
+                    const changes = collectAllChanges();
+                    await saveChangesToPersistence(changes);
+                    setLastSaved(new Date());
+                    debugLog('💾 Auto-saved changes');
+                } catch (error) {
+                    debugLog('❌ Auto-save failed', error);
+                } finally {
+                    setAutoSaving(false);
+                }
+            }, 3000), [hasUnpublishedChanges]);
+
+            // Trigger auto-save when changes are made
+            useEffect(() => {
+                if (hasUnpublishedChanges) {
+                    autoSaveChanges();
+                }
+            }, [hasUnpublishedChanges, autoSaveChanges]);
 
             // Test Mode State
             const [testMode, setTestMode] = useState(false);
@@ -1473,45 +1387,303 @@
                 { id: 'test-admin', username: 'AdminUser', tier: 'ADMIN', isAdmin: true, description: 'Admin user' }
             ];
 
-            // API Call function
-            const apiCall = useCallback(async (endpoint, options = {}) => {
-                const token = localStorage.getItem('authToken');
-                const headers = {
-                    'Content-Type': 'application/json',
-                    ...(token && { 'Authorization': `Bearer ${token}` })
-                };
+            // 🚀 Enhanced Publish Function with Real Persistence
+            const handlePublish = useCallback(async () => {
+                if (!hasUnpublishedChanges || isPublishing) return;
+
+                setIsPublishing(true);
+                debugLog('🚀 Publishing changes to live site...');
 
                 try {
-                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                        headers,
-                        ...options
+                    // 1. Collect all current element states
+                    const currentChanges = collectAllChanges();
+                    debugLog('📊 Collected changes for publishing', currentChanges);
+
+                    // 2. Save changes to backend/storage
+                    await saveChangesToPersistence(currentChanges);
+
+                    // 3. Inject changes into iframe for immediate feedback
+                    await injectChangesIntoIframe(currentChanges);
+
+                    setHasUnpublishedChanges(false);
+                    setShowPublishNotification(true);
+                    
+                    // Broadcast publish event
+                    if (socketRef.current) {
+                        socketRef.current.emit('sitePublished', {
+                            user: user?.username,
+                            timestamp: Date.now(),
+                            changesCount: liveChanges,
+                            changes: currentChanges
+                        });
+                    }
+
+                    debugLog('✅ Site published successfully');
+
+                } catch (error) {
+                    debugLog('❌ Publish failed', error);
+                    alert('Failed to publish changes. Please try again.');
+                } finally {
+                    setIsPublishing(false);
+                }
+            }, [hasUnpublishedChanges, isPublishing, liveChanges, user]);
+
+            // Enhanced Element Scanner
+            const scanAllElements = useCallback(() => {
+                if (!iframeRef.current || !fullEditMode) return;
+
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    
+                    if (!iframeDoc || iframeDoc.readyState !== 'complete') return;
+
+                    debugLog('🔍 Scanning ALL elements for complete editing...');
+
+                    // Clear existing
+                    const existingEditables = iframeDoc.querySelectorAll('.editable-element, .clickable-area');
+                    existingEditables.forEach(el => {
+                        el.classList.remove('editable-element', 'editable-text', 'editable-image', 'clickable-area');
+                        el.removeEventListener('click', handleElementClick);
                     });
 
-                    if (!response.ok) {
-                        if (response.status === 401) {
-                            localStorage.removeItem('authToken');
-                            setIsAuthenticated(false);
-                            setUser(null);
-                            throw new Error('Unauthorized');
-                        }
-                        throw new Error(`HTTP ${response.status}`);
-                    }
+                    // Add full edit mode class
+                    iframeDoc.body.classList.add('full-edit-mode');
 
-                    return response.json();
+                    const elements = [];
+                    let elementCounter = 0;
+
+                    // Get ALL elements
+                    const allElements = iframeDoc.querySelectorAll('*');
+                    
+                    allElements.forEach((element) => {
+                        // Skip script, style, meta elements
+                        if (['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE', 'HTML', 'BODY'].includes(element.tagName)) {
+                            return;
+                        }
+
+                        const rect = element.getBoundingClientRect();
+                        if (rect.width < 5 || rect.height < 5) return;
+
+                        const computedStyle = iframeDoc.defaultView.getComputedStyle(element);
+                        if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
+                            return;
+                        }
+
+                        elementCounter++;
+                        const editId = `edit-${elementCounter}`;
+                        element.setAttribute('data-edit-id', editId);
+                        element.classList.add('editable-element');
+
+                        // Classify element type
+                        let elementType = 'element';
+                        
+                        if (element.tagName === 'IMG' || element.style.backgroundImage) {
+                            element.classList.add('editable-image');
+                            element.setAttribute('data-edit-type', '🖼️ Image');
+                            elementType = 'image';
+                        } else if (element.textContent && element.textContent.trim().length > 0) {
+                            element.classList.add('editable-text');
+                            element.setAttribute('data-edit-type', '✏️ Text');
+                            elementType = 'text';
+                        } else {
+                            element.setAttribute('data-edit-type', '⚙️ Element');
+                        }
+
+                        // Add click handler
+                        element.addEventListener('click', handleElementClick);
+
+                        elements.push({
+                            id: editId,
+                            element,
+                            type: elementType,
+                            tagName: element.tagName,
+                            text: element.textContent?.substring(0, 50) || '',
+                            className: element.className
+                        });
+                    });
+
+                    // Add clickable areas for empty spaces
+                    const emptyAreas = iframeDoc.querySelectorAll('body > *, div, section, article, main');
+                    emptyAreas.forEach((area) => {
+                        if (!area.classList.contains('editable-element')) {
+                            area.classList.add('clickable-area');
+                            area.addEventListener('click', handleAreaClick);
+                        }
+                    });
+
+                    setEditableElements(elements);
+                    editHandlersAttached.current = true;
+                    
+                    debugLog(`✅ Full edit mode enabled: ${elements.length} elements editable`);
+                    
                 } catch (error) {
-                    if (error.message !== 'Unauthorized') {
-                        debugLog(`❌ API Error: ${endpoint}`, error.message);
-                    }
-                    throw error;
+                    debugLog('❌ Failed to enable full edit mode', error);
                 }
+            }, [fullEditMode]);
+
+            // Element Click Handler
+            const handleElementClick = useCallback((e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const element = e.target;
+                const rect = element.getBoundingClientRect();
+                const iframeRect = iframeRef.current.getBoundingClientRect();
+                
+                setSelectedElement(element);
+                setPropertyEditor({
+                    element,
+                    position: {
+                        x: iframeRect.left + rect.right + 10,
+                        y: iframeRect.top + rect.top
+                    }
+                });
+
+                debugLog('🎯 Element selected for editing', { 
+                    tagName: element.tagName, 
+                    editId: element.getAttribute('data-edit-id')
+                });
             }, []);
 
-            // Get current URL
-            const getCurrentUrl = useCallback(() => {
-                const page = pages.find(p => p.id === currentPage);
-                if (!page) return `${MAIN_SITE_URL}/`;
-                return page.id === 'live' ? page.url : `${MAIN_SITE_URL}${page.url}`;
-            }, [currentPage, pages]);
+            // Area Click Handler (for adding elements)
+            const handleAreaClick = useCallback((e) => {
+                if (!creationMode) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const clickX = e.clientX;
+                const clickY = e.clientY;
+                
+                createElement(creationMode, { x: clickX, y: clickY });
+                setCreationMode(null);
+                setShowCreationOverlay(false);
+            }, [creationMode]);
+
+            // Create Element Function
+            const createElement = useCallback((type, position) => {
+                if (!iframeRef.current) return;
+
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    
+                    if (!iframeDoc) return;
+
+                    const newElement = iframeDoc.createElement('div');
+                    const elementId = generateId();
+                    
+                    newElement.id = elementId;
+                    newElement.setAttribute('data-edit-id', elementId);
+                    newElement.style.position = 'absolute';
+                    newElement.style.left = position.x + 'px';
+                    newElement.style.top = position.y + 'px';
+                    newElement.style.zIndex = '1000';
+
+                    // Configure based on type
+                    switch (type) {
+                        case 'text':
+                            newElement.textContent = 'New Text Element';
+                            newElement.style.padding = '8px';
+                            newElement.style.border = '1px solid #ccc';
+                            break;
+                        case 'heading':
+                            newElement.innerHTML = '<h2>New Heading</h2>';
+                            newElement.style.fontSize = '24px';
+                            newElement.style.fontWeight = 'bold';
+                            break;
+                        case 'button':
+                            newElement.innerHTML = '<button style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">New Button</button>';
+                            break;
+                        case 'image':
+                            newElement.innerHTML = '<img src="https://via.placeholder.com/200x150" alt="New Image" style="max-width: 100%; height: auto;" />';
+                            break;
+                        case 'container':
+                            newElement.style.width = '300px';
+                            newElement.style.height = '200px';
+                            newElement.style.border = '2px solid #3b82f6';
+                            newElement.style.padding = '16px';
+                            newElement.textContent = 'New Container';
+                            break;
+                        case 'card':
+                            newElement.innerHTML = `
+                                <div style="background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; width: 250px;">
+                                    <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: bold;">Card Title</h3>
+                                    <p style="margin: 0; color: #666;">Card content goes here.</p>
+                                </div>
+                            `;
+                            break;
+                        case '3d':
+                            newElement.innerHTML = '<div style="width: 100px; height: 100px; background: linear-gradient(45deg, #3b82f6, #8b5cf6); transform: rotateX(15deg) rotateY(15deg); transform-style: preserve-3d;">3D Element</div>';
+                            newElement.className = 'element-3d';
+                            break;
+                        default:
+                            newElement.textContent = `New ${type} Element`;
+                            newElement.style.padding = '12px';
+                            newElement.style.border = '1px solid #ddd';
+                            newElement.style.background = '#f9f9f9';
+                    }
+
+                    // Add to document
+                    iframeDoc.body.appendChild(newElement);
+                    
+                    // Make it editable
+                    newElement.classList.add('editable-element');
+                    newElement.addEventListener('click', handleElementClick);
+                    
+                    // Update elements list
+                    setEditableElements(prev => [...prev, {
+                        id: elementId,
+                        element: newElement,
+                        type: type,
+                        tagName: 'DIV',
+                        text: newElement.textContent?.substring(0, 50) || '',
+                        className: newElement.className
+                    }]);
+
+                    // Mark as having unpublished changes
+                    setHasUnpublishedChanges(true);
+
+                    debugLog(`✅ Created new ${type} element`, { id: elementId, position });
+                    
+                } catch (error) {
+                    debugLog('❌ Failed to create element', error);
+                }
+            }, [handleElementClick]);
+
+            // Property Save Handler
+            const handlePropertySave = useCallback((properties) => {
+                if (!selectedElement) return;
+
+                try {
+                    // Apply text content
+                    if (properties.text !== undefined) {
+                        selectedElement.textContent = properties.text;
+                    }
+
+                    // Apply styles
+                    Object.entries(properties).forEach(([key, value]) => {
+                        if (key !== 'text' && value) {
+                            selectedElement.style[key] = value;
+                        }
+                    });
+
+                    // Mark as having unpublished changes
+                    setHasUnpublishedChanges(true);
+
+                    debugLog('✅ Properties applied to element', properties);
+                    
+                    // Broadcast live update
+                    pushLiveUpdate('elementUpdate', {
+                        elementId: selectedElement.getAttribute('data-edit-id'),
+                        properties
+                    });
+
+                } catch (error) {
+                    debugLog('❌ Failed to apply properties', error);
+                }
+            }, [selectedElement]);
 
             // Live Update Functions
             const pushLiveUpdate = useCallback((updateType, updateData, source = 'user') => {
@@ -1586,7 +1758,7 @@
                                 zIndex: element.style.zIndex
                             },
                             attributes: {},
-                            isNew: element.id.startsWith('element-'),
+                            isNew: element.id.startsWith('element-'), // Check if it's a newly created element
                             selector: generateElementSelector(element),
                             xpath: generateXPath(element)
                         };
@@ -1611,6 +1783,64 @@
                 debugLog('📊 Collected changes', changes);
                 return changes;
             }, [editableElements, currentPage]);
+
+            // 🎯 Generate CSS Selector for Element
+            const generateElementSelector = (element) => {
+                if (element.id) return `#${element.id}`;
+                
+                const path = [];
+                let current = element;
+                
+                while (current && current.nodeType === Node.ELEMENT_NODE) {
+                    let selector = current.nodeName.toLowerCase();
+                    
+                    if (current.className) {
+                        selector += '.' + current.className.split(' ').join('.');
+                    }
+                    
+                    // Add nth-child if needed for uniqueness
+                    const siblings = current.parentNode ? 
+                        Array.from(current.parentNode.children).filter(e => e.nodeName === current.nodeName) : [];
+                    
+                    if (siblings.length > 1) {
+                        const index = siblings.indexOf(current) + 1;
+                        selector += `:nth-child(${index})`;
+                    }
+                    
+                    path.unshift(selector);
+                    current = current.parentElement;
+                    
+                    if (path.length > 5) break; // Limit depth
+                }
+                
+                return path.join(' > ');
+            };
+
+            // 🎯 Generate XPath for Element
+            const generateXPath = (element) => {
+                if (element.id) return `//*[@id="${element.id}"]`;
+                
+                const path = [];
+                let current = element;
+                
+                while (current && current.nodeType === Node.ELEMENT_NODE) {
+                    const tagName = current.nodeName.toLowerCase();
+                    const siblings = current.parentNode ? 
+                        Array.from(current.parentNode.children).filter(e => e.nodeName === current.nodeName) : [];
+                    
+                    if (siblings.length > 1) {
+                        const index = siblings.indexOf(current) + 1;
+                        path.unshift(`${tagName}[${index}]`);
+                    } else {
+                        path.unshift(tagName);
+                    }
+                    
+                    current = current.parentElement;
+                    if (path.length > 10) break; // Limit depth
+                }
+                
+                return '//' + path.join('/');
+            };
 
             // 💾 Save Changes to Persistence Layer
             const saveChangesToPersistence = useCallback(async (changes) => {
@@ -1660,6 +1890,31 @@
                 }
             }, [currentPage]);
 
+            // 🗄️ IndexedDB Storage
+            const saveToIndexedDB = async (key, data) => {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('RTiDesignStudio', 1);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        const db = request.result;
+                        const transaction = db.transaction(['changes'], 'readwrite');
+                        const store = transaction.objectStore('changes');
+                        
+                        store.put({ id: key, data: data, timestamp: Date.now() });
+                        transaction.oncomplete = () => resolve();
+                        transaction.onerror = () => reject(transaction.error);
+                    };
+                    
+                    request.onupgradeneeded = () => {
+                        const db = request.result;
+                        if (!db.objectStoreNames.contains('changes')) {
+                            db.createObjectStore('changes', { keyPath: 'id' });
+                        }
+                    };
+                });
+            };
+
             // 🔄 Load Changes from Persistence
             const loadChangesFromPersistence = useCallback(async (page) => {
                 const storageKey = `rti_design_changes_${page}`;
@@ -1706,6 +1961,33 @@
 
                 return null;
             }, []);
+
+            // 🗄️ Load from IndexedDB
+            const loadFromIndexedDB = async (key) => {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('RTiDesignStudio', 1);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        const db = request.result;
+                        const transaction = db.transaction(['changes'], 'readonly');
+                        const store = transaction.objectStore('changes');
+                        const getRequest = store.get(key);
+                        
+                        getRequest.onsuccess = () => {
+                            resolve(getRequest.result ? getRequest.result.data : null);
+                        };
+                        getRequest.onerror = () => reject(getRequest.error);
+                    };
+                    
+                    request.onupgradeneeded = () => {
+                        const db = request.result;
+                        if (!db.objectStoreNames.contains('changes')) {
+                            db.createObjectStore('changes', { keyPath: 'id' });
+                        }
+                    };
+                });
+            };
 
             // 💉 Inject Changes into Iframe
             const injectChangesIntoIframe = useCallback(async (changes) => {
@@ -1834,554 +2116,44 @@
                     throw new Error('Failed to apply changes to page');
                 }
             }, []);
+            const apiCall = useCallback(async (endpoint, options = {}) => {
+                const token = localStorage.getItem('authToken');
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                };
 
-            // Auto-save functionality
-            const autoSaveChanges = useCallback(debounce(async () => {
-                if (!hasUnpublishedChanges) return;
-                
-                setAutoSaving(true);
                 try {
-                    const changes = collectAllChanges();
-                    await saveChangesToPersistence(changes);
-                    setLastSaved(new Date());
-                    debugLog('💾 Auto-saved changes');
-                } catch (error) {
-                    debugLog('❌ Auto-save failed', error);
-                } finally {
-                    setAutoSaving(false);
-                }
-            }, 3000), [hasUnpublishedChanges, collectAllChanges, saveChangesToPersistence]);
+                    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                        headers,
+                        ...options
+                    });
 
-            // 🌐 Live Site Integration Script Generator
-            const generateLiveSiteScript = useCallback(() => {
-                return `<!-- RTi Design Studio Live Integration -->
-<script id="rti-live-integration">
-(function() {
-    const RTI_API_BASE = '${API_BASE_URL}';
-    const RTI_SOCKET_URL = '${SOCKET_URL}';
-    
-    // Function to load and apply saved changes
-    async function loadAndApplyChanges() {
-        try {
-            // Try to load from API first
-            const currentPage = window.location.pathname.replace('/', '') || 'landing';
-            const response = await fetch(RTI_API_BASE + '/design/load/' + currentPage);
-            if (response.ok) {
-                const savedChanges = await response.json();
-                if (savedChanges && savedChanges.elements) {
-                    applyChangesToPage(savedChanges);
-                    console.log('🎨 RTi Design: Applied saved changes from server');
-                }
-            }
-        } catch (error) {
-            // Fallback to localStorage
-            const currentPage = window.location.pathname.replace('/', '') || 'landing';
-            const storageKey = 'rti_design_changes_' + currentPage;
-            const localData = localStorage.getItem(storageKey);
-            if (localData) {
-                const savedChanges = JSON.parse(localData);
-                applyChangesToPage(savedChanges);
-                console.log('🎨 RTi Design: Applied saved changes from localStorage');
-            }
-        }
-    }
-    
-    // Function to apply changes to the live page
-    function applyChangesToPage(changes) {
-        if (!changes || !changes.elements) return;
-        
-        // Create or update dynamic styles
-        let styleElement = document.getElementById('rti-dynamic-styles');
-        if (!styleElement) {
-            styleElement = document.createElement('style');
-            styleElement.id = 'rti-dynamic-styles';
-            document.head.appendChild(styleElement);
-        }
-        
-        let cssRules = '';
-        
-        Object.values(changes.elements).forEach(function(elementChange) {
-            try {
-                // Find element by multiple methods
-                let targetElement = document.getElementById(elementChange.id);
-                
-                if (!targetElement && elementChange.selector) {
-                    targetElement = document.querySelector(elementChange.selector);
-                }
-                
-                if (!targetElement && elementChange.xpath) {
-                    const xpathResult = document.evaluate(
-                        elementChange.xpath, 
-                        document, 
-                        null, 
-                        XPathResult.FIRST_ORDERED_NODE_TYPE, 
-                        null
-                    );
-                    targetElement = xpathResult.singleNodeValue;
-                }
-                
-                if (targetElement) {
-                    // Apply content changes
-                    if (elementChange.innerHTML !== undefined) {
-                        targetElement.innerHTML = elementChange.innerHTML;
-                    }
-                    if (elementChange.textContent !== undefined && !elementChange.innerHTML) {
-                        targetElement.textContent = elementChange.textContent;
-                    }
-                    
-                    // Apply style changes
-                    Object.entries(elementChange.styles).forEach(function(styleEntry) {
-                        const property = styleEntry[0];
-                        const value = styleEntry[1];
-                        if (value && value !== 'auto' && value !== 'inherit') {
-                            targetElement.style[property] = value;
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            localStorage.removeItem('authToken');
+                            setIsAuthenticated(false);
+                            setUser(null);
+                            throw new Error('Unauthorized');
                         }
-                    });
-                    
-                    // Apply attributes
-                    Object.entries(elementChange.attributes).forEach(function(attrEntry) {
-                        const attr = attrEntry[0];
-                        const value = attrEntry[1];
-                        if (attr !== 'style' && value) {
-                            targetElement.setAttribute(attr, value);
-                        }
-                    });
-                    
-                } else if (elementChange.isNew) {
-                    // Create new elements
-                    const newElement = document.createElement(elementChange.tagName.toLowerCase());
-                    newElement.id = elementChange.id;
-                    
-                    if (elementChange.innerHTML) {
-                        newElement.innerHTML = elementChange.innerHTML;
-                    } else if (elementChange.textContent) {
-                        newElement.textContent = elementChange.textContent;
+                        throw new Error(`HTTP ${response.status}`);
                     }
-                    
-                    // Apply styles
-                    Object.entries(elementChange.styles).forEach(function(styleEntry) {
-                        const property = styleEntry[0];
-                        const value = styleEntry[1];
-                        if (value && value !== 'auto' && value !== 'inherit') {
-                            newElement.style[property] = value;
-                        }
-                    });
-                    
-                    // Apply attributes
-                    Object.entries(elementChange.attributes).forEach(function(attrEntry) {
-                        const attr = attrEntry[0];
-                        const value = attrEntry[1];
-                        if (attr !== 'style' && value) {
-                            newElement.setAttribute(attr, value);
-                        }
-                    });
-                    
-                    document.body.appendChild(newElement);
-                }
-                
-                // Generate CSS rules for persistence
-                if (elementChange.selector) {
-                    const styles = Object.entries(elementChange.styles)
-                        .filter(function(entry) { return entry[1] && entry[1] !== 'auto' && entry[1] !== 'inherit'; })
-                        .map(function(entry) { 
-                            return entry[0].replace(/([A-Z])/g, '-$1').toLowerCase() + ': ' + entry[1]; 
-                        })
-                        .join('; ');
-                    
-                    if (styles) {
-                        cssRules += elementChange.selector + ' { ' + styles + ' }\\n';
+
+                    return response.json();
+                } catch (error) {
+                    if (error.message !== 'Unauthorized') {
+                        debugLog(`❌ API Error: ${endpoint}`, error.message);
                     }
+                    throw error;
                 }
-                
-            } catch (error) {
-                console.error('RTi Design: Error applying element changes', error);
-            }
-        });
-        
-        // Apply CSS rules
-        if (cssRules) {
-            styleElement.textContent = cssRules;
-        }
-    }
-    
-    // Set up real-time updates via WebSocket
-    function setupRealTimeUpdates() {
-        try {
-            if (typeof io !== 'undefined') {
-                const socket = io(RTI_SOCKET_URL);
-                socket.on('liveDesignUpdate', function(data) {
-                    console.log('🔴 RTi Design: Received live update', data);
-                    if (data.type === 'elementUpdate') {
-                        applyElementUpdate(data.data);
-                    } else if (data.type === 'sitePublished') {
-                        loadAndApplyChanges();
-                    }
-                });
-                
-                socket.on('connect', function() {
-                    console.log('🔴 RTi Design: Live updates connected');
-                });
-            }
-        } catch (error) {
-            console.log('RTi Design: Socket.io not available, real-time updates disabled');
-        }
-    }
-    
-    function applyElementUpdate(updateData) {
-        const element = document.querySelector('[data-edit-id="' + updateData.elementId + '"]');
-        if (element && updateData.properties) {
-            Object.entries(updateData.properties).forEach(function(entry) {
-                const key = entry[0];
-                const value = entry[1];
-                if (key === 'text') {
-                    element.textContent = value;
-                } else if (key !== 'text' && value) {
-                    element.style[key] = value;
-                }
-            });
-        }
-    }
-    
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAndApplyChanges();
-            setupRealTimeUpdates();
-        });
-    } else {
-        loadAndApplyChanges();
-        setupRealTimeUpdates();
-    }
-    
-    // Check for updates periodically
-    setInterval(loadAndApplyChanges, 30000);
-    
-})();
-</script>
-<!-- End RTi Design Studio Integration -->`;
             }, []);
 
-            // 📋 Copy Integration Script Function
-            const copyIntegrationScript = useCallback(() => {
-                const script = generateLiveSiteScript();
-                navigator.clipboard.writeText(script).then(() => {
-                    alert('✅ Integration script copied to clipboard!\n\nPaste this script into the <head> section of your live site pages to enable real-time design updates.');
-                }).catch(() => {
-                    // Fallback - show modal with script
-                    const modal = document.createElement('div');
-                    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
-                    
-                    const modalContent = document.createElement('div');
-                    modalContent.style.cssText = 'background:white;border-radius:12px;padding:20px;max-width:80%;max-height:80%;overflow:auto;';
-                    
-                    modalContent.innerHTML = 
-                        '<h3 style="margin:0 0 15px 0;color:#1f2937;">🌐 Live Site Integration Script</h3>' +
-                        '<p style="margin:0 0 15px 0;color:#6b7280;">Copy this script and paste it into the &lt;head&gt; section of your live site pages:</p>' +
-                        '<textarea readonly style="width:100%;height:300px;font-family:monospace;font-size:12px;border:1px solid #d1d5db;border-radius:6px;padding:10px;" onclick="this.select()">' + script + '</textarea>' +
-                        '<button onclick="this.parentElement.parentElement.remove()" style="margin-top:15px;background:#3b82f6;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;">Close</button>';
-                    
-                    modal.appendChild(modalContent);
-                    document.body.appendChild(modal);
-                });
-            }, [generateLiveSiteScript]);
-
-            // 🚀 Enhanced Publish Function with Live Site Updates
-            const handlePublish = useCallback(async () => {
-                if (!hasUnpublishedChanges || isPublishing) return;
-
-                setIsPublishing(true);
-                debugLog('🚀 Publishing changes to live site...');
-
-                try {
-                    // 1. Collect all current element states
-                    const currentChanges = collectAllChanges();
-                    debugLog('📊 Collected changes for publishing', currentChanges);
-
-                    // 2. Save changes to persistence (all methods)
-                    await saveChangesToPersistence(currentChanges);
-
-                    // 3. Inject changes into iframe for immediate feedback
-                    await injectChangesIntoIframe(currentChanges);
-
-                    // 4. Broadcast to all connected live site instances
-                    if (socketRef.current) {
-                        socketRef.current.emit('sitePublished', {
-                            user: user?.username,
-                            timestamp: Date.now(),
-                            changesCount: liveChanges,
-                            changes: currentChanges
-                        });
-                    }
-
-                    setHasUnpublishedChanges(false);
-                    setShowPublishNotification(true);
-                    
-                    debugLog('✅ Site published successfully to live environment');
-
-                } catch (error) {
-                    debugLog('❌ Publish failed', error);
-                    alert('Failed to publish changes. Please try again.');
-                } finally {
-                    setIsPublishing(false);
-                }
-            }, [hasUnpublishedChanges, isPublishing, liveChanges, user, collectAllChanges, saveChangesToPersistence, injectChangesIntoIframe]);
-
-            // Element Click Handler
-            const handleElementClick = useCallback((e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const element = e.target;
-                const rect = element.getBoundingClientRect();
-                const iframeRect = iframeRef.current.getBoundingClientRect();
-                
-                setSelectedElement(element);
-                setPropertyEditor({
-                    element,
-                    position: {
-                        x: iframeRect.left + rect.right + 10,
-                        y: iframeRect.top + rect.top
-                    }
-                });
-
-                debugLog('🎯 Element selected for editing', { 
-                    tagName: element.tagName, 
-                    editId: element.getAttribute('data-edit-id')
-                });
-            }, []);
-
-            // Area Click Handler (for adding elements)
-            const handleAreaClick = useCallback((e) => {
-                if (!creationMode) return;
-                
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const clickX = e.clientX;
-                const clickY = e.clientY;
-                
-                createElement(creationMode, { x: clickX, y: clickY });
-                setCreationMode(null);
-                setShowCreationOverlay(false);
-            }, [creationMode]);
-
-            // Enhanced Element Scanner
-            const scanAllElements = useCallback(() => {
-                if (!iframeRef.current || !fullEditMode) return;
-
-                try {
-                    const iframe = iframeRef.current;
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                    
-                    if (!iframeDoc || iframeDoc.readyState !== 'complete') return;
-
-                    debugLog('🔍 Scanning ALL elements for complete editing...');
-
-                    // Clear existing
-                    const existingEditables = iframeDoc.querySelectorAll('.editable-element, .clickable-area');
-                    existingEditables.forEach(el => {
-                        el.classList.remove('editable-element', 'editable-text', 'editable-image', 'clickable-area');
-                        el.removeEventListener('click', handleElementClick);
-                    });
-
-                    // Add full edit mode class
-                    iframeDoc.body.classList.add('full-edit-mode');
-
-                    const elements = [];
-                    let elementCounter = 0;
-
-                    // Get ALL elements
-                    const allElements = iframeDoc.querySelectorAll('*');
-                    
-                    allElements.forEach((element) => {
-                        // Skip script, style, meta elements
-                        if (['SCRIPT', 'STYLE', 'META', 'LINK', 'HEAD', 'TITLE', 'HTML', 'BODY'].includes(element.tagName)) {
-                            return;
-                        }
-
-                        const rect = element.getBoundingClientRect();
-                        if (rect.width < 5 || rect.height < 5) return;
-
-                        const computedStyle = iframeDoc.defaultView.getComputedStyle(element);
-                        if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden') {
-                            return;
-                        }
-
-                        elementCounter++;
-                        const editId = `edit-${elementCounter}`;
-                        element.setAttribute('data-edit-id', editId);
-                        element.classList.add('editable-element');
-
-                        // Classify element type
-                        let elementType = 'element';
-                        
-                        if (element.tagName === 'IMG' || element.style.backgroundImage) {
-                            element.classList.add('editable-image');
-                            element.setAttribute('data-edit-type', '🖼️ Image');
-                            elementType = 'image';
-                        } else if (element.textContent && element.textContent.trim().length > 0) {
-                            element.classList.add('editable-text');
-                            element.setAttribute('data-edit-type', '✏️ Text');
-                            elementType = 'text';
-                        } else {
-                            element.setAttribute('data-edit-type', '⚙️ Element');
-                        }
-
-                        // Add click handler
-                        element.addEventListener('click', handleElementClick);
-
-                        elements.push({
-                            id: editId,
-                            element,
-                            type: elementType,
-                            tagName: element.tagName,
-                            text: element.textContent?.substring(0, 50) || '',
-                            className: element.className
-                        });
-                    });
-
-                    // Add clickable areas for empty spaces
-                    const emptyAreas = iframeDoc.querySelectorAll('body > *, div, section, article, main');
-                    emptyAreas.forEach((area) => {
-                        if (!area.classList.contains('editable-element')) {
-                            area.classList.add('clickable-area');
-                            area.addEventListener('click', handleAreaClick);
-                        }
-                    });
-
-                    setEditableElements(elements);
-                    editHandlersAttached.current = true;
-                    
-                    debugLog(`✅ Full edit mode enabled: ${elements.length} elements editable`);
-                    
-                } catch (error) {
-                    debugLog('❌ Failed to enable full edit mode', error);
-                }
-            }, [fullEditMode, handleElementClick, handleAreaClick]);
-
-            // Create Element Function
-            const createElement = useCallback((type, position) => {
-                if (!iframeRef.current) return;
-
-                try {
-                    const iframe = iframeRef.current;
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                    
-                    if (!iframeDoc) return;
-
-                    const newElement = iframeDoc.createElement('div');
-                    const elementId = generateId();
-                    
-                    newElement.id = elementId;
-                    newElement.setAttribute('data-edit-id', elementId);
-                    newElement.style.position = 'absolute';
-                    newElement.style.left = position.x + 'px';
-                    newElement.style.top = position.y + 'px';
-                    newElement.style.zIndex = '1000';
-
-                    // Configure based on type
-                    switch (type) {
-                        case 'text':
-                            newElement.textContent = 'New Text Element';
-                            newElement.style.padding = '8px';
-                            newElement.style.border = '1px solid #ccc';
-                            break;
-                        case 'heading':
-                            newElement.innerHTML = '<h2>New Heading</h2>';
-                            newElement.style.fontSize = '24px';
-                            newElement.style.fontWeight = 'bold';
-                            break;
-                        case 'button':
-                            newElement.innerHTML = '<button style="padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">New Button</button>';
-                            break;
-                        case 'image':
-                            newElement.innerHTML = '<img src="https://via.placeholder.com/200x150" alt="New Image" style="max-width: 100%; height: auto;" />';
-                            break;
-                        case 'container':
-                            newElement.style.width = '300px';
-                            newElement.style.height = '200px';
-                            newElement.style.border = '2px solid #3b82f6';
-                            newElement.style.padding = '16px';
-                            newElement.textContent = 'New Container';
-                            break;
-                        case 'card':
-                            newElement.innerHTML = `
-                                <div style="background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 20px; width: 250px;">
-                                    <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: bold;">Card Title</h3>
-                                    <p style="margin: 0; color: #666;">Card content goes here.</p>
-                                </div>
-                            `;
-                            break;
-                        case '3d':
-                            newElement.innerHTML = '<div style="width: 100px; height: 100px; background: linear-gradient(45deg, #3b82f6, #8b5cf6); transform: rotateX(15deg) rotateY(15deg); transform-style: preserve-3d;">3D Element</div>';
-                            newElement.className = 'element-3d';
-                            break;
-                        default:
-                            newElement.textContent = `New ${type} Element`;
-                            newElement.style.padding = '12px';
-                            newElement.style.border = '1px solid #ddd';
-                            newElement.style.background = '#f9f9f9';
-                    }
-
-                    // Add to document
-                    iframeDoc.body.appendChild(newElement);
-                    
-                    // Make it editable
-                    newElement.classList.add('editable-element');
-                    newElement.addEventListener('click', handleElementClick);
-                    
-                    // Update elements list
-                    setEditableElements(prev => [...prev, {
-                        id: elementId,
-                        element: newElement,
-                        type: type,
-                        tagName: 'DIV',
-                        text: newElement.textContent?.substring(0, 50) || '',
-                        className: newElement.className
-                    }]);
-
-                    // Mark as having unpublished changes
-                    setHasUnpublishedChanges(true);
-
-                    debugLog(`✅ Created new ${type} element`, { id: elementId, position });
-                    
-                } catch (error) {
-                    debugLog('❌ Failed to create element', error);
-                }
-            }, [handleElementClick]);
-
-            // Property Save Handler
-            const handlePropertySave = useCallback((properties) => {
-                if (!selectedElement) return;
-
-                try {
-                    // Apply text content
-                    if (properties.text !== undefined) {
-                        selectedElement.textContent = properties.text;
-                    }
-
-                    // Apply styles
-                    Object.entries(properties).forEach(([key, value]) => {
-                        if (key !== 'text' && value) {
-                            selectedElement.style[key] = value;
-                        }
-                    });
-
-                    // Mark as having unpublished changes
-                    setHasUnpublishedChanges(true);
-
-                    debugLog('✅ Properties applied to element', properties);
-                    
-                    // Broadcast live update
-                    pushLiveUpdate('elementUpdate', {
-                        elementId: selectedElement.getAttribute('data-edit-id'),
-                        properties
-                    });
-
-                } catch (error) {
-                    debugLog('❌ Failed to apply properties', error);
-                }
-            }, [selectedElement, pushLiveUpdate]);
+            // Get current URL
+            const getCurrentUrl = useCallback(() => {
+                const page = pages.find(p => p.id === currentPage);
+                if (!page) return `${MAIN_SITE_URL}/`;
+                return page.id === 'live' ? page.url : `${MAIN_SITE_URL}${page.url}`;
+            }, [currentPage]);
 
             // Handle iframe load with change restoration
             const handleIframeLoad = useCallback(async () => {
@@ -2422,13 +2194,6 @@
                 }
             }, [fullEditMode, scanAllElements, currentPage, loadChangesFromPersistence, injectChangesIntoIframe]);
 
-            // Trigger auto-save when changes are made
-            useEffect(() => {
-                if (hasUnpublishedChanges) {
-                    autoSaveChanges();
-                }
-            }, [hasUnpublishedChanges, autoSaveChanges]);
-
             // Page change effect
             useEffect(() => {
                 debugLog('🔄 Page changed:', currentPage);
@@ -2443,7 +2208,7 @@
                     const newUrl = page?.id === 'live' ? page.url : `${MAIN_SITE_URL}${page?.url || '/'}`;
                     iframeRef.current.src = newUrl;
                 }
-            }, [currentPage, pages]);
+            }, [currentPage]);
 
             // Full edit mode effect
             useEffect(() => {
@@ -2476,6 +2241,14 @@
             useEffect(() => {
                 setShowCreationOverlay(!!creationMode);
             }, [creationMode]);
+
+            // Initialization effect
+            useEffect(() => {
+                if (isAuthenticated) {
+                    setIsInitializing(true);
+                    setTimeout(() => setIsInitializing(false), 3000);
+                }
+            }, [isAuthenticated]);
 
             // Socket connection effect
             useEffect(() => {
@@ -2855,26 +2628,6 @@
                                     >
                                         {showElementToolbar ? '➕ Hide Tools' : '➕ Add Elements'}
                                     </button>
-
-                                    {/* 🌐 Live Site Integration */}
-                                    <div className="border-t border-gray-600 pt-3">
-                                        <h4 className="text-white font-medium mb-2">🌐 Live Site Setup</h4>
-                                        
-                                        <button
-                                            onClick={copyIntegrationScript}
-                                            className="w-full mb-2 p-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <span>📋</span>
-                                            <div>
-                                                <div className="text-sm">Copy Integration Script</div>
-                                                <div className="text-xs opacity-80">Add to your live site</div>
-                                            </div>
-                                        </button>
-                                        
-                                        <div className="text-xs text-gray-400 mb-2 p-2 bg-gray-900/50 rounded">
-                                            💡 Copy the script and paste it into the &lt;head&gt; section of your live site pages to enable real-time updates.
-                                        </div>
-                                    </div>
 
                                     {/* 💾 Save/Load Controls */}
                                     <div className="border-t border-gray-600 pt-3">
