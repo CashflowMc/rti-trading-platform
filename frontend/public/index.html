@@ -334,6 +334,34 @@
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
 
+            // Initialize debug panels when component mounts
+            useEffect(() => {
+                // Create debug panels
+                const debugPanel = document.createElement('div');
+                debugPanel.id = 'debug-panel';
+                debugPanel.className = 'debug-panel';
+                debugPanel.style.display = 'none';
+                document.body.appendChild(debugPanel);
+
+                const errorPanel = document.createElement('div');
+                errorPanel.id = 'error-panel';
+                errorPanel.className = 'error-panel';
+                errorPanel.style.display = 'none';
+                document.body.appendChild(errorPanel);
+
+                const debugToggle = document.createElement('button');
+                debugToggle.className = 'debug-toggle';
+                debugToggle.textContent = '🔍 DEBUG';
+                debugToggle.onclick = window.toggleDebug;
+                document.body.appendChild(debugToggle);
+
+                return () => {
+                    debugPanel?.remove();
+                    errorPanel?.remove();
+                    debugToggle?.remove();
+                };
+            }, []);
+
             // Debug state changes
             useEffect(() => {
                 debugLog('State Change: User', { user: user?.username || 'null', id: user?.id });
@@ -1807,34 +1835,6 @@
 
             return <Dashboard />;
         };
-
-        // Initialize debug panels
-        useEffect(() => {
-            // Create debug panels
-            const debugPanel = document.createElement('div');
-            debugPanel.id = 'debug-panel';
-            debugPanel.className = 'debug-panel';
-            debugPanel.style.display = 'none';
-            document.body.appendChild(debugPanel);
-
-            const errorPanel = document.createElement('div');
-            errorPanel.id = 'error-panel';
-            errorPanel.className = 'error-panel';
-            errorPanel.style.display = 'none';
-            document.body.appendChild(errorPanel);
-
-            const debugToggle = document.createElement('button');
-            debugToggle.className = 'debug-toggle';
-            debugToggle.textContent = '🔍 DEBUG';
-            debugToggle.onclick = toggleDebug;
-            document.body.appendChild(debugToggle);
-
-            return () => {
-                debugPanel?.remove();
-                errorPanel?.remove();
-                debugToggle?.remove();
-            };
-        }, []);
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<TradingGroupDashboard />);
