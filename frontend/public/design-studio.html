@@ -296,6 +296,7 @@
 
                 try {
                     const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+                    if (!iframeDoc) return;
                     
                     // Update colors in real-time
                     if (updateData.colors) {
@@ -308,9 +309,21 @@
                     // Update text content
                     if (updateData.text) {
                         Object.entries(updateData.text).forEach(([selector, content]) => {
-                            const elements = iframeDoc.querySelectorAll(`[data-design="${selector}"]`);
+                            // Try multiple selectors for text updates
+                            const elements = [
+                                ...iframeDoc.querySelectorAll(`[data-design="${selector}"]`),
+                                ...iframeDoc.querySelectorAll(`#${selector}`),
+                                ...iframeDoc.querySelectorAll(`.${selector}`)
+                            ];
+                            
                             elements.forEach(el => {
-                                el.textContent = content;
+                                if (el) {
+                                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                                        el.value = content;
+                                    } else {
+                                        el.textContent = content;
+                                    }
+                                }
                             });
                         });
                     }
@@ -324,37 +337,63 @@
                     }
 
                     setLiveChanges(prev => prev + 1);
+                    debugLog('✅ Live update applied successfully');
                 } catch (error) {
-                    debugLog('Error applying live update:', error);
+                    debugLog('❌ Error applying live update:', error);
                 }
             };
 
             // Push Live Updates
             const pushLiveUpdate = (updateType, updateData) => {
-                if (!socket || !isConnected) {
-                    debugLog('⚠️ Cannot push update - not connected');
-                    return;
-                }
-
-                const payload = {
-                    type: updateType,
-                    page: currentPage,
-                    data: updateData,
-                    timestamp: Date.now(),
-                    user: user?.username
-                };
-
-                debugLog('🚀 Pushing live update:', payload);
-                socket.emit('liveDesignUpdate', payload);
+                debugLog('🚀 Pushing live update:', { updateType, updateData });
 
                 // Apply immediately to preview
                 applyLiveUpdate(updateData);
+
+                // Also try to inject styles directly
+                if (updateType === 'colors' && iframeRef.current) {
+                    try {
+                        const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+                        if (iframeDoc) {
+                            let styleElement = iframeDoc.getElementById('live-design-styles');
+                            if (!styleElement) {
+                                styleElement = iframeDoc.createElement('style');
+                                styleElement.id = 'live-design-styles';
+                                iframeDoc.head.appendChild(styleElement);
+                            }
+
+                            const cssRules = Object.entries(updateData).map(([key, value]) => {
+                                return `:root { --${key}-color: ${value} !important; }`;
+                            }).join('\n');
+
+                            styleElement.textContent = cssRules;
+                        }
+                    } catch (error) {
+                        debugLog('❌ Error injecting styles:', error);
+                    }
+                }
+
+                if (socket && isConnected) {
+                    const payload = {
+                        type: updateType,
+                        page: currentPage,
+                        data: updateData,
+                        timestamp: Date.now(),
+                        user: user?.username
+                    };
+
+                    socket.emit('liveDesignUpdate', payload);
+                }
             };
 
             // Refresh Iframe
             const refreshIframe = () => {
                 if (iframeRef.current) {
-                    iframeRef.current.src = iframeRef.current.src;
+                    const currentSrc = iframeRef.current.src;
+                    iframeRef.current.src = '';
+                    setTimeout(() => {
+                        iframeRef.current.src = currentSrc;
+                    }, 100);
                 }
             };
 
@@ -370,6 +409,21 @@
 
                 // Push live update immediately
                 pushLiveUpdate('siteData', { [pageId]: updates });
+            };
+
+            // Handle iframe load to inject styles
+            const handleIframeLoad = () => {
+                debugLog('📄 Iframe loaded, applying current styles');
+                
+                setTimeout(() => {
+                    const currentPageData = siteData[currentPage] || {};
+                    if (currentPageData.colors) {
+                        pushLiveUpdate('colors', currentPageData.colors);
+                    }
+                    if (currentPageData.fonts) {
+                        pushLiveUpdate('fonts', currentPageData.fonts);
+                    }
+                }, 500);
             };
 
             // Login Component
@@ -547,13 +601,14 @@
                                         <textarea
                                             value={currentPageData[selectedComponent.id] || ''}
                                             onChange={(e) => {
+                                                const newValue = e.target.value;
                                                 updateSiteData(currentPage, {
-                                                    [selectedComponent.id]: e.target.value
+                                                    [selectedComponent.id]: newValue
                                                 });
                                                 
                                                 // Push immediate text update
                                                 pushLiveUpdate('text', {
-                                                    [selectedComponent.id]: e.target.value
+                                                    [selectedComponent.id]: newValue
                                                 });
                                             }}
                                             className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-white"
@@ -801,9 +856,7 @@
                                     src={getCurrentUrl()}
                                     className="live-iframe"
                                     title="Live Website Preview"
-                                    onLoad={() => {
-                                        debugLog(`📄 Loaded page: ${currentPage}`);
-                                    }}
+                                    onLoad={handleIframeLoad}
                                 />
                             </div>
                         </div>
@@ -811,7 +864,7 @@
                         {/* Live Changes Indicator */}
                         {liveChanges > 0 && (
                             <div className="live-changes-indicator bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
-                                🔴 {liveChanges} live changes broadcasted
+                                🔴 {liveChanges} live changes applied
                             </div>
                         )}
                     </div>
