@@ -1037,26 +1037,343 @@
                 const isPaidUser = user.tier === 'WEEKLY' || user.tier === 'MONTHLY' || user.isAdmin;
                 const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
 
+                // Create arrays for conditional content to ensure proper keys
+                const dashboardSections = [];
+                
+                // Add error section
+                if (error) {
+                    dashboardSections.push(
+                        <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                            {error}
+                            <button 
+                                onClick={() => setError('')}
+                                className="float-right text-red-500 hover:text-red-700"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    );
+                }
+                
+                // Add upgrade banner section
+                if (!isPaidUser) {
+                    dashboardSections.push(
+                        <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="text-4xl">🚀</div>
+                                    <div>
+                                        <h3 className="text-xl font-black">UPGRADE TO PREMIUM - TO THE MOON! 🌕</h3>
+                                        <p className="text-yellow-100">
+                                            You're on the FREE tier with limited access. Upgrade to get:
+                                        </p>
+                                        <ul className="text-sm text-yellow-100 mt-2 space-y-1">
+                                            <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
+                                            <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
+                                            <li key="upgrade-feature-3">• Full chat participation & history</li>
+                                            <li key="upgrade-feature-4">• Priority customer support</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setShowSubscriptionPicker(true)}
+                                    className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
+                                >
+                                    💎 UPGRADE NOW
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+                
+                // Add admin panel section
+                if (user.isAdmin && showAdminPanel) {
+                    dashboardSections.push(
+                        <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+                            <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
+                                ⚙️ Admin Panel - Create Alert
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
+                                    <select
+                                        value={newAlert.type}
+                                        onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="NEWS">News Alert</option>
+                                        <option value="BOT_SIGNAL">Bot Signal</option>
+                                        <option value="MARKET_UPDATE">Market Update</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                                    <select
+                                        value={newAlert.priority}
+                                        onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="LOW">Low</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="HIGH">High</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                    <input
+                                        type="text"
+                                        value={newAlert.title}
+                                        onChange={(e) => setNewAlert({...newAlert, title: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="Alert title"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                                    <textarea
+                                        value={newAlert.message}
+                                        onChange={(e) => setNewAlert({...newAlert, message: e.target.value})}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        rows="3"
+                                        placeholder="Alert message"
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleCreateAlert}
+                                    disabled={loading}
+                                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    ➕ {loading ? 'Creating...' : 'Create Alert'}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // Add main grid section
+                dashboardSections.push(
+                    <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                        <div className="lg:col-span-3 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
+                                <div className="flex gap-2">
+                                    {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
+                                        <button
+                                            key={`filter-${type}-${index}`}
+                                            onClick={() => setFilterType(type)}
+                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+                                                filterType === type 
+                                                    ? 'bg-blue-500 text-white' 
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                            }`}
+                                        >
+                                            {type === 'BOT_SIGNAL' ? 'Bot Signals' : 
+                                             type === 'NEWS' ? 'News' : 
+                                             type === 'MARKET_UPDATE' ? 'Market' : 'All'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {limitedAlerts.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {limitedAlerts.map(alert => (
+                                            <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
+                                                alert.priority === 'HIGH' ? 'border-red-500' :
+                                                alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-300'
+                                            }`}>
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <span className="text-xl">
+                                                                {alert.type === 'BOT_SIGNAL' ? '🤖' : 
+                                                                 alert.type === 'MARKET_UPDATE' ? '📊' : '🔔'}
+                                                            </span>
+                                                            <div>
+                                                                <h3 className="font-bold text-gray-900">{alert.title}</h3>
+                                                                {alert.botName && (
+                                                                    <p className="text-sm text-blue-600 font-medium">{alert.botName}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <p className="text-gray-700 mb-3">{alert.message}</p>
+                                                        
+                                                        {alert.pnl && (
+                                                            <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                                                                alert.pnl.includes('+') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                            }`}>
+                                                                {alert.pnl.includes('+') ? '📈' : '📉'}
+                                                                {alert.pnl}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="text-right ml-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span>🕐</span>
+                                                            <span className="text-sm text-gray-500">{formatTimeAgo(alert.createdAt)}</span>
+                                                            {user.isAdmin && (
+                                                                <button
+                                                                    onClick={() => handleDeleteAlert(alert._id)}
+                                                                    className="p-1 text-red-400 hover:text-red-600"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        
+                                        {!isPaidUser && filteredAlerts.length > 3 && (
+                                            <div key="paywall-section" className="relative">
+                                                <div className="filter blur-sm pointer-events-none">
+                                                    {filteredAlerts.slice(3, 6).map(alert => (
+                                                        <div key={`preview-${alert._id}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center gap-3 mb-2">
+                                                                        <span className="text-xl">🔔</span>
+                                                                        <h3 className="font-bold text-gray-900">{alert.title}</h3>
+                                                                    </div>
+                                                                    <p className="text-gray-700">{alert.message}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                
+                                                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/50 flex items-center justify-center">
+                                                    <div className="text-center bg-white p-8 rounded-lg shadow-xl border border-orange-200">
+                                                        <div className="text-4xl mb-4">🔒</div>
+                                                        <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
+                                                        <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
+                                                        <button 
+                                                            onClick={() => setShowSubscriptionPicker(true)}
+                                                            className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
+                                                        >
+                                                            🚀 UPGRADE NOW
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-1">
+                            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    👥 Active Users ({members.length})
+                                </h3>
+                                
+                                <div className="space-y-3">
+                                    {(isPaidUser ? members : members.slice(0, 3)).map(member => (
+                                        <div key={member.id} className="flex items-center gap-3">
+                                            <div className="relative">
+                                                <img src={member.avatar} alt="" className="w-10 h-10 rounded-full" />
+                                                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
+                                                    member.status === 'online' ? 'bg-green-500' :
+                                                    member.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
+                                                }`}></div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-medium text-gray-900 text-sm">{member.username}</p>
+                                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                                    member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
+                                                    member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
+                                                    member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {member.tier}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    {!isPaidUser && members.length > 3 && (
+                                        <div className="text-center py-3 text-sm text-gray-500 border-t">
+                                            <p>+{members.length - 3} more members</p>
+                                            <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
+                                                Upgrade to see all
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-lg shadow-sm p-6 relative">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    📈 Live Markets
+                                    {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">LIMITED</span>}
+                                </h3>
+                                
+                                {isPaidUser ? (
+                                    <div className="space-y-3">
+                                        {Object.entries(marketData).map(([symbol, data]) => (
+                                            <div key={symbol} className="flex justify-between items-center">
+                                                <span className="font-medium text-gray-900">{symbol}</span>
+                                                <div className="text-right">
+                                                    <div className="font-bold text-gray-900">
+                                                        ${data.price.toFixed(2)}
+                                                    </div>
+                                                    <div className={`text-xs ${
+                                                        data.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                                                    }`}>
+                                                        {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="text-4xl mb-3">🔒</div>
+                                        <p className="text-gray-600 mb-3">Real-time market data</p>
+                                        <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
+                                        <button 
+                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
+                                        >
+                                            Unlock Premium
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+
                 return (
-                    <div key="dashboard-container" className="min-h-screen bg-gray-50 relative">
-                        <header key="dashboard-header" className="bg-white shadow-sm border-b">
+                    <div className="min-h-screen bg-gray-50 relative">
+                        <header className="bg-white shadow-sm border-b">
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
-                                    <div key="dashboard-logo" className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3">
                                         <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
                                             RTi Cashflowops
                                         </div>
                                     </div>
 
-                                    <div key="dashboard-nav" className="flex items-center gap-4">
-                                        <div key="live-indicator" className="flex items-center gap-2 text-green-600">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2 text-green-600">
                                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                             <span className="text-sm font-medium">Live</span>
                                         </div>
 
                                         {user.isAdmin && (
                                             <button
-                                                key="admin-panel-toggle"
                                                 onClick={() => setShowAdminPanel(!showAdminPanel)}
                                                 className="flex items-center gap-2 bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600"
                                             >
@@ -1064,7 +1381,7 @@
                                             </button>
                                         )}
 
-                                        <div key="user-info" className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3">
                                             <img src={user.avatar} alt="" className="w-8 h-8 rounded-full" />
                                             <div className="text-right">
                                                 <p className="text-sm font-medium text-gray-900">{user.username}</p>
@@ -1078,7 +1395,6 @@
                                                 </p>
                                             </div>
                                             <button
-                                                key="logout-button"
                                                 onClick={() => {
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
@@ -1098,311 +1414,12 @@
                             </div>
                         </header>
 
-                        <div key="dashboard-main" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                            {error && (
-                                <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-                                    {error}
-                                    <button 
-                                        onClick={() => setError('')}
-                                        className="float-right text-red-500 hover:text-red-700"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            )}
-
-                            {!isPaidUser && (
-                                <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-4xl">🚀</div>
-                                            <div>
-                                                <h3 className="text-xl font-black">UPGRADE TO PREMIUM - TO THE MOON! 🌕</h3>
-                                                <p className="text-yellow-100">
-                                                    You're on the FREE tier with limited access. Upgrade to get:
-                                                </p>
-                                                <ul className="text-sm text-yellow-100 mt-2 space-y-1">
-                                                    <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
-                                                    <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
-                                                    <li key="upgrade-feature-3">• Full chat participation & history</li>
-                                                    <li key="upgrade-feature-4">• Priority customer support</li>
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            key="upgrade-button"
-                                            onClick={() => setShowSubscriptionPicker(true)}
-                                            className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
-                                        >
-                                            💎 UPGRADE NOW
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {user.isAdmin && showAdminPanel && (
-                                <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-                                    <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
-                                        ⚙️ Admin Panel - Create Alert
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div key="alert-type-field">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
-                                            <select
-                                                value={newAlert.type}
-                                                onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option key="alert-type-news" value="NEWS">News Alert</option>
-                                                <option key="alert-type-bot" value="BOT_SIGNAL">Bot Signal</option>
-                                                <option key="alert-type-market" value="MARKET_UPDATE">Market Update</option>
-                                            </select>
-                                        </div>
-                                        <div key="alert-priority-field">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                            <select
-                                                value={newAlert.priority}
-                                                onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            >
-                                                <option key="priority-low" value="LOW">Low</option>
-                                                <option key="priority-medium" value="MEDIUM">Medium</option>
-                                                <option key="priority-high" value="HIGH">High</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div key="alert-title-field">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                                            <input
-                                                type="text"
-                                                value={newAlert.title}
-                                                onChange={(e) => setNewAlert({...newAlert, title: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                placeholder="Alert title"
-                                            />
-                                        </div>
-                                        <div key="alert-message-field">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                                            <textarea
-                                                value={newAlert.message}
-                                                onChange={(e) => setNewAlert({...newAlert, message: e.target.value})}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                rows="3"
-                                                placeholder="Alert message"
-                                            />
-                                        </div>
-                                        <button
-                                            key="create-alert-button"
-                                            onClick={handleCreateAlert}
-                                            disabled={loading}
-                                            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50"
-                                        >
-                                            ➕ {loading ? 'Creating...' : 'Create Alert'}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                                <div key="alerts-section" className="lg:col-span-3 space-y-6">
-                                    <div key="alerts-header" className="flex items-center justify-between">
-                                        <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
-                                        <div className="flex gap-2">
-                                            {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
-                                                <button
-                                                    key={`filter-${type}-${index}`}
-                                                    onClick={() => setFilterType(type)}
-                                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                                                        filterType === type 
-                                                            ? 'bg-blue-500 text-white' 
-                                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                                    }`}
-                                                >
-                                                    {type === 'BOT_SIGNAL' ? 'Bot Signals' : 
-                                                     type === 'NEWS' ? 'News' : 
-                                                     type === 'MARKET_UPDATE' ? 'Market' : 'All'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div key="alerts-list" className="space-y-4">
-                                        {limitedAlerts.length === 0 ? (
-                                            <div key="alerts-empty" className="text-center py-8 text-gray-500">
-                                                No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
-                                            </div>
-                                        ) : (
-                                            <div key="alerts-container" className="space-y-4">
-                                                {limitedAlerts.map(alert => (
-                                                    <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
-                                                        alert.priority === 'HIGH' ? 'border-red-500' :
-                                                        alert.priority === 'MEDIUM' ? 'border-yellow-500' : 'border-gray-300'
-                                                    }`}>
-                                                        <div className="flex items-start justify-between">
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center gap-3 mb-2">
-                                                                    <span className="text-xl">
-                                                                        {alert.type === 'BOT_SIGNAL' ? '🤖' : 
-                                                                         alert.type === 'MARKET_UPDATE' ? '📊' : '🔔'}
-                                                                    </span>
-                                                                    <div>
-                                                                        <h3 className="font-bold text-gray-900">{alert.title}</h3>
-                                                                        {alert.botName && (
-                                                                            <p className="text-sm text-blue-600 font-medium">{alert.botName}</p>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                
-                                                                <p className="text-gray-700 mb-3">{alert.message}</p>
-                                                                
-                                                                {alert.pnl && (
-                                                                    <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-                                                                        alert.pnl.includes('+') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                                    }`}>
-                                                                        {alert.pnl.includes('+') ? '📈' : '📉'}
-                                                                        {alert.pnl}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            
-                                                            <div className="text-right ml-4">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span>🕐</span>
-                                                                    <span className="text-sm text-gray-500">{formatTimeAgo(alert.createdAt)}</span>
-                                                                    {user.isAdmin && (
-                                                                        <button
-                                                                            onClick={() => handleDeleteAlert(alert._id)}
-                                                                            className="p-1 text-red-400 hover:text-red-600"
-                                                                        >
-                                                                            🗑️
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                
-                                                {!isPaidUser && filteredAlerts.length > 3 && (
-                                                    <div key="paywall-section" className="relative">
-                                                        <div className="filter blur-sm pointer-events-none">
-                                                            {filteredAlerts.slice(3, 6).map(alert => (
-                                                                <div key={`preview-${alert._id}`} className="bg-white rounded-lg shadow-sm border-l-4 border-gray-300 p-6 mb-4">
-                                                                    <div className="flex items-start justify-between">
-                                                                        <div className="flex-1">
-                                                                            <div className="flex items-center gap-3 mb-2">
-                                                                                <span className="text-xl">🔔</span>
-                                                                                <h3 className="font-bold text-gray-900">{alert.title}</h3>
-                                                                            </div>
-                                                                            <p className="text-gray-700">{alert.message}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        
-                                                        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/95 to-white/50 flex items-center justify-center">
-                                                            <div className="text-center bg-white p-8 rounded-lg shadow-xl border border-orange-200">
-                                                                <div className="text-4xl mb-4">🔒</div>
-                                                                <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
-                                                                <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
-                                                                <button 
-                                                                    onClick={() => setShowSubscriptionPicker(true)}
-                                                                    className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
-                                                                >
-                                                                    🚀 UPGRADE NOW
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div key="sidebar-section" className="lg:col-span-1">
-                                    <div key="users-panel" className="bg-white rounded-lg shadow-sm p-6 mb-6">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            👥 Active Users ({members.length})
-                                        </h3>
-                                        
-                                        <div className="space-y-3">
-                                            {(isPaidUser ? members : members.slice(0, 3)).map(member => (
-                                                <div key={member.id} className="flex items-center gap-3">
-                                                    <div className="relative">
-                                                        <img src={member.avatar} alt="" className="w-10 h-10 rounded-full" />
-                                                        <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${
-                                                            member.status === 'online' ? 'bg-green-500' :
-                                                            member.status === 'away' ? 'bg-yellow-500' : 'bg-gray-400'
-                                                        }`}></div>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-medium text-gray-900 text-sm">{member.username}</p>
-                                                        <span className={`text-xs px-2 py-0.5 rounded ${
-                                                            member.tier === 'MONTHLY' ? 'bg-green-100 text-green-800' :
-                                                            member.tier === 'WEEKLY' ? 'bg-blue-100 text-blue-800' :
-                                                            member.tier === 'ADMIN' ? 'bg-red-100 text-red-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                            {member.tier}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            
-                                            {!isPaidUser && members.length > 3 && (
-                                                <div key="users-upgrade-prompt" className="text-center py-3 text-sm text-gray-500 border-t">
-                                                    <p>+{members.length - 3} more members</p>
-                                                    <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
-                                                        Upgrade to see all
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div key="markets-panel" className="bg-white rounded-lg shadow-sm p-6 relative">
-                                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                            📈 Live Markets
-                                            {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">LIMITED</span>}
-                                        </h3>
-                                        
-                                        {isPaidUser ? (
-                                            <div key="markets-data" className="space-y-3">
-                                                {Object.entries(marketData).map(([symbol, data]) => (
-                                                    <div key={symbol} className="flex justify-between items-center">
-                                                        <span className="font-medium text-gray-900">{symbol}</span>
-                                                        <div className="text-right">
-                                                            <div className="font-bold text-gray-900">
-                                                                ${data.price.toFixed(2)}
-                                                            </div>
-                                                            <div className={`text-xs ${
-                                                                data.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
-                                                            }`}>
-                                                                {data.changePercent >= 0 ? '+' : ''}{data.changePercent.toFixed(2)}%
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div key="markets-locked" className="text-center py-8">
-                                                <div className="text-4xl mb-3">🔒</div>
-                                                <p className="text-gray-600 mb-3">Real-time market data</p>
-                                                <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
-                                                <button 
-                                                    onClick={() => setShowSubscriptionPicker(true)}
-                                                    className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
-                                                >
-                                                    Unlock Premium
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                            {dashboardSections.map((section, index) => (
+                                <React.Fragment key={`section-${index}`}>
+                                    {section}
+                                </React.Fragment>
+                            ))}
                         </div>
 
                         <ChatPanel />
