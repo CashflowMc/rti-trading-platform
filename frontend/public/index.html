@@ -480,7 +480,7 @@
                                 const randomDuration = 3 + ((i * 3) % 20) / 10;
                                 return (
                                     <div 
-                                        key={`money-${i}`}
+                                        key={`landing-money-${i}`}
                                         className="falling-money"
                                         style={{
                                             left: `${randomLeft}%`,
@@ -588,13 +588,14 @@
 
                             <div className="bg-black/80 backdrop-blur-lg border border-green-500/30 rounded-2xl shadow-2xl p-8 w-full max-w-md">
                                 {error && (
-                                    <div className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
+                                    <div key="landing-error" className="bg-red-500/20 border border-red-500 text-red-300 px-4 py-2 rounded-lg mb-4">
                                         {error}
                                     </div>
                                 )}
 
                                 <div className="flex gap-2 mb-6">
                                     <button
+                                        key="login-tab"
                                         onClick={() => setIsRegistering(false)}
                                         className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                                             !isRegistering 
@@ -605,6 +606,7 @@
                                         Login
                                     </button>
                                     <button
+                                        key="register-tab"
                                         onClick={() => setIsRegistering(true)}
                                         className={`flex-1 py-2 px-4 rounded-lg font-medium ${
                                             isRegistering 
@@ -616,7 +618,7 @@
                                     </button>
                                 </div>
 
-                                <div className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                                <div key="admin-section" className="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
                                     <div className="flex items-center justify-between">
                                         <span className="text-red-300 text-sm font-medium">🔐 Admin Access</span>
                                         <button
@@ -639,7 +641,7 @@
 
                                 <div className="space-y-6">
                                     {isRegistering && (
-                                        <div>
+                                        <div key="email-field">
                                             <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Email</label>
                                             <input
                                                 type="email"
@@ -651,7 +653,7 @@
                                         </div>
                                     )}
 
-                                    <div>
+                                    <div key="username-field">
                                         <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Username</label>
                                         <input
                                             type="text"
@@ -668,7 +670,7 @@
                                         />
                                     </div>
 
-                                    <div>
+                                    <div key="password-field">
                                         <label className="block text-sm font-bold text-green-400 mb-2 uppercase tracking-wide">Password</label>
                                         <input
                                             type="password"
@@ -686,6 +688,7 @@
                                     </div>
 
                                     <button
+                                        key="submit-button"
                                         onClick={isRegistering ? handleRegister : handleLogin}
                                         disabled={loading}
                                         className="w-full bg-gradient-to-r from-green-500 via-yellow-500 to-orange-500 text-black py-4 rounded-lg font-black text-lg hover:from-green-600 hover:via-yellow-600 hover:to-orange-600 transition-all duration-300 transform hover:scale-105 shadow-lg uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
@@ -799,7 +802,7 @@
 
                         <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-12">
                             <div className="w-full max-w-6xl">
-                                <div className="text-center mb-12">
+                                <div key="subscription-header" className="text-center mb-12">
                                     <div className="text-6xl mb-6">🚀🌕</div>
                                     <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-wider"
                                         style={{ fontFamily: 'Impact, Arial Black, sans-serif' }}>
@@ -814,7 +817,7 @@
                                 </div>
 
                                 {error && (
-                                    <div className="max-w-2xl mx-auto mb-8 bg-red-500/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg text-center">
+                                    <div key="subscription-error" className="max-w-2xl mx-auto mb-8 bg-red-500/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg text-center">
                                         {error}
                                     </div>
                                 )}
@@ -827,14 +830,14 @@
                                                 : 'border-gray-500 hover:border-green-400'
                                         }`}>
                                             {plan.popular && (
-                                                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                                                <div key={`${plan.id}-popular`} className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                                                     <span className="bg-green-500 text-black px-4 py-2 rounded-full text-sm font-black uppercase">
                                                         🔥 Most Popular
                                                     </span>
                                                 </div>
                                             )}
 
-                                            <div className="text-center mb-6">
+                                            <div key={`${plan.id}-header`} className="text-center mb-6">
                                                 <h3 className="text-2xl font-black text-white mb-2">{plan.name}</h3>
                                                 <div className="text-4xl font-black text-green-400 mb-2">
                                                     ${plan.price}
@@ -845,7 +848,7 @@
                                                 </p>
                                             </div>
 
-                                            <ul className="space-y-3 mb-8">
+                                            <ul key={`${plan.id}-features`} className="space-y-3 mb-8">
                                                 {plan.features.map((feature, idx) => (
                                                     <li key={`${plan.id}-feature-${idx}`} className="flex items-center text-gray-300">
                                                         <span className="text-green-400 mr-3">✅</span>
@@ -855,6 +858,7 @@
                                             </ul>
 
                                             <button
+                                                key={`${plan.id}-button`}
                                                 onClick={() => handlePlanSelection(plan.id)}
                                                 disabled={isProcessing}
                                                 className={`w-full py-4 px-6 rounded-lg font-black text-lg transition-all duration-300 ${
@@ -869,7 +873,7 @@
                                     ))}
                                 </div>
 
-                                <div className="text-center">
+                                <div key="subscription-footer" className="text-center">
                                     <button
                                         onClick={handleSkipForNow}
                                         className="text-gray-400 hover:text-white transition-colors text-sm underline"
@@ -892,10 +896,11 @@
                 const maxMessages = isPaidUser ? 100 : 10;
 
                 return (
-                    <div className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
+                    <div key="chat-panel" className={`fixed bottom-0 right-4 z-50 transition-all duration-300 ${
                         chatExpanded ? 'w-96 h-96' : 'w-80 h-12'
                     }`}>
                         <div 
+                            key="chat-header"
                             className="bg-gradient-to-r from-green-500 to-blue-600 text-white px-4 py-3 rounded-t-lg cursor-pointer flex items-center justify-between hover:from-green-600 hover:to-blue-700 transition-all"
                             onClick={() => setChatExpanded(!chatExpanded)}
                         >
@@ -917,29 +922,30 @@
                         </div>
 
                         {chatExpanded && (
-                            <div className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
+                            <div key="chat-content" className="bg-white border-l border-r border-gray-200 flex flex-col h-80">
                                 <div 
+                                    key="chat-messages"
                                     ref={chatMessagesRef}
                                     className="flex-1 overflow-y-auto p-3 space-y-3 chat-scrollbar"
                                 >
                                     {chatMessages.length === 0 ? (
-                                        <div className="text-center text-gray-500 py-8">
+                                        <div key="chat-empty" className="text-center text-gray-500 py-8">
                                             <span className="text-4xl mb-2 block">🚀</span>
                                             <p className="text-sm">Welcome to RTi Trading Chat!</p>
                                             <p className="text-xs text-gray-400 mt-1">Start the conversation...</p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-3">
+                                        <div key="chat-messages-list" className="space-y-3">
                                             {chatMessages.slice(-maxMessages).map((message) => (
                                                 <div key={message.id} className="chat-message-enter">
                                                     {message.type === 'system' ? (
-                                                        <div className="text-center">
+                                                        <div key={`${message.id}-system`} className="text-center">
                                                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                                                                 {message.message}
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <div className="flex items-start gap-2">
+                                                        <div key={`${message.id}-user`} className="flex items-start gap-2">
                                                             <img 
                                                                 src={message.user.avatar} 
                                                                 alt="" 
@@ -969,7 +975,7 @@
                                     )}
                                     
                                     {!isPaidUser && chatMessages.length > maxMessages && (
-                                        <div className="text-center py-2 border-t">
+                                        <div key="chat-upgrade-prompt" className="text-center py-2 border-t">
                                             <p className="text-xs text-gray-500">
                                                 Showing last {maxMessages} messages
                                             </p>
@@ -983,7 +989,7 @@
                                     )}
                                 </div>
 
-                                <div className="border-t p-3">
+                                <div key="chat-input" className="border-t p-3">
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -1032,24 +1038,25 @@
                 const limitedAlerts = isPaidUser ? filteredAlerts : filteredAlerts.slice(0, 3);
 
                 return (
-                    <div className="min-h-screen bg-gray-50 relative">
-                        <header className="bg-white shadow-sm border-b">
+                    <div key="dashboard-container" className="min-h-screen bg-gray-50 relative">
+                        <header key="dashboard-header" className="bg-white shadow-sm border-b">
                             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                                 <div className="flex justify-between items-center h-16">
-                                    <div className="flex items-center gap-3">
+                                    <div key="dashboard-logo" className="flex items-center gap-3">
                                         <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-orange-500">
                                             RTi Cashflowops
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2 text-green-600">
+                                    <div key="dashboard-nav" className="flex items-center gap-4">
+                                        <div key="live-indicator" className="flex items-center gap-2 text-green-600">
                                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                                             <span className="text-sm font-medium">Live</span>
                                         </div>
 
                                         {user.isAdmin && (
                                             <button
+                                                key="admin-panel-toggle"
                                                 onClick={() => setShowAdminPanel(!showAdminPanel)}
                                                 className="flex items-center gap-2 bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600"
                                             >
@@ -1057,7 +1064,7 @@
                                             </button>
                                         )}
 
-                                        <div className="flex items-center gap-3">
+                                        <div key="user-info" className="flex items-center gap-3">
                                             <img src={user.avatar} alt="" className="w-8 h-8 rounded-full" />
                                             <div className="text-right">
                                                 <p className="text-sm font-medium text-gray-900">{user.username}</p>
@@ -1071,6 +1078,7 @@
                                                 </p>
                                             </div>
                                             <button
+                                                key="logout-button"
                                                 onClick={() => {
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
@@ -1090,9 +1098,9 @@
                             </div>
                         </header>
 
-                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <div key="dashboard-main" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                             {error && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+                                <div key="dashboard-error" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
                                     {error}
                                     <button 
                                         onClick={() => setError('')}
@@ -1104,7 +1112,7 @@
                             )}
 
                             {!isPaidUser && (
-                                <div className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
+                                <div key="upgrade-banner" className="bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 text-white rounded-lg p-6 mb-8 shadow-lg">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className="text-4xl">🚀</div>
@@ -1114,14 +1122,15 @@
                                                     You're on the FREE tier with limited access. Upgrade to get:
                                                 </p>
                                                 <ul className="text-sm text-yellow-100 mt-2 space-y-1">
-                                                    <li>• Unlimited live alerts & bot signals</li>
-                                                    <li>• Real-time market data & PnL tracking</li>
-                                                    <li>• Full chat participation & history</li>
-                                                    <li>• Priority customer support</li>
+                                                    <li key="upgrade-feature-1">• Unlimited live alerts & bot signals</li>
+                                                    <li key="upgrade-feature-2">• Real-time market data & PnL tracking</li>
+                                                    <li key="upgrade-feature-3">• Full chat participation & history</li>
+                                                    <li key="upgrade-feature-4">• Priority customer support</li>
                                                 </ul>
                                             </div>
                                         </div>
                                         <button 
+                                            key="upgrade-button"
                                             onClick={() => setShowSubscriptionPicker(true)}
                                             className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
                                         >
@@ -1132,38 +1141,38 @@
                             )}
 
                             {user.isAdmin && showAdminPanel && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
+                                <div key="admin-panel" className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
                                     <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
                                         ⚙️ Admin Panel - Create Alert
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
+                                        <div key="alert-type-field">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Alert Type</label>
                                             <select
                                                 value={newAlert.type}
                                                 onChange={(e) => setNewAlert({...newAlert, type: e.target.value})}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
-                                                <option value="NEWS">News Alert</option>
-                                                <option value="BOT_SIGNAL">Bot Signal</option>
-                                                <option value="MARKET_UPDATE">Market Update</option>
+                                                <option key="alert-type-news" value="NEWS">News Alert</option>
+                                                <option key="alert-type-bot" value="BOT_SIGNAL">Bot Signal</option>
+                                                <option key="alert-type-market" value="MARKET_UPDATE">Market Update</option>
                                             </select>
                                         </div>
-                                        <div>
+                                        <div key="alert-priority-field">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                                             <select
                                                 value={newAlert.priority}
                                                 onChange={(e) => setNewAlert({...newAlert, priority: e.target.value})}
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
-                                                <option value="LOW">Low</option>
-                                                <option value="MEDIUM">Medium</option>
-                                                <option value="HIGH">High</option>
+                                                <option key="priority-low" value="LOW">Low</option>
+                                                <option key="priority-medium" value="MEDIUM">Medium</option>
+                                                <option key="priority-high" value="HIGH">High</option>
                                             </select>
                                         </div>
                                     </div>
                                     <div className="space-y-4">
-                                        <div>
+                                        <div key="alert-title-field">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                                             <input
                                                 type="text"
@@ -1173,7 +1182,7 @@
                                                 placeholder="Alert title"
                                             />
                                         </div>
-                                        <div>
+                                        <div key="alert-message-field">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                                             <textarea
                                                 value={newAlert.message}
@@ -1184,6 +1193,7 @@
                                             />
                                         </div>
                                         <button
+                                            key="create-alert-button"
                                             onClick={handleCreateAlert}
                                             disabled={loading}
                                             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2 disabled:opacity-50"
@@ -1194,9 +1204,9 @@
                                 </div>
                             )}
 
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                                <div className="lg:col-span-3 space-y-6">
-                                    <div className="flex items-center justify-between">
+                            <div key="dashboard-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                                <div key="alerts-section" className="lg:col-span-3 space-y-6">
+                                    <div key="alerts-header" className="flex items-center justify-between">
                                         <h2 className="text-2xl font-bold text-gray-900">Live Alerts</h2>
                                         <div className="flex gap-2">
                                             {['ALL', 'BOT_SIGNAL', 'NEWS', 'MARKET_UPDATE'].map((type, index) => (
@@ -1217,13 +1227,13 @@
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div key="alerts-list" className="space-y-4">
                                         {limitedAlerts.length === 0 ? (
-                                            <div className="text-center py-8 text-gray-500">
+                                            <div key="alerts-empty" className="text-center py-8 text-gray-500">
                                                 No alerts found. {user.isAdmin && 'Create one using the admin panel above!'}
                                             </div>
                                         ) : (
-                                            <div className="space-y-4">
+                                            <div key="alerts-container" className="space-y-4">
                                                 {limitedAlerts.map(alert => (
                                                     <div key={alert._id} className={`bg-white rounded-lg shadow-sm border-l-4 p-6 ${
                                                         alert.priority === 'HIGH' ? 'border-red-500' :
@@ -1312,8 +1322,8 @@
                                     </div>
                                 </div>
 
-                                <div className="lg:col-span-1">
-                                    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                                <div key="sidebar-section" className="lg:col-span-1">
+                                    <div key="users-panel" className="bg-white rounded-lg shadow-sm p-6 mb-6">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                             👥 Active Users ({members.length})
                                         </h3>
@@ -1343,7 +1353,7 @@
                                             ))}
                                             
                                             {!isPaidUser && members.length > 3 && (
-                                                <div className="text-center py-3 text-sm text-gray-500 border-t">
+                                                <div key="users-upgrade-prompt" className="text-center py-3 text-sm text-gray-500 border-t">
                                                     <p>+{members.length - 3} more members</p>
                                                     <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
                                                         Upgrade to see all
@@ -1353,14 +1363,14 @@
                                         </div>
                                     </div>
 
-                                    <div className="bg-white rounded-lg shadow-sm p-6 relative">
+                                    <div key="markets-panel" className="bg-white rounded-lg shadow-sm p-6 relative">
                                         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                             📈 Live Markets
                                             {!isPaidUser && <span className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded">LIMITED</span>}
                                         </h3>
                                         
                                         {isPaidUser ? (
-                                            <div className="space-y-3">
+                                            <div key="markets-data" className="space-y-3">
                                                 {Object.entries(marketData).map(([symbol, data]) => (
                                                     <div key={symbol} className="flex justify-between items-center">
                                                         <span className="font-medium text-gray-900">{symbol}</span>
@@ -1378,7 +1388,7 @@
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="text-center py-8">
+                                            <div key="markets-locked" className="text-center py-8">
                                                 <div className="text-4xl mb-3">🔒</div>
                                                 <p className="text-gray-600 mb-3">Real-time market data</p>
                                                 <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
