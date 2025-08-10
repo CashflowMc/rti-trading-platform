@@ -160,6 +160,7 @@
         let dashboardInitialized = false;
         let socketInitialized = false;
         let authCheckCompleted = false;
+        let routingInitialized = false;
         let apiCallsInProgress = new Set();
         let componentRenderCount = 0;
 
@@ -187,7 +188,7 @@
             }
 
             // Track initialization steps
-            if (message.includes('Dashboard Loaded') || message.includes('Socket') || message.includes('Auth')) {
+            if (message.includes('Dashboard Loaded') || message.includes('Socket') || message.includes('Auth') || message.includes('ROUTING')) {
                 initializationSteps.push(logEntry);
             }
 
@@ -245,6 +246,7 @@
                     <div style="margin-bottom: 5px;">Dashboard Init: ${dashboardInitialized ? '✅' : '❌'}</div>
                     <div style="margin-bottom: 5px;">Socket Init: ${socketInitialized ? '✅' : '❌'}</div>
                     <div style="margin-bottom: 5px;">Auth Complete: ${authCheckCompleted ? '✅' : '❌'}</div>
+                    <div style="margin-bottom: 5px;">Routing Init: ${routingInitialized ? '✅' : '❌'}</div>
                     <div style="margin-bottom: 5px;">API Calls Active: ${apiCallsInProgress.size}</div>
                     <hr style="margin: 10px 0;">
                     <div style="font-weight: bold;">Recent Logs:</div>
@@ -333,6 +335,92 @@
             const [chatExpanded, setChatExpanded] = useState(false);
             const [unreadMessages, setUnreadMessages] = useState(0);
             const chatMessagesRef = useRef(null);
+
+            // 🌐 URL ROUTING FUNCTIONS
+            const updateURL = (path) => {
+                const newUrl = `${window.location.origin}${path}`;
+                debugLog(`🌐 ROUTING: Updating URL to ${path}`, { newUrl });
+                window.history.pushState({}, '', path);
+            };
+
+            const navigateToPage = (page) => {
+                debugLog(`🌐 ROUTING: Navigating to ${page}`);
+                
+                switch (page) {
+                    case 'landing':
+                        setShowLanding(true);
+                        setShowSubscriptionPicker(false);
+                        updateURL('/');
+                        break;
+                    case 'subscription':
+                        setShowLanding(false);
+                        setShowSubscriptionPicker(true);
+                        updateURL('/subscription');
+                        break;
+                    case 'dashboard':
+                        setShowLanding(false);
+                        setShowSubscriptionPicker(false);
+                        updateURL('/dashboard');
+                        break;
+                    default:
+                        debugLog(`🌐 ROUTING: Unknown page ${page}`, null, 'WARN');
+                }
+            };
+
+            // 🌐 URL-BASED ROUTING INITIALIZATION
+            useEffect(() => {
+                if (routingInitialized) {
+                    debugLog('🌐 ROUTING: Skipping - already initialized', null, 'WARN');
+                    return;
+                }
+
+                routingInitialized = true;
+                const currentPath = window.location.pathname;
+                debugLog('🌐 ROUTING: Initializing URL-based routing', { 
+                    currentPath,
+                    origin: window.location.origin,
+                    fullURL: window.location.href 
+                }, 'SUCCESS');
+
+                // Set initial state based on URL
+                if (currentPath === '/dashboard') {
+                    debugLog('🌐 ROUTING: URL indicates dashboard - setting initial state');
+                    setShowLanding(false);
+                    setShowSubscriptionPicker(false);
+                } else if (currentPath === '/subscription') {
+                    debugLog('🌐 ROUTING: URL indicates subscription - setting initial state');
+                    setShowLanding(false);
+                    setShowSubscriptionPicker(true);
+                } else {
+                    debugLog('🌐 ROUTING: URL indicates landing page - setting initial state');
+                    setShowLanding(true);
+                    setShowSubscriptionPicker(false);
+                }
+
+                // Handle browser back/forward buttons
+                const handlePopState = (event) => {
+                    const path = window.location.pathname;
+                    debugLog('🌐 ROUTING: Browser navigation detected', { path });
+                    
+                    if (path === '/dashboard') {
+                        setShowLanding(false);
+                        setShowSubscriptionPicker(false);
+                    } else if (path === '/subscription') {
+                        setShowLanding(false);
+                        setShowSubscriptionPicker(true);
+                    } else {
+                        setShowLanding(true);
+                        setShowSubscriptionPicker(false);
+                    }
+                };
+
+                window.addEventListener('popstate', handlePopState);
+
+                return () => {
+                    window.removeEventListener('popstate', handlePopState);
+                    routingInitialized = false;
+                };
+            }, []);
 
             // Initialize debug panels when component mounts
             useEffect(() => {
@@ -775,13 +863,12 @@
 
                         if (requiresSubscriptionSelection(response.user)) {
                             debugLog('LOGIN: Redirecting to subscription picker');
-                            setShowSubscriptionPicker(true);
-                            setShowLanding(false);
+                            navigateToPage('subscription');
                             return;
                         }
 
                         debugLog('LOGIN: Redirecting to dashboard');
-                        setShowLanding(false);
+                        navigateToPage('dashboard');
                     } catch (err) {
                         trackError(err, 'Login');
                         setError(err.message);
@@ -819,8 +906,7 @@
                         setUser(response.user);
                         
                         debugLog('REGISTER: New user - showing subscription picker');
-                        setShowSubscriptionPicker(true);
-                        setShowLanding(false);
+                        navigateToPage('subscription');
                     } catch (err) {
                         trackError(err, 'Registration');
                         setError(err.message);
@@ -1133,7 +1219,7 @@
                         });
                     }
                     
-                    setShowSubscriptionPicker(false);
+                    navigateToPage('dashboard');
                 };
 
                 return (
@@ -1334,7 +1420,7 @@
                                                 Showing last {maxMessages} messages
                                             </p>
                                             <button 
-                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                onClick={() => navigateToPage('subscription')}
                                                 className="text-xs text-blue-600 hover:text-blue-800 underline"
                                             >
                                                 Upgrade to see full chat history
@@ -1365,7 +1451,7 @@
                                     {!isPaidUser && (
                                         <p className="text-xs text-gray-500 mt-1 text-center">
                                             <button 
-                                                onClick={() => setShowSubscriptionPicker(true)}
+                                                onClick={() => navigateToPage('subscription')}
                                                 className="text-blue-600 hover:text-blue-800 underline"
                                             >
                                                 Upgrade to participate in chat
@@ -1437,7 +1523,7 @@
                                                     debugLog('LOGOUT: User logging out');
                                                     localStorage.removeItem('authToken');
                                                     setUser(null);
-                                                    setShowLanding(true);
+                                                    navigateToPage('landing');
                                                     if (socket) {
                                                         socket.disconnect();
                                                         socket = null;
@@ -1446,6 +1532,7 @@
                                                     dashboardInitialized = false;
                                                     socketInitialized = false;
                                                     authCheckCompleted = false;
+                                                    routingInitialized = false;
                                                 }}
                                                 className="p-1 text-gray-400 hover:text-gray-600"
                                             >
@@ -1489,7 +1576,7 @@
                                             </div>
                                         </div>
                                         <button 
-                                            onClick={() => setShowSubscriptionPicker(true)}
+                                            onClick={() => navigateToPage('subscription')}
                                             className="bg-white text-orange-600 px-6 py-3 rounded-lg font-black hover:bg-gray-100 transition-colors shadow-lg"
                                         >
                                             💎 UPGRADE NOW
@@ -1525,7 +1612,7 @@
                                             >
                                                 <option value="LOW">Low</option>
                                                 <option value="MEDIUM">Medium</option>
-                                                <option value="MEDIUM">High</option>
+                                                <option value="HIGH">High</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1668,7 +1755,7 @@
                                                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Premium Content</h3>
                                                                 <p className="text-gray-600 mb-4">Upgrade to see all {filteredAlerts.length} live alerts</p>
                                                                 <button 
-                                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                                    onClick={() => navigateToPage('subscription')}
                                                                     className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg font-bold hover:from-orange-600 hover:to-red-600 transition-all"
                                                                 >
                                                                     🚀 UPGRADE NOW
@@ -1715,7 +1802,7 @@
                                             {!isPaidUser && members.length > 3 && (
                                                 <div className="text-center py-3 text-sm text-gray-500 border-t">
                                                     <p>+{members.length - 3} more members</p>
-                                                    <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => setShowSubscriptionPicker(true)}>
+                                                    <p className="text-xs text-orange-600 font-medium cursor-pointer" onClick={() => navigateToPage('subscription')}>
                                                         Upgrade to see all
                                                     </p>
                                                 </div>
@@ -1753,7 +1840,7 @@
                                                 <p className="text-gray-600 mb-3">Real-time market data</p>
                                                 <p className="text-sm text-gray-500 mb-4">Live prices, trends & signals</p>
                                                 <button 
-                                                    onClick={() => setShowSubscriptionPicker(true)}
+                                                    onClick={() => navigateToPage('subscription')}
                                                     className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-600"
                                                 >
                                                     Unlock Premium
@@ -1798,13 +1885,23 @@
                             
                             setUser(userData);
                             
-                            if (requiresSubscriptionSelection(userData)) {
-                                debugLog('AUTH: Needs subscription - showing picker');
-                                setShowSubscriptionPicker(true);
-                                setShowLanding(false);
+                            // Check current URL to determine where to redirect
+                            const currentPath = window.location.pathname;
+                            debugLog('AUTH: Determining redirect based on URL', { currentPath });
+                            
+                            if (currentPath === '/subscription' || requiresSubscriptionSelection(userData)) {
+                                debugLog('AUTH: Redirecting to subscription picker');
+                                navigateToPage('subscription');
+                            } else if (currentPath === '/dashboard') {
+                                debugLog('AUTH: Staying on dashboard');
+                                navigateToPage('dashboard');
                             } else {
-                                debugLog('AUTH: Valid subscription - going to dashboard');
-                                setShowLanding(false);
+                                // Default redirect based on subscription status
+                                if (requiresSubscriptionSelection(userData)) {
+                                    navigateToPage('subscription');
+                                } else {
+                                    navigateToPage('dashboard');
+                                }
                             }
                         })
                         .catch((error) => {
@@ -1812,10 +1909,12 @@
                             trackError(error, 'Auth Token Validation');
                             localStorage.removeItem('authToken');
                             authCheckCompleted = false;
+                            navigateToPage('landing');
                         });
                 } else {
                     endPerformanceTimer('auth-check');
                     debugLog('AUTH: No token found - staying on landing');
+                    navigateToPage('landing');
                 }
             }, []);
 
