@@ -264,6 +264,14 @@
             const [previewMode, setPreviewMode] = useState('desktop');
             const [showCode, setShowCode] = useState(false);
             const [liveChanges, setLiveChanges] = useState(0);
+
+            // Debug currentPage changes
+            useEffect(() => {
+                debugLog('📄 CURRENT PAGE STATE CHANGED:', { 
+                    newPage: currentPage,
+                    timestamp: new Date().toISOString() 
+                });
+            }, [currentPage]);
             
             // Site Data for Real-Time Editing
             const [siteData, setSiteData] = useState({
@@ -624,6 +632,12 @@
 
             // Reset and navigate when page changes
             useEffect(() => {
+                debugLog('🔄 PAGE CHANGE EFFECT TRIGGERED:', { 
+                    currentPage, 
+                    previousPage: lastUrlRef.current,
+                    iframeExists: !!iframeRef.current 
+                });
+                
                 iframeLoadedRef.current = false;
                 lastUrlRef.current = '';
                 stylesAppliedRef.current = false;
@@ -631,8 +645,22 @@
                 // Force iframe to navigate to new page
                 if (iframeRef.current) {
                     const newUrl = getCurrentUrl();
-                    debugLog(`🔄 Navigating to page: ${currentPage}`, { url: newUrl });
-                    iframeRef.current.src = newUrl;
+                    debugLog(`🔄 FORCING NAVIGATION:`, { 
+                        page: currentPage, 
+                        url: newUrl,
+                        iframeCurrent: iframeRef.current.src 
+                    });
+                    
+                    // Clear first, then set new URL
+                    iframeRef.current.src = 'about:blank';
+                    setTimeout(() => {
+                        if (iframeRef.current) {
+                            iframeRef.current.src = newUrl;
+                            debugLog('✅ Iframe src updated to:', newUrl);
+                        }
+                    }, 200);
+                } else {
+                    debugLog('❌ No iframe reference available for navigation');
                 }
             }, [currentPage, getCurrentUrl]);
 
@@ -1039,6 +1067,9 @@
                                     </span>
                                 </div>
                                 <span className="text-gray-600">Real-Time Editor</span>
+                                <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded font-mono">
+                                    Page: {currentPage}
+                                </span>
                                 <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                     {getCurrentUrl()}
                                 </span>
@@ -1070,8 +1101,24 @@
                                 <button
                                     key={`page-${page.id}-${index}`}
                                     onClick={() => {
-                                        debugLog('🔄 Page tab clicked:', { from: currentPage, to: page.id });
+                                        debugLog('🔄 Page tab clicked:', { 
+                                            from: currentPage, 
+                                            to: page.id,
+                                            currentUrl: getCurrentUrl(),
+                                            newUrl: page.id === 'live' ? page.url : `${MAIN_SITE_URL}${page.url}`
+                                        });
+                                        
+                                        // Force immediate state change
                                         setCurrentPage(page.id);
+                                        
+                                        // Also force iframe update immediately
+                                        setTimeout(() => {
+                                            if (iframeRef.current) {
+                                                const newUrl = page.id === 'live' ? page.url : `${MAIN_SITE_URL}${page.url}`;
+                                                debugLog('🔄 Force updating iframe src:', { newUrl });
+                                                iframeRef.current.src = newUrl;
+                                            }
+                                        }, 100);
                                     }}
                                     className={`page-tab px-4 py-3 text-sm font-medium whitespace-nowrap flex items-center gap-2 ${
                                         currentPage === page.id ? 'active' : ''
@@ -1079,6 +1126,9 @@
                                 >
                                     <span>{page.icon}</span>
                                     {page.name}
+                                    <span className="text-xs opacity-50">
+                                        {currentPage === page.id ? '(active)' : ''}
+                                    </span>
                                 </button>
                             ))}
                         </div>
