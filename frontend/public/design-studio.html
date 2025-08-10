@@ -1323,6 +1323,11 @@
             // Messaging State
             const [showMessaging, setShowMessaging] = useState(false);
 
+            // Publish State
+            const [isPublishing, setIsPublishing] = useState(false);
+            const [showPublishNotification, setShowPublishNotification] = useState(false);
+            const [hasUnpublishedChanges, setHasUnpublishedChanges] = useState(false);
+
             // Auto-save State
             const [autoSaving, setAutoSaving] = useState(false);
             const [lastSaved, setLastSaved] = useState(null);
@@ -1342,7 +1347,7 @@
                 } finally {
                     setAutoSaving(false);
                 }
-            }, 3000), [hasUnpublishedChanges, collectAllChanges, saveChangesToPersistence]);
+            }, 3000), [hasUnpublishedChanges]);
 
             // Trigger auto-save when changes are made
             useEffect(() => {
