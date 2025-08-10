@@ -162,9 +162,6 @@
         const SOCKET_URL = 'https://rti-trading-backend-production.up.railway.app';
         const MAIN_SITE_URL = window.location.origin;
 
-        // Global socket reference
-        let socket = null;
-
         const debugLog = (message, data = null) => {
             console.log(`🎨 [RTi LIVE DESIGN] ${message}`);
             if (data) console.log('📊 Data:', data);
@@ -301,6 +298,7 @@
                 }
             });
 
+            // Refs
             const iframeRef = useRef(null);
             const socketRef = useRef(null);
             const connectionAttempted = useRef(false);
@@ -317,7 +315,7 @@
             ];
 
             // Components for each page
-            const getPageComponents = (pageId) => {
+            const getPageComponents = useCallback((pageId) => {
                 const commonComponents = [
                     { id: 'colors', name: '🎨 Color Scheme', type: 'style', page: 'all' },
                     { id: 'fonts', name: '🔤 Typography', type: 'style', page: 'all' }
@@ -344,10 +342,10 @@
                 };
 
                 return [...commonComponents, ...(pageSpecific[pageId] || [])];
-            };
+            }, []);
 
             // Authentication Functions
-            const apiCall = async (endpoint, options = {}) => {
+            const apiCall = useCallback(async (endpoint, options = {}) => {
                 const token = localStorage.getItem('authToken');
                 const headers = {
                     'Content-Type': 'application/json',
@@ -372,7 +370,7 @@
                     debugLog(`API Error: ${endpoint}`, error.message);
                     throw error;
                 }
-            };
+            }, []);
 
             // Enhanced Live Update Function with Error Handling
             const applyLiveUpdate = useCallback((updateData) => {
@@ -512,7 +510,7 @@
                 }
             }, [isConnected, currentPage, user, debouncedApplyUpdate]);
 
-            // Optimized Socket Connection
+            // Socket Connection Effect
             useEffect(() => {
                 if (isAuthenticated && !socketRef.current && !connectionAttempted.current) {
                     connectionAttempted.current = true;
@@ -526,7 +524,6 @@
                     });
                     
                     socketRef.current = newSocket;
-                    socket = newSocket;
                     
                     newSocket.on('connect', () => {
                         debugLog('🔴 LIVE CONNECTION ESTABLISHED');
@@ -560,18 +557,15 @@
                         debugLog('❌ Socket connection error:', error);
                         connectionAttempted.current = false;
                     });
-                }
 
-                return () => {
-                    if (socketRef.current) {
+                    return () => {
                         debugLog('🔌 Cleaning up socket connection');
-                        socketRef.current.disconnect();
+                        newSocket.disconnect();
                         socketRef.current = null;
-                        socket = null;
                         connectionAttempted.current = false;
-                    }
-                };
-            }, [isAuthenticated, applyLiveUpdate]);
+                    };
+                }
+            }, [isAuthenticated, applyLiveUpdate, user, currentPage]);
 
             // Handle iframe load with anti-loop protection
             const handleIframeLoad = useCallback(() => {
@@ -612,11 +606,11 @@
                 stylesAppliedRef.current = false;
             }, [currentPage]);
 
-            const getCurrentUrl = () => {
+            const getCurrentUrl = useCallback(() => {
                 const page = pages.find(p => p.id === currentPage);
                 if (page?.id === 'live') return page.url;
                 return `${MAIN_SITE_URL}${page?.url || '/'}`;
-            };
+            }, [currentPage, pages]);
 
             // Refresh Iframe
             const refreshIframe = useCallback(() => {
@@ -628,7 +622,9 @@
                     const currentSrc = iframeRef.current.src;
                     iframeRef.current.src = '';
                     setTimeout(() => {
-                        iframeRef.current.src = currentSrc;
+                        if (iframeRef.current) {
+                            iframeRef.current.src = currentSrc;
+                        }
                     }, 100);
                 }
             }, []);
@@ -651,7 +647,7 @@
             const LoginForm = memo(() => {
                 const [credentials, setCredentials] = useState({ username: '', password: '' });
 
-                const handleLogin = async () => {
+                const handleLogin = useCallback(async () => {
                     if (!credentials.username || !credentials.password) {
                         setError('Please enter admin credentials');
                         return;
@@ -679,7 +675,7 @@
                     } finally {
                         setLoading(false);
                     }
-                };
+                }, [credentials, apiCall]);
 
                 return (
                     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
@@ -1105,7 +1101,7 @@
                             setLoading(false);
                         });
                 }
-            }, []);
+            }, [apiCall]);
 
             debugLog('🔴 RTi Live Design Studio Initialized');
 
@@ -1127,12 +1123,14 @@
         };
 
         // Render the application with Error Boundary
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(
-            React.createElement(DesignStudioErrorBoundary, null,
+        const DesignStudioApp = () => {
+            return React.createElement(DesignStudioErrorBoundary, null,
                 React.createElement(RTiLiveDesignStudio)
-            )
-        );
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(React.createElement(DesignStudioApp));
     </script>
 </body>
 </html>
