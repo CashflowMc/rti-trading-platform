@@ -1087,68 +1087,6 @@
                                     )}
                                 </div>
 
-                                {/* 🧪 TEMPORARY: Design Studio Testing */}
-                                <div className="mb-6 p-3 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                                    <div className="text-center">
-                                        <span className="text-blue-300 text-sm font-medium">🧪 Design Studio Test Mode</span>
-                                        <div className="mt-2 space-x-2">
-                                            <button
-                                                onClick={() => {
-                                                    const mockUser = {
-                                                        id: 'test-123',
-                                                        username: 'TestUser',
-                                                        avatar: 'https://ui-avatars.com/api/?name=Test&background=22c55e&color=fff',
-                                                        tier: 'MONTHLY',
-                                                        isAdmin: false
-                                                    };
-                                                    setUser(mockUser);
-                                                    navigateToPage('dashboard');
-                                                    debugLog('🧪 MOCK: User logged in for testing', mockUser, 'SUCCESS');
-                                                }}
-                                                className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
-                                            >
-                                                🚀 Mock Login (User)
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const mockAdmin = {
-                                                        id: 'admin-123',
-                                                        username: 'AdminTest',
-                                                        avatar: 'https://ui-avatars.com/api/?name=Admin&background=ef4444&color=fff',
-                                                        tier: 'ADMIN',
-                                                        isAdmin: true
-                                                    };
-                                                    setUser(mockAdmin);
-                                                    navigateToPage('dashboard');
-                                                    debugLog('🧪 MOCK: Admin logged in for testing', mockAdmin, 'SUCCESS');
-                                                }}
-                                                className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
-                                            >
-                                                👑 Mock Login (Admin)
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    const mockUser = {
-                                                        id: 'free-123',
-                                                        username: 'FreeUser',
-                                                        avatar: 'https://ui-avatars.com/api/?name=Free&background=6b7280&color=fff',
-                                                        tier: 'FREE'
-                                                    };
-                                                    setUser(mockUser);
-                                                    navigateToPage('subscription');
-                                                    debugLog('🧪 MOCK: Free user needs subscription', mockUser, 'SUCCESS');
-                                                }}
-                                                className="bg-gray-500 text-white px-3 py-1 rounded text-xs hover:bg-gray-600"
-                                            >
-                                                🆓 Mock Login (Free)
-                                            </button>
-                                        </div>
-                                        <div className="mt-2 text-xs text-blue-200">
-                                            🧪 Use these to test design studio navigation without real login
-                                        </div>
-                                    </div>
-                                </div>
-
                                 <div className="space-y-6">
                                     {isRegistering && (
                                         <div>
