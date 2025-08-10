@@ -174,6 +174,182 @@
         .test-button:active {
             transform: scale(0.98);
         }
+
+        /* 🖱️ CLICK TO EDIT STYLES */
+        .editable-element {
+            outline: 2px dashed rgba(59, 130, 246, 0.5) !important;
+            cursor: pointer !important;
+            position: relative !important;
+        }
+
+        .editable-element:hover {
+            outline: 2px solid #3b82f6 !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+        }
+
+        .edit-tooltip {
+            position: absolute;
+            top: -30px;
+            left: 0;
+            background: #3b82f6;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .inline-editor {
+            border: 2px solid #3b82f6 !important;
+            background: white !important;
+            padding: 8px !important;
+            font-family: inherit !important;
+            font-size: inherit !important;
+            color: inherit !important;
+            outline: none !important;
+            border-radius: 4px !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+        }
+
+        /* 📁 UPLOAD STYLES */
+        .upload-zone {
+            border: 2px dashed #6b7280;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .upload-zone.dragover {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            transform: scale(1.02);
+        }
+
+        .image-preview {
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            display: inline-block;
+        }
+
+        .image-preview img {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+        }
+
+        .image-preview .remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* 👤 PROFILE EDITOR STYLES */
+        .profile-editor {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .profile-avatar:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .tab-navigation {
+            display: flex;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-button.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+
+        .tab-button:hover {
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
     </style>
 </head>
 <body>
@@ -203,6 +379,33 @@
                 clearTimeout(timeout);
                 timeout = setTimeout(later, wait);
             };
+        };
+
+        // 📁 File Upload Utility
+        const uploadFile = async (file, type = 'image') => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('type', type);
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed');
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Upload error:', error);
+                throw error;
+            }
         };
 
         // Error Boundary Component
@@ -276,6 +479,269 @@
             </div>
         );
 
+        // 📁 Image Upload Component
+        const ImageUploader = memo(({ onUpload, currentImage = null, title = "Upload Image" }) => {
+            const [dragOver, setDragOver] = useState(false);
+            const [uploading, setUploading] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const handleDrop = useCallback(async (e) => {
+                e.preventDefault();
+                setDragOver(false);
+                
+                const files = Array.from(e.dataTransfer.files);
+                const imageFiles = files.filter(file => file.type.startsWith('image/'));
+                
+                if (imageFiles.length > 0) {
+                    handleFileUpload(imageFiles[0]);
+                }
+            }, []);
+
+            const handleFileUpload = async (file) => {
+                if (!file) return;
+                
+                setUploading(true);
+                try {
+                    const result = await uploadFile(file, 'image');
+                    onUpload(result.url);
+                    debugLog('✅ Image uploaded successfully', result);
+                } catch (error) {
+                    debugLog('❌ Image upload failed', error);
+                    alert('Image upload failed. Please try again.');
+                } finally {
+                    setUploading(false);
+                }
+            };
+
+            return (
+                <div className="space-y-4">
+                    <label className="block text-sm font-medium">{title}</label>
+                    
+                    {currentImage && (
+                        <div className="image-preview">
+                            <img src={currentImage} alt="Current" />
+                            <button
+                                onClick={() => onUpload(null)}
+                                className="remove-btn"
+                                title="Remove image"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
+
+                    <div
+                        className={`upload-zone ${dragOver ? 'dragover' : ''}`}
+                        onDrop={handleDrop}
+                        onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOver(true);
+                        }}
+                        onDragLeave={() => setDragOver(false)}
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        {uploading ? (
+                            <div className="text-center">
+                                <div className="spinner mx-auto mb-2" style={{width: '24px', height: '24px'}}></div>
+                                <p className="text-sm text-gray-600">Uploading...</p>
+                            </div>
+                        ) : (
+                            <div className="text-center">
+                                <div className="text-4xl mb-2">📁</div>
+                                <p className="text-sm text-gray-600 mb-1">
+                                    Drop images here or click to browse
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    PNG, JPG, GIF up to 10MB
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileUpload(file);
+                        }}
+                        className="hidden"
+                    />
+                </div>
+            );
+        });
+
+        // 👤 Profile Editor Component
+        const ProfileEditor = memo(({ user, onUpdate, onClose }) => {
+            const [profileData, setProfileData] = useState({
+                username: user?.username || '',
+                email: user?.email || '',
+                displayName: user?.displayName || '',
+                bio: user?.bio || '',
+                avatar: user?.avatar || '',
+                role: user?.role || '',
+                company: user?.company || '',
+                location: user?.location || ''
+            });
+            const [saving, setSaving] = useState(false);
+
+            const handleSave = async () => {
+                setSaving(true);
+                try {
+                    // API call to update profile
+                    const token = localStorage.getItem('authToken');
+                    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(profileData)
+                    });
+
+                    if (response.ok) {
+                        const updatedUser = await response.json();
+                        onUpdate(updatedUser);
+                        debugLog('✅ Profile updated successfully');
+                    } else {
+                        throw new Error('Failed to update profile');
+                    }
+                } catch (error) {
+                    debugLog('❌ Profile update failed', error);
+                    alert('Failed to update profile. Please try again.');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            return (
+                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+                    <div className="modal-content">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800">👤 Edit Profile</h2>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-600 text-2xl"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            {/* Avatar Upload */}
+                            <div className="text-center">
+                                <div className="mb-4">
+                                    <img
+                                        src={profileData.avatar || `https://ui-avatars.com/api/?name=${profileData.username}&background=3b82f6&color=fff`}
+                                        alt="Avatar"
+                                        className="profile-avatar mx-auto"
+                                    />
+                                </div>
+                                <ImageUploader
+                                    currentImage={profileData.avatar}
+                                    onUpload={(url) => setProfileData(prev => ({...prev, avatar: url}))}
+                                    title="Profile Picture"
+                                />
+                            </div>
+
+                            {/* Profile Fields */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.username}
+                                        onChange={(e) => setProfileData(prev => ({...prev, username: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                    <input
+                                        type="email"
+                                        value={profileData.email}
+                                        onChange={(e) => setProfileData(prev => ({...prev, email: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.displayName}
+                                        onChange={(e) => setProfileData(prev => ({...prev, displayName: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.role}
+                                        onChange={(e) => setProfileData(prev => ({...prev, role: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        placeholder="e.g., Design Studio Admin"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.company}
+                                        onChange={(e) => setProfileData(prev => ({...prev, company: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                    <input
+                                        type="text"
+                                        value={profileData.location}
+                                        onChange={(e) => setProfileData(prev => ({...prev, location: e.target.value}))}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                                <textarea
+                                    value={profileData.bio}
+                                    onChange={(e) => setProfileData(prev => ({...prev, bio: e.target.value}))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    rows="3"
+                                    placeholder="Tell us about yourself..."
+                                />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-4 border-t">
+                                <button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium disabled:opacity-50"
+                                >
+                                    {saving ? '💾 Saving...' : '💾 Save Changes'}
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        });
+
         const RTiLiveDesignStudio = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [user, setUser] = useState(null);
@@ -300,6 +766,19 @@
             const [isInitializing, setIsInitializing] = useState(true);
             const [userInitiatedChange, setUserInitiatedChange] = useState(false);
 
+            // 🖱️ CLICK TO EDIT STATE
+            const [clickToEditMode, setClickToEditMode] = useState(false);
+            const [editingElement, setEditingElement] = useState(null);
+            const [inlineEditorValue, setInlineEditorValue] = useState('');
+
+            // 👤 PROFILE EDITOR STATE
+            const [showProfileEditor, setShowProfileEditor] = useState(false);
+
+            // 📁 MEDIA LIBRARY STATE
+            const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+            const [mediaFiles, setMediaFiles] = useState([]);
+            const [activeTab, setActiveTab] = useState('components');
+
             // Debug currentPage changes
             useEffect(() => {
                 debugLog('📄 CURRENT PAGE STATE CHANGED:', { 
@@ -314,6 +793,8 @@
                     title: 'RTi',
                     subtitle: 'CASHFLOWOPS',
                     welcomeMessage: '🚀 MOON LANDING SUCCESSFUL! 🌕',
+                    heroImage: null,
+                    backgroundImage: null,
                     colors: {
                         primary: '#22c55e',
                         secondary: '#f59e0b',
@@ -327,6 +808,7 @@
                 },
                 dashboard: {
                     headerTitle: 'RTi Cashflowops',
+                    logo: null,
                     colors: {
                         primary: '#22c55e',
                         accent: '#3b82f6'
@@ -334,6 +816,7 @@
                 },
                 subscription: {
                     title: 'CHOOSE YOUR MISSION',
+                    featuredImage: null,
                     colors: {
                         primary: '#22c55e',
                         secondary: '#f59e0b'
@@ -350,7 +833,7 @@
             const stylesAppliedRef = useRef(false);
             const lastUpdateTime = useRef(0);
             const authCheckInProgress = useRef(false);
-            const updateSourceRef = useRef('system'); // Track update source
+            const updateSourceRef = useRef('system');
 
             // Available Pages
             const pages = [
@@ -411,16 +894,10 @@
                         return;
                     }
 
-                    // Create mock token and inject user
                     const mockToken = `mock-token-${user.id}-${Date.now()}`;
-                    
-                    // Set localStorage in iframe
                     iframeWindow.localStorage.setItem('authToken', mockToken);
-                    
-                    // Inject user data directly into iframe's window
                     iframeWindow.testMockUser = user;
                     
-                    // Force refresh to apply changes
                     setTimeout(() => {
                         iframe.src = iframe.src;
                         setTestUser(user);
@@ -445,11 +922,9 @@
                     const iframeWindow = iframe.contentWindow;
                     
                     if (iframeWindow) {
-                        // Clear all test data
                         iframeWindow.localStorage.removeItem('authToken');
                         delete iframeWindow.testMockUser;
                         
-                        // Force refresh
                         setTimeout(() => {
                             iframe.src = iframe.src;
                             setTestUser(null);
@@ -469,11 +944,150 @@
                 debugLog('🧪 TEST: Forced page navigation', { pageId });
             }, []);
 
+            // 🖱️ CLICK TO EDIT FUNCTIONS
+            const enableClickToEdit = useCallback(() => {
+                setClickToEditMode(true);
+                
+                if (!iframeRef.current) return;
+                
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    
+                    if (!iframeDoc) return;
+
+                    // Inject click-to-edit styles and handlers
+                    let styleElement = iframeDoc.getElementById('click-to-edit-styles');
+                    if (!styleElement) {
+                        styleElement = iframeDoc.createElement('style');
+                        styleElement.id = 'click-to-edit-styles';
+                        iframeDoc.head.appendChild(styleElement);
+                    }
+
+                    styleElement.textContent = `
+                        .editable-element {
+                            outline: 2px dashed rgba(59, 130, 246, 0.5) !important;
+                            cursor: pointer !important;
+                            position: relative !important;
+                        }
+                        .editable-element:hover {
+                            outline: 2px solid #3b82f6 !important;
+                            background: rgba(59, 130, 246, 0.1) !important;
+                        }
+                        .edit-tooltip {
+                            position: absolute;
+                            top: -30px;
+                            left: 0;
+                            background: #3b82f6;
+                            color: white;
+                            padding: 4px 8px;
+                            border-radius: 4px;
+                            font-size: 12px;
+                            z-index: 1000;
+                            pointer-events: none;
+                        }
+                    `;
+
+                    // Add editable class to text elements
+                    const textElements = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div[data-design]');
+                    textElements.forEach(el => {
+                        if (el.textContent.trim().length > 0) {
+                            el.classList.add('editable-element');
+                            
+                            // Add tooltip
+                            const tooltip = iframeDoc.createElement('div');
+                            tooltip.className = 'edit-tooltip';
+                            tooltip.textContent = '🖱️ Click to edit';
+                            el.appendChild(tooltip);
+                            
+                            // Add click handler
+                            el.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startInlineEdit(el);
+                            });
+                        }
+                    });
+
+                    debugLog('🖱️ Click-to-edit mode enabled');
+                } catch (error) {
+                    debugLog('❌ Failed to enable click-to-edit', error);
+                }
+            }, []);
+
+            const disableClickToEdit = useCallback(() => {
+                setClickToEditMode(false);
+                
+                if (!iframeRef.current) return;
+                
+                try {
+                    const iframe = iframeRef.current;
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    
+                    if (!iframeDoc) return;
+
+                    // Remove editable classes and tooltips
+                    const editableElements = iframeDoc.querySelectorAll('.editable-element');
+                    editableElements.forEach(el => {
+                        el.classList.remove('editable-element');
+                        const tooltip = el.querySelector('.edit-tooltip');
+                        if (tooltip) tooltip.remove();
+                    });
+
+                    // Remove styles
+                    const styleElement = iframeDoc.getElementById('click-to-edit-styles');
+                    if (styleElement) styleElement.remove();
+
+                    debugLog('🖱️ Click-to-edit mode disabled');
+                } catch (error) {
+                    debugLog('❌ Failed to disable click-to-edit', error);
+                }
+            }, []);
+
+            const startInlineEdit = useCallback((element) => {
+                setEditingElement(element);
+                setInlineEditorValue(element.textContent);
+                
+                // Replace element content with input
+                const input = element.ownerDocument.createElement('input');
+                input.className = 'inline-editor';
+                input.value = element.textContent;
+                input.style.width = `${element.offsetWidth}px`;
+                input.style.height = `${element.offsetHeight}px`;
+                
+                element.innerHTML = '';
+                element.appendChild(input);
+                input.focus();
+                input.select();
+
+                const saveEdit = () => {
+                    const newValue = input.value;
+                    element.textContent = newValue;
+                    setEditingElement(null);
+                    
+                    // Push live update
+                    const elementId = element.getAttribute('data-design') || element.id || element.className;
+                    pushLiveUpdate('text', { [elementId]: newValue }, 'user');
+                    
+                    debugLog('🖱️ Inline edit saved', { elementId, newValue });
+                };
+
+                input.addEventListener('blur', saveEdit);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') saveEdit();
+                    if (e.key === 'Escape') {
+                        element.textContent = element.getAttribute('data-original') || element.textContent;
+                        setEditingElement(null);
+                    }
+                });
+            }, []);
+
             // Components for each page
             const getPageComponents = useCallback((pageId) => {
                 const commonComponents = [
                     { id: 'colors', name: '🎨 Color Scheme', type: 'style', page: 'all' },
-                    { id: 'fonts', name: '🔤 Typography', type: 'style', page: 'all' }
+                    { id: 'fonts', name: '🔤 Typography', type: 'style', page: 'all' },
+                    { id: 'images', name: '📁 Images & Media', type: 'media', page: 'all' }
                 ];
 
                 const pageSpecific = {
@@ -481,17 +1095,20 @@
                         { id: 'title', name: '📝 Main Title', type: 'text', page: 'landing' },
                         { id: 'subtitle', name: '📝 Subtitle', type: 'text', page: 'landing' },
                         { id: 'welcomeMessage', name: '💬 Welcome Message', type: 'text', page: 'landing' },
+                        { id: 'heroImage', name: '🖼️ Hero Image', type: 'image', page: 'landing' },
+                        { id: 'backgroundImage', name: '🌄 Background Image', type: 'image', page: 'landing' },
                         { id: 'moon', name: '🌕 Moon Animation', type: 'animation', page: 'landing' },
-                        { id: 'money-rain', name: '💰 Money Rain', type: 'animation', page: 'landing' },
-                        { id: 'background', name: '🎨 Background', type: 'style', page: 'landing' }
+                        { id: 'money-rain', name: '💰 Money Rain', type: 'animation', page: 'landing' }
                     ],
                     dashboard: [
                         { id: 'headerTitle', name: '📋 Header Title', type: 'text', page: 'dashboard' },
+                        { id: 'logo', name: '🏢 Logo', type: 'image', page: 'dashboard' },
                         { id: 'alerts', name: '⚠️ Alert System', type: 'component', page: 'dashboard' },
                         { id: 'chat', name: '💬 Chat Panel', type: 'component', page: 'dashboard' }
                     ],
                     subscription: [
                         { id: 'title', name: '📝 Page Title', type: 'text', page: 'subscription' },
+                        { id: 'featuredImage', name: '✨ Featured Image', type: 'image', page: 'subscription' },
                         { id: 'plans', name: '💎 Pricing Plans', type: 'component', page: 'subscription' }
                     ]
                 };
@@ -535,9 +1152,8 @@
                 }
             }, []);
 
-            // 🔧 FIXED: Enhanced Live Update Function - Now distinguishes between user and system updates
+            // Enhanced Live Update Function
             const applyLiveUpdate = useCallback((updateData, source = 'system') => {
-                // Prevent rapid successive updates
                 const now = Date.now();
                 if (now - lastUpdateTime.current < 500) {
                     return;
@@ -556,7 +1172,6 @@
                         return;
                     }
 
-                    // Skip if not ready
                     if (iframe.contentWindow?.document.readyState !== 'complete') {
                         return;
                     }
@@ -568,9 +1183,7 @@
                             Object.entries(updateData.colors).forEach(([key, value]) => {
                                 root.style.setProperty(`--${key}-color`, value);
                             });
-                        } catch (error) {
-                            // Silent fail
-                        }
+                        } catch (error) {}
                     }
 
                     // Apply text content
@@ -593,9 +1206,7 @@
                                     }
                                 });
                             });
-                        } catch (error) {
-                            // Silent fail
-                        }
+                        } catch (error) {}
                     }
 
                     // Apply fonts
@@ -605,9 +1216,30 @@
                             Object.entries(updateData.fonts).forEach(([key, value]) => {
                                 root.style.setProperty(`--${key}-font`, value);
                             });
-                        } catch (error) {
-                            // Silent fail
-                        }
+                        } catch (error) {}
+                    }
+
+                    // Apply images
+                    if (updateData.images) {
+                        try {
+                            Object.entries(updateData.images).forEach(([selector, imageUrl]) => {
+                                const elements = [
+                                    ...iframeDoc.querySelectorAll(`[data-design="${selector}"]`),
+                                    ...iframeDoc.querySelectorAll(`#${selector}`),
+                                    ...iframeDoc.querySelectorAll(`.${selector}`)
+                                ];
+                                
+                                elements.forEach(el => {
+                                    if (el && imageUrl) {
+                                        if (el.tagName === 'IMG') {
+                                            el.src = imageUrl;
+                                        } else {
+                                            el.style.backgroundImage = `url(${imageUrl})`;
+                                        }
+                                    }
+                                });
+                            });
+                        } catch (error) {}
                     }
 
                     // Inject styles for better compatibility
@@ -635,12 +1267,10 @@
                             }
 
                             styleElement.textContent = cssRules.join('\n');
-                        } catch (error) {
-                            // Silent fail
-                        }
+                        } catch (error) {}
                     }
 
-                    // 🔧 FIXED: Only show live indicator for USER-initiated changes, not system/initial loads
+                    // Only show live indicator for USER-initiated changes
                     if (source === 'user' && !isInitializing) {
                         setLiveChanges(prev => prev + 1);
                         setShowLiveIndicator(true);
@@ -649,26 +1279,20 @@
                     } else if (source === 'system') {
                         debugLog('🔧 SYSTEM UPDATE: Initial/system change applied (no indicator)', { source, updateData });
                     }
-                } catch (error) {
-                    // Silent fail
-                }
+                } catch (error) {}
             }, [isInitializing]);
 
-            // 🔧 FIXED: Debounced Live Update Function
+            // Debounced Live Update Function
             const debouncedApplyUpdate = useMemo(
                 () => debounce((updateData, source) => applyLiveUpdate(updateData, source), 300),
                 [applyLiveUpdate]
             );
 
-            // 🔧 FIXED: Push Live Updates - now tracks source
+            // Push Live Updates
             const pushLiveUpdate = useCallback((updateType, updateData, source = 'user') => {
-                // Set the source for tracking
                 updateSourceRef.current = source;
-                
-                // Apply immediately to preview with debouncing
                 debouncedApplyUpdate(updateData, source);
 
-                // Only broadcast USER changes to socket, not system/initial loads
                 if (socketRef.current && isConnected && source === 'user') {
                     const payload = {
                         type: updateType,
@@ -718,7 +1342,6 @@
                         }
                     });
 
-                    // 🔧 FIXED: Only apply socket updates from OTHER users, not our own
                     newSocket.on('designUpdate', (data) => {
                         if (data.user !== user?.username) {
                             debugLog('📡 Received live design update from other user:', data);
@@ -760,7 +1383,7 @@
                 return fullUrl;
             }, [currentPage]);
 
-            // 🔧 FIXED: Handle iframe load - no longer triggers live updates
+            // Handle iframe load
             const handleIframeLoad = useCallback(() => {
                 const currentUrl = getCurrentUrl();
                 
@@ -777,7 +1400,7 @@
                 iframeLoadedRef.current = true;
                 lastUrlRef.current = currentUrl;
                 
-                // 🔧 FIXED: Apply initial styles without triggering live indicators
+                // Apply initial styles without triggering live indicators
                 if (!stylesAppliedRef.current) {
                     stylesAppliedRef.current = true;
                     
@@ -790,19 +1413,22 @@
                             applyLiveUpdate({ fonts: currentPageData.fonts }, 'system');
                         }
                         
-                        // Reset protection flag after delay
+                        // Re-enable click-to-edit if it was active
+                        if (clickToEditMode) {
+                            setTimeout(() => enableClickToEdit(), 1000);
+                        }
+                        
                         setTimeout(() => {
                             stylesAppliedRef.current = false;
                         }, 3000);
                     }, 1500);
                 }
-            }, [currentPage, siteData, getCurrentUrl, applyLiveUpdate, isInitializing]);
+            }, [currentPage, siteData, getCurrentUrl, applyLiveUpdate, isInitializing, clickToEditMode, enableClickToEdit]);
 
-            // 🔧 FIXED: Page change effect - cleaner navigation
+            // Page change effect
             useEffect(() => {
                 debugLog('🔄 PAGE CHANGE EFFECT:', { currentPage });
                 
-                // Reset state for new page
                 iframeLoadedRef.current = false;
                 lastUrlRef.current = '';
                 stylesAppliedRef.current = false;
@@ -816,13 +1442,11 @@
                 }
             }, [currentPage]);
 
-            // 🔧 FIXED: Initialization effect
+            // Initialization effect
             useEffect(() => {
                 if (isAuthenticated) {
-                    // Start initialization period
                     setIsInitializing(true);
                     
-                    // End initialization after 5 seconds
                     const initTimer = setTimeout(() => {
                         setIsInitializing(false);
                         debugLog('🚀 Initialization period ended - live updates now tracked');
@@ -849,7 +1473,7 @@
                 }
             }, []);
 
-            // 🔧 FIXED: Update Site Data - now properly tracks user changes
+            // Update Site Data
             const updateSiteData = useCallback((pageId, updates) => {
                 setSiteData(prev => ({
                     ...prev,
@@ -859,7 +1483,6 @@
                     }
                 }));
 
-                // This is a user-initiated change
                 pushLiveUpdate('siteData', { [pageId]: updates }, 'user');
             }, [pushLiveUpdate]);
 
@@ -917,6 +1540,9 @@
                                 <div className="text-6xl mb-4">🔴</div>
                                 <h1 className="text-3xl font-black text-white mb-2">RTi Live Design</h1>
                                 <p className="text-gray-300">Real-Time Website Editor</p>
+                                <div className="text-sm text-blue-300 mt-2">
+                                    ✨ Now with Click-to-Edit & Media Upload!
+                                </div>
                             </div>
 
                             {error && (
@@ -987,21 +1613,80 @@
                             <h3 className="font-bold text-lg">🧩 Live Components</h3>
                             <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-red-500 live-indicator' : 'bg-gray-500'}`}></div>
                         </div>
-                        
-                        <div className="space-y-2">
-                            {components.map((component, index) => (
-                                <div
-                                    key={`${component.id}-${component.page}-${index}`}
-                                    onClick={() => setSelectedComponent(component)}
-                                    className={`component-item p-3 rounded-lg cursor-pointer ${
-                                        selectedComponent?.id === component.id ? 'selected' : ''
-                                    }`}
-                                >
-                                    <div className="font-medium">{component.name}</div>
-                                    <div className="text-xs opacity-75">{component.type} • {component.page}</div>
-                                </div>
-                            ))}
+
+                        {/* Tab Navigation */}
+                        <div className="flex mb-4 bg-gray-800 rounded-lg p-1">
+                            <button
+                                onClick={() => setActiveTab('components')}
+                                className={`flex-1 px-3 py-2 rounded text-sm transition-all ${
+                                    activeTab === 'components' 
+                                        ? 'bg-blue-600 text-white' 
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                🧩 Components
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('media')}
+                                className={`flex-1 px-3 py-2 rounded text-sm transition-all ${
+                                    activeTab === 'media' 
+                                        ? 'bg-blue-600 text-white' 
+                                        : 'text-gray-400 hover:text-white'
+                                }`}
+                            >
+                                📁 Media
+                            </button>
                         </div>
+
+                        {activeTab === 'components' && (
+                            <div className="space-y-2">
+                                {components.map((component, index) => (
+                                    <div
+                                        key={`${component.id}-${component.page}-${index}`}
+                                        onClick={() => setSelectedComponent(component)}
+                                        className={`component-item p-3 rounded-lg cursor-pointer ${
+                                            selectedComponent?.id === component.id ? 'selected' : ''
+                                        }`}
+                                    >
+                                        <div className="font-medium">{component.name}</div>
+                                        <div className="text-xs opacity-75">{component.type} • {component.page}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === 'media' && (
+                            <div className="space-y-4">
+                                <ImageUploader
+                                    onUpload={(url) => {
+                                        setMediaFiles(prev => [...prev, { url, type: 'image', name: 'Uploaded Image' }]);
+                                        debugLog('📁 Media uploaded', { url });
+                                    }}
+                                    title="Upload Media"
+                                />
+                                
+                                {mediaFiles.length > 0 && (
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium text-sm">Recent Uploads</h4>
+                                        {mediaFiles.map((file, index) => (
+                                            <div key={index} className="flex items-center gap-2 p-2 bg-gray-800 rounded">
+                                                <img src={file.url} alt="" className="w-8 h-8 object-cover rounded" />
+                                                <span className="text-xs flex-1">{file.name}</span>
+                                                <button
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(file.url);
+                                                        alert('URL copied!');
+                                                    }}
+                                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                                >
+                                                    📋
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="mt-6 p-3 bg-gray-800 rounded-lg">
                             <h4 className="font-bold mb-2 flex items-center gap-2">
@@ -1022,24 +1707,36 @@
                                 <div className="text-xs text-gray-400">
                                     Mode: {isInitializing ? '🚀 Initializing...' : '🔴 Live'}
                                 </div>
+                                <div className="text-xs text-gray-400">
+                                    Click-to-Edit: {clickToEditMode ? '🖱️ ON' : '❌ OFF'}
+                                </div>
                             </div>
                         </div>
 
                         <div className="mt-4 p-3 bg-gray-800 rounded-lg">
                             <h4 className="font-bold mb-2 flex items-center justify-between">
                                 <span>👤 Designer</span>
-                                <button
-                                    onClick={() => {
-                                        localStorage.removeItem('authToken');
-                                        setIsAuthenticated(false);
-                                        setUser(null);
-                                        debugLog('🚪 Designer logged out');
-                                    }}
-                                    className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
-                                    title="Logout"
-                                >
-                                    🚪
-                                </button>
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => setShowProfileEditor(true)}
+                                        className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded"
+                                        title="Edit Profile"
+                                    >
+                                        ✏️
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            localStorage.removeItem('authToken');
+                                            setIsAuthenticated(false);
+                                            setUser(null);
+                                            debugLog('🚪 Designer logged out');
+                                        }}
+                                        className="text-xs bg-red-600 hover:bg-red-700 px-2 py-1 rounded"
+                                        title="Logout"
+                                    >
+                                        🚪
+                                    </button>
+                                </div>
                             </h4>
                             <div className="text-sm">
                                 <div className="text-green-400">{user?.username}</div>
@@ -1103,7 +1800,6 @@
 
                 const currentPageData = siteData[currentPage] || {};
 
-                // 🔧 FIXED: All handlers now properly mark as user-initiated changes
                 const handleTextChange = useCallback((componentId, value) => {
                     setUserInitiatedChange(true);
                     updateSiteData(currentPage, {
@@ -1135,6 +1831,12 @@
                     pushLiveUpdate('fonts', { [fontType]: font }, 'user');
                 }, [currentPage, currentPageData.fonts, updateSiteData, pushLiveUpdate]);
 
+                const handleImageChange = useCallback((componentId, imageUrl) => {
+                    setUserInitiatedChange(true);
+                    updateSiteData(currentPage, { [componentId]: imageUrl });
+                    pushLiveUpdate('images', { [componentId]: imageUrl }, 'user');
+                }, [currentPage, updateSiteData, pushLiveUpdate]);
+
                 return (
                     <div className="property-panel p-4">
                         <div className="flex items-center justify-between mb-4">
@@ -1147,6 +1849,22 @@
                                     {showCode ? '🎨' : '</>'}
                                 </button>
                                 <button
+                                    onClick={() => {
+                                        if (clickToEditMode) {
+                                            disableClickToEdit();
+                                        } else {
+                                            enableClickToEdit();
+                                        }
+                                    }}
+                                    className={`px-2 py-1 rounded text-xs transition-all ${
+                                        clickToEditMode 
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                                            : 'bg-gray-700 hover:bg-gray-600'
+                                    }`}
+                                >
+                                    🖱️
+                                </button>
+                                <button
                                     onClick={refreshIframe}
                                     className="px-2 py-1 bg-blue-600 rounded text-xs hover:bg-blue-700"
                                 >
@@ -1154,6 +1872,16 @@
                                 </button>
                             </div>
                         </div>
+
+                        {/* Click-to-Edit Notice */}
+                        {clickToEditMode && (
+                            <div className="mb-4 p-3 bg-blue-900/50 border border-blue-500 rounded-lg">
+                                <div className="text-sm text-blue-300 font-medium mb-1">🖱️ Click-to-Edit Mode Active</div>
+                                <div className="text-xs text-blue-200">
+                                    Click any text element in the preview to edit it directly!
+                                </div>
+                            </div>
+                        )}
 
                         {/* 🧪 TEST MODE PANEL */}
                         {testMode && (
@@ -1237,6 +1965,20 @@
                                         />
                                         <div className="text-xs text-gray-400 mt-1">
                                             Changes apply instantly to live site
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Image Upload */}
+                                {selectedComponent.type === 'image' && (
+                                    <div>
+                                        <ImageUploader
+                                            currentImage={currentPageData[selectedComponent.id]}
+                                            onUpload={(url) => handleImageChange(selectedComponent.id, url)}
+                                            title={`Upload ${selectedComponent.name}`}
+                                        />
+                                        <div className="text-xs text-gray-400 mt-1">
+                                            Images update instantly across the live site
                                         </div>
                                     </div>
                                 )}
@@ -1357,10 +2099,10 @@
                                 <div className="text-4xl mb-2">🎯</div>
                                 <p>Select a component to edit live</p>
                                 <div className="text-xs mt-2 text-gray-500">
-                                    Only USER changes broadcast as "live updates"
+                                    Or use click-to-edit mode
                                 </div>
                                 <div className="text-xs mt-1 text-green-500">
-                                    🔧 Fixed: No more spurious updates!
+                                    🔧 Enhanced with media upload & profile editing!
                                 </div>
                             </div>
                         )}
@@ -1416,6 +2158,11 @@
                                 {testMode && (
                                     <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded font-bold animate-pulse">
                                         🧪 TEST MODE
+                                    </span>
+                                )}
+                                {clickToEditMode && (
+                                    <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded font-bold">
+                                        🖱️ CLICK-TO-EDIT
                                     </span>
                                 )}
                                 {isInitializing && (
@@ -1497,7 +2244,7 @@
                             </div>
                         </div>
 
-                        {/* 🔧 FIXED: Live Changes Indicator - Only shows for USER changes */}
+                        {/* Live Changes Indicator */}
                         {showLiveIndicator && !isInitializing && (
                             <div className="live-changes-indicator bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg">
                                 🔴 User change applied live! (Total: {liveChanges})
@@ -1549,7 +2296,7 @@
                 }
             }, []);
 
-            debugLog('🔴 RTi Live Design Studio Initialized (FIXED VERSION)');
+            debugLog('🔴 RTi Live Design Studio Initialized (ENHANCED VERSION)');
 
             if (loading) {
                 return <LoadingOverlay message="Initializing Live Design Studio..." />;
@@ -1560,11 +2307,25 @@
             }
 
             return (
-                <div className="design-grid">
-                    <ComponentTree />
-                    <LivePreviewArea />
-                    <PropertyPanel />
-                </div>
+                <>
+                    <div className="design-grid">
+                        <ComponentTree />
+                        <LivePreviewArea />
+                        <PropertyPanel />
+                    </div>
+
+                    {/* 👤 Profile Editor Modal */}
+                    {showProfileEditor && (
+                        <ProfileEditor
+                            user={user}
+                            onUpdate={(updatedUser) => {
+                                setUser(updatedUser);
+                                setShowProfileEditor(false);
+                            }}
+                            onClose={() => setShowProfileEditor(false)}
+                        />
+                    )}
+                </>
             );
         };
 
