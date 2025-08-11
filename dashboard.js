@@ -1,3 +1,4 @@
+// Hello testing repo push
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import io from 'socket.io-client';
@@ -51,9 +52,9 @@ const Dashboard = () => {
       try {
         const alertsArray =
           Array.isArray(data.alerts) ? data.alerts :
-          Array.isArray(data.data) ? data.data :
-          Array.isArray(data.payload) ? data.payload :
-          [];
+            Array.isArray(data.data) ? data.data :
+              Array.isArray(data.payload) ? data.payload :
+                [];
 
         if (!Array.isArray(alertsArray)) {
           throw new Error('No valid alerts array found in response');
